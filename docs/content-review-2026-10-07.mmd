@@ -1,0 +1,24 @@
+flowchart TD
+  A[宿主真实多轮请求 当前成果 实际已读来源 假设] --> B[有界正文校验身份及hash 冻结snapshot]
+  B --> C[真实选段 offset 行号 partial与实际预算]
+  C --> M[按类别及真实ID生成canonical A S R短引用表 纳入inputHash]
+  M --> P[实际wire v2 Zod完整schema 硬限3项及短引句 纳入预算及hash]
+  P --> Q{wireVersion及schemaHash当前 从snapshot重算短引用表一致}
+  Q -- 否 --> O[旧或缺失协议拒绝 不发模型请求]
+  Q -- 是 --> D[独立当前配置Pi审查 无工具 原生传输最多重试一次]
+  D --> T{建立provider请求失败且可重试}
+  T -- 是 --> R[同Run signal可取消退避 不重试JSON或length]
+  R --> E{正常stop 严格findings与coverage协议}
+  T -- 否 --> E
+  E -- 否 --> U[unverified 安全已知code及字段path 区分语法与结构 不存任意键值正文]
+  U --> V[保留脱敏错误 响应hash长度 仅安全块计数 不存思考正文 不重试invalid或length]
+  E -- 是 --> W[严格按kind及短ref映射冻结真实ID 未知或串类型拒绝]
+  W -- 未知引用 --> U
+  W -- 精确映射 --> F[宿主仅在本次已提供摘录中逐字绑定原句]
+  F -- 假引用或无依据 --> U
+  F -- 有效引文 --> G[模型发现 issues_found 或未发现 reviewed]
+  G --> H[独立回执 模型身份 输入结果hash 覆盖限制 无人工确认]
+  H --> I{版本本地刷新}
+  I -- 变化 --> S[stale unverified 保留历史 禁用候选]
+  I -- 未变化 --> J[有限候选修正或用户核对]
+  J --> K[范围推断只可降为假设待确认 不自创业务事实]

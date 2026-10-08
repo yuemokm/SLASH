@@ -1,0 +1,13 @@
+flowchart LR
+  Project[已授权项目skills目录] --> Gateway[现有资料读取网关]
+  Gateway --> Discover[路径/链接/大小复核]
+  Discover --> PiParse[Pi loadSkills解析私有快照]
+  PiParse --> Catalogue[有效名称/说明 + 校验问题]
+  Catalogue --> Prompt[实际Pi提示词中的技能描述]
+  Prompt --> Need[模型load_skill 或用户/skill]
+  Need --> Gateway
+  Gateway --> Verify[当前授权与发现哈希复核]
+  Verify --> Context[技能正文进入Pi上下文]
+  Verify --> Receipt[路径/哈希/时间/字符数回执]
+  Receipt --> View[执行记录：发现与实际读取分开]
+  Context --> Existing[现有受控工具：Plan只读]

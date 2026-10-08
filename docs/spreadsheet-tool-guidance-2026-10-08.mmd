@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant P as Pi现有工具调用
+    participant G as 权限/来源链宿主
+    participant X as 现有XLSX解析器
+    P->>G: 登记TXT+正文hash+原Excel坐标
+    alt Office路径误用
+        G->>G: 业务权限/Files授权/异步后授权快照复核
+        G-->>P: EXTRACTED_TEXT_REQUIRED，不切换来源
+    else 提取TXT
+        G->>X: 真实提取链及版本核验
+        alt 字段名和值为同一主格
+            X-->>P: FIELD_VALUE_SAME_CELL，索引/地址/主格
+        else 值格跨行或跨列合并
+            X-->>P: VALUE_MERGE_AMBIGUOUS，索引/值格/字段格/主格/合并范围
+            Note over P,X: 整次拒绝，无部分证据；可显式单独重查正常格
+        else 其他组合
+            X->>X: 保留合并/字段行/列头严格校验
+            alt 任一项不合法
+                X-->>P: 精确错误，整次拒绝，不返回部分证据
+            else 全部组合合法
+                X-->>G: 原值与位置
+                G->>G: 尾部hash/权限复核
+                G-->>P: current原值证据，语义unverified
+            end
+        end
+    end
+    Note over P,G: 调用者显式修正再调用；宿主不删项/改hash/自动重试

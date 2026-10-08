@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"></head><body><template><style>
+#scene-01-work{position:absolute;inset:0;width:1920px;height:1080px;background:#f7f5f2;color:#18212d;overflow:hidden;font-family:inherit}
+#scene-01-work .header{position:absolute;left:48px;right:48px;top:20px;height:62px;display:flex;align-items:center;justify-content:space-between}
+#scene-01-work .chapter{font:400 22px "IBM Plex Mono","Slash Caption",monospace;color:#9c321e;letter-spacing:.04em}
+#scene-01-work h1{font-size:34px;font-weight:700;letter-spacing:-.025em;margin:0}
+#scene-01-work .footage{position:absolute;left:32px;top:91px;width:1856px;height:878px;object-fit:contain;background:#f7f5f2}
+#scene-01-work .footage-window{position:absolute;left:32px;top:91px;width:1856px;height:878px;overflow:hidden}
+#scene-01-work .focus{position:absolute;left:0;top:0;width:1856px;height:878px;transform-origin:100% 50%}
+#scene-01-work .focus .footage{left:0;top:0}
+#scene-01-work .repair-note{position:absolute;left:80px;top:152px;width:970px;height:790px}
+#scene-01-work .repair-note h2{font-size:56px;line-height:1.4;margin:0 0 28px}
+#scene-01-work .repair-note p{font-size:30px;line-height:1.65;margin:0 0 22px}
+#scene-01-work .repair-note p.small{font-size:26px;color:#455363}
+#scene-01-work .repair-note p.hash{font:400 21px "IBM Plex Mono",monospace;color:#455363}
+#scene-01-work .repair-mask{position:absolute;left:1218px;top:91px;width:568px;height:878px;overflow:hidden}
+#scene-01-work .repair-video{position:absolute;inset:0 auto auto -149px;width:864px;height:878px;object-fit:fill}
+#scene-01-work .repair-overview{position:absolute;left:32px;top:91px;width:1856px;height:878px;object-fit:contain;background:#f7f5f2}
+#scene-01-work .caption{position:absolute;inset:auto 48px 18px;width:1824px;height:76px;display:flex;align-items:center;justify-content:center;background:#f7f5f2}
+#scene-01-work .caption p{margin:0;font-size:30px;line-height:1.45;font-weight:700;letter-spacing:-.02em;text-align:center}
+#scene-01-work .progress{position:absolute;bottom:0;left:0;width:1920px;height:4px;background:#d84a2a;transform-origin:left center}
+#scene-01-work .evidence-still{position:absolute;left:48px;top:205px;width:1152px;height:620px;object-fit:contain}
+#scene-01-work .editorial{position:absolute;left:1280px;top:220px;width:560px}
+#scene-01-work .eyebrow{color:#9c321e;font-size:23px;margin:0 0 20px}
+#scene-01-work h2{font-size:70px;line-height:1.3;font-weight:700;letter-spacing:-.05em;margin:0 0 30px}
+#scene-01-work .editorial p:not(.eyebrow){font-size:28px;line-height:1.7}
+#scene-01-work .editorial p.small{font-size:23px;color:#455363}
+#scene-01-work .evidence-slide{position:absolute;top:140px;left:80px;width:1760px;height:790px;display:flex;align-items:center;justify-content:center}
+#scene-01-work .evidence-slide img{width:1080px;max-height:720px;object-fit:contain}
+#scene-01-work .evidence-slide .closing{position:absolute;left:220px;top:320px;font-size:48px;line-height:1.7;font-weight:700}
+#scene-01-work-export img{position:absolute;top:150px;width:1760px;max-width:1760px}
+#scene-01-work-export .closing{top:360px}
+#scene-01-work .fixture-label{position:absolute;top:99px;left:80px;font-size:22px;color:#455363;margin:0}
+</style><section data-hf-id="hf-hfmb" id="scene-01-work" data-composition-id="scene-01-work" data-width="1920" data-height="1080"><div data-hf-id="hf-4y7z" class="header"><span data-hf-id="hf-hisb" class="chapter">01 / 资料到成果</span><h1 data-hf-id="hf-rvpp">PM 的工作，从已有资料开始</h1></div><div data-hf-id="hf-akzq" class="footage-window"><div data-hf-id="hf-twnw" id="scene-01-work-focus" class="focus" data-layout-allow-overflow=""><video data-hf-id="hf-rxjy" id="scene-01-work-video" class="clip footage" src="assets/footage/01-work.mp4" muted data-start="0" data-duration="20" data-track-index="0"></video></div></div><div data-hf-id="hf-p2wl" id="scene-01-work-caption-0" class="clip caption" data-start="0" data-duration="7" data-track-index="2"><p data-hf-id="hf-l8rm">slash：把资料、需求和原型放进同一个工作流程。</p></div>
+<div data-hf-id="hf-sy27" id="scene-01-work-caption-1" class="clip caption" data-start="7" data-duration="7" data-track-index="2"><p data-hf-id="hf-gcw2">三份成果来自真实模型基线；本片交互输入均为合成示例。</p></div>
+<div data-hf-id="hf-klbr" id="scene-01-work-caption-2" class="clip caption" data-start="14" data-duration="6" data-track-index="2"><p data-hf-id="hf-8sj1">看成果，也看它依据什么、还有哪些未确认。</p></div><div data-hf-id="hf-ci7o" id="scene-01-work-progress" class="progress" aria-hidden="true"></div></section><script>{const tl=gsap.timeline({paused:true});
+// Registry staggered-fade-up integration: finite opacity/y reveal on actual copy.
+tl.fromTo('#scene-01-work-caption-0 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},0.1);
+tl.fromTo('#scene-01-work-caption-1 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},7.1);
+tl.fromTo('#scene-01-work-caption-2 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},14.1);
+
+tl.fromTo('#scene-01-work-progress',{scaleX:0},{scaleX:1,duration:20,ease:'none'},0);
+window.__timelines=window.__timelines||{};window.__timelines['scene-01-work']=tl;}</script></template></body></html>

@@ -1,0 +1,13 @@
+flowchart TD
+    Response[Pi 当前 prompt 的真实结果] --> HostCancelled{Service 记录宿主取消?}
+    HostCancelled -->|用户停止| Cancelled[cancelled / 无错误 / 不自动续写]
+    HostCancelled -->|超时等明确宿主原因| HostFailure[failed / 保留宿主原因]
+    HostCancelled -->|否| Outcome{当前助手 stopReason}
+    Outcome -->|aborted| Aborted[MODEL_RESPONSE_ABORTED / 保留 Pi errorMessage]
+    Outcome -->|error| Error[MODEL_RESPONSE_ERROR / 保留 Pi errorMessage]
+    Outcome -->|length| Interrupted[interrupted / 保留部分回复和草稿]
+    Outcome -->|stop| Complete[进入已有成功或方案确认流程]
+    Aborted --> Failed[failed / 现有脱敏 / 保存检查点]
+    Error --> Failed
+    Failed --> Resume[用户显式继续前核对已完成与结果未知操作]
+    Interrupted --> Resume

@@ -1,0 +1,8 @@
+flowchart LR
+    Navigation[项目与会话导航] --> Conversation[主工作面：正文与输入]
+    Conversation -->|打开成果或文件| Preview[独立预览与阅读]
+    Preview -->|关闭预览| Conversation
+    Conversation -->|按需打开| Details[详情 / 成果 / 文件]
+    Conversation --> Summary[简要执行状态]
+    Summary -->|展开| Evidence[工具记录 / 来源 / 恢复点]
+    Summary -->|需要处理| Action[待确认方案 / 权限请求 / 错误与恢复]

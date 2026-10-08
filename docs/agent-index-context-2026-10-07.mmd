@@ -1,0 +1,12 @@
+flowchart TD
+  Disk[磁盘完整AGENTS与原全文hash] --> Parser[复用人工与managed分区parser]
+  Parser --> Manual[人工规则完整保留]
+  Parser --> Managed[自动索引只读投影]
+  Managed --> Small{managed是否超过6000字符}
+  Small -->|否| Original[原样注入]
+  Small -->|是| Summary[真实路径与目录计数摘要 partial]
+  Manual --> Pi[既有Pi运行时]
+  Original --> Pi
+  Summary --> Pi
+  Summary --> Receipt[原hash与投影hash及计数回执]
+  Pi --> Lookup[既有授权工具按需查读]

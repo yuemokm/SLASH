@@ -1,0 +1,14 @@
+flowchart LR
+  Catalog[精确匹配 Pi 模型目录] --> Resolve[统一解析模型能力与来源]
+  Metadata[可信上游元数据快照] --> Resolve
+  Manual[用户手动覆盖] --> Resolve
+  Unknown[无法识别：明确标记兼容值] --> Resolve
+  Resolve --> Pi[Pi AgentSession]
+  Sources[Slash 按需选择资料 / 权限与来源回执] --> Pi
+  Pi --> Context[Pi 上下文计算 / 原生压缩 / 有界恢复]
+  Context --> Model[模型响应]
+  Model --> Events[本 prompt 的真实响应事件]
+  Events --> Status[Slash 任务状态与继续入口]
+  Pi --> Tools[Slash 工具网关]
+  Tools --> Guard[参考原件只读 / 处理副本 / ChangeSet]
+  Context -. 压缩状态事件 .-> Status

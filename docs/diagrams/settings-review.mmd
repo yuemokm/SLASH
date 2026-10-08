@@ -1,0 +1,15 @@
+flowchart LR
+  Settings[设置] --> General[通用：主题]
+  Settings --> Workspace[工作空间：目录和访问]
+  Workspace --> Share[高级：共享锁期限]
+  Settings --> Models[模型：连接和默认模型]
+  Models --> Routing[高级：按任务分工]
+  Routing --> Auto[会话模型：自动按设置选择]
+  Models --> Fixed[会话模型：手动固定配置]
+  Settings --> Quality[质量检查：在线文档门槛]
+  Settings --> Connections[连接：CLI / MCP]
+  Connections --> Manual[高级：手动调用工具]
+  Settings --> Permissions[权限与审批]
+  Permissions --> Children[高级：辅助任务限制]
+  Settings --> Archive[归档会话]
+  Search[搜索设置项] --> Settings

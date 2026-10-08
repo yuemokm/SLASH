@@ -1,0 +1,45 @@
+flowchart TB
+    User["B 端产品经理"] --> Workbench["slash 工作台<br/>会话 · 项目导航 · 成果预览"]
+
+    subgraph Business["七项业务能力"]
+        Inbox["1 需求收件箱<br/>文本 · 文件 · 链接 · 截图"]
+        Clarify["2 调研与需求澄清<br/>来源证据 · 待确认问题 · 决策"]
+        Solution["3 方案工作台<br/>流程 · 角色 · 权限 · 字段 · 规则"]
+        Prototype["4 HTML 原型与页面说明<br/>交互 · 角色状态 · 模拟数据"]
+        Review["5 评审助手<br/>完整性 · 一致性 · 可验收性"]
+        Change["6 变更分析<br/>影响范围 · 差异 · 关联修改"]
+        Knowledge["7 产品知识库<br/>术语 · 业务规则 · 历史决策"]
+    end
+
+    Workbench --> Inbox
+    Workbench --> Solution
+    Workbench --> Knowledge
+    Inbox --> Clarify --> Solution --> Prototype
+    Solution --> Review
+    Prototype --> Review --> Change
+    Change --> Solution
+    Change --> Prototype
+    Clarify -->|"确认后沉淀"| Knowledge
+    Knowledge -->|"带版本引用"| Clarify
+
+    Package["可选设计包：逻辑成果集合<br/>会话统一编辑 · 跨授权目录检索<br/>需求 · 证据 · 关联 · 版本"]
+    Solution --- Package
+    Prototype --- Package
+    Review --- Package
+    Change --- Package
+    Clarify --- Package
+
+    Resources["资源中心<br/>文档模板 · 界面规范 · draw.io 规范<br/>参考资料 · 素材 · 共享资源"]
+    Resources --> Clarify
+    Resources --> Solution
+    Resources --> Prototype
+
+    Delivery["成果与交付中心<br/>版本检查 · 导出 · 发布 · 结果追踪"]
+    Package --> Delivery
+    Delivery --> Files["本地交付<br/>Markdown · Word · draw.io<br/>HTML 构建包 · 源项目"]
+    Delivery --> Online["在线交付<br/>钉钉 / 飞书文档<br/>MCP 发布原型链接"]
+
+    Foundation["基础能力<br/>工作空间 · 规则与设置 · Pi 会话<br/>工具连接 · 任务状态 · 权限 · 版本"]
+    Foundation -.-> Workbench
+    Foundation -.-> Resources
+    Foundation -.-> Delivery

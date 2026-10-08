@@ -1,0 +1,11 @@
+flowchart LR
+  UI[已有共享页面] --> Local[本机共享账号与权限]
+  UI --> Peer[已连接映射与凭据]
+  Local --> CAS[共享路径与授权指纹核对]
+  CAS --> Admin[固定提权脚本]
+  Admin --> Receipt[成功/回滚/结果未知]
+  Peer --> Target[盘符与UNC目标核对]
+  Target --> Remove[仅断开所选映射]
+  Remove --> Reconnect[可选新凭据重连]
+  Reconnect --> Verify[重新核对映射与读写]
+  Verify --> Mount[更新工作空间可用状态]

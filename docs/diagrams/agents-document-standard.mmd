@@ -1,0 +1,11 @@
+flowchart LR
+  Legacy[旧 agent.md] --> Migrate[核对快照并迁移 / 合并]
+  Existing[已有人工 AGENTS.md] --> Migrate
+  Migrate --> Document[单一 AGENTS.md]
+  Resources[资源变化] --> Auto[更新自动索引区域]
+  Rules[人工规则编辑] --> Manual[更新人工区域]
+  Auto --> Queue[同项目写入队列与内容复核]
+  Manual --> Queue
+  Queue --> Document
+  Document --> Read[任务前同步并读取]
+  Read --> Runtime[人工规则 + 单份索引进入 Pi]

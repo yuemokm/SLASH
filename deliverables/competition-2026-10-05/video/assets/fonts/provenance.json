@@ -1,0 +1,210 @@
+{
+  "source": "HyperFrames downloaded Noto Sans JP cache",
+  "notice": "Existing WOFF2 subsets selected by actual caption glyph coverage; font bytes unchanged.",
+  "records": [
+    {
+      "name": "400-normal-38de2d94d44b.woff2",
+      "weight": 400,
+      "bytes": 37872,
+      "characters": 158
+    },
+    {
+      "name": "400-normal-249094f15a2e.woff2",
+      "weight": 400,
+      "bytes": 32124,
+      "characters": 30
+    },
+    {
+      "name": "400-normal-9bc24f0e1fae.woff2",
+      "weight": 400,
+      "bytes": 31044,
+      "characters": 27
+    },
+    {
+      "name": "400-normal-b15557f34a62.woff2",
+      "weight": 400,
+      "bytes": 30872,
+      "characters": 18
+    },
+    {
+      "name": "400-normal-529ff90565b5.woff2",
+      "weight": 400,
+      "bytes": 28544,
+      "characters": 13
+    },
+    {
+      "name": "400-normal-dcd5cf001c1d.woff2",
+      "weight": 400,
+      "bytes": 24648,
+      "characters": 7
+    },
+    {
+      "name": "400-normal-5be5c5e58a2a.woff2",
+      "weight": 400,
+      "bytes": 13004,
+      "characters": 4
+    },
+    {
+      "name": "400-normal-6fbce291d6c3.woff2",
+      "weight": 400,
+      "bytes": 19704,
+      "characters": 4
+    },
+    {
+      "name": "400-normal-226f32c429a0.woff2",
+      "weight": 400,
+      "bytes": 18860,
+      "characters": 3
+    },
+    {
+      "name": "400-normal-2aa8a057c6ad.woff2",
+      "weight": 400,
+      "bytes": 17320,
+      "characters": 3
+    },
+    {
+      "name": "400-normal-156d0867f7d8.woff2",
+      "weight": 400,
+      "bytes": 19984,
+      "characters": 2
+    },
+    {
+      "name": "400-normal-46e6f111171e.woff2",
+      "weight": 400,
+      "bytes": 22068,
+      "characters": 2
+    },
+    {
+      "name": "400-normal-5803a176eb2e.woff2",
+      "weight": 400,
+      "bytes": 20956,
+      "characters": 2
+    },
+    {
+      "name": "400-normal-ea23463ba7c3.woff2",
+      "weight": 400,
+      "bytes": 74796,
+      "characters": 2
+    },
+    {
+      "name": "400-normal-3891194d6f6c.woff2",
+      "weight": 400,
+      "bytes": 16524,
+      "characters": 1
+    },
+    {
+      "name": "400-normal-c4b77a6fc38d.woff2",
+      "weight": 400,
+      "bytes": 21444,
+      "characters": 1
+    },
+    {
+      "name": "400-normal-e660293a3396.woff2",
+      "weight": 400,
+      "bytes": 18308,
+      "characters": 1
+    },
+    {
+      "name": "700-normal-38de2d94d44b.woff2",
+      "weight": 700,
+      "bytes": 37872,
+      "characters": 158
+    },
+    {
+      "name": "700-normal-249094f15a2e.woff2",
+      "weight": 700,
+      "bytes": 32124,
+      "characters": 30
+    },
+    {
+      "name": "700-normal-9bc24f0e1fae.woff2",
+      "weight": 700,
+      "bytes": 31044,
+      "characters": 27
+    },
+    {
+      "name": "700-normal-b15557f34a62.woff2",
+      "weight": 700,
+      "bytes": 30872,
+      "characters": 18
+    },
+    {
+      "name": "700-normal-529ff90565b5.woff2",
+      "weight": 700,
+      "bytes": 28544,
+      "characters": 13
+    },
+    {
+      "name": "700-normal-dcd5cf001c1d.woff2",
+      "weight": 700,
+      "bytes": 24648,
+      "characters": 7
+    },
+    {
+      "name": "700-normal-5be5c5e58a2a.woff2",
+      "weight": 700,
+      "bytes": 13004,
+      "characters": 4
+    },
+    {
+      "name": "700-normal-6fbce291d6c3.woff2",
+      "weight": 700,
+      "bytes": 19704,
+      "characters": 4
+    },
+    {
+      "name": "700-normal-226f32c429a0.woff2",
+      "weight": 700,
+      "bytes": 18860,
+      "characters": 3
+    },
+    {
+      "name": "700-normal-2aa8a057c6ad.woff2",
+      "weight": 700,
+      "bytes": 17320,
+      "characters": 3
+    },
+    {
+      "name": "700-normal-156d0867f7d8.woff2",
+      "weight": 700,
+      "bytes": 19984,
+      "characters": 2
+    },
+    {
+      "name": "700-normal-46e6f111171e.woff2",
+      "weight": 700,
+      "bytes": 22068,
+      "characters": 2
+    },
+    {
+      "name": "700-normal-5803a176eb2e.woff2",
+      "weight": 700,
+      "bytes": 20956,
+      "characters": 2
+    },
+    {
+      "name": "700-normal-ea23463ba7c3.woff2",
+      "weight": 700,
+      "bytes": 74796,
+      "characters": 2
+    },
+    {
+      "name": "700-normal-3891194d6f6c.woff2",
+      "weight": 700,
+      "bytes": 16524,
+      "characters": 1
+    },
+    {
+      "name": "700-normal-c4b77a6fc38d.woff2",
+      "weight": 700,
+      "bytes": 21444,
+      "characters": 1
+    },
+    {
+      "name": "700-normal-e660293a3396.woff2",
+      "weight": 700,
+      "bytes": 18308,
+      "characters": 1
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+release/
+.test-data/
+*.log
+*.sqlite*
+.env*
+
+# Local backups and generated presentation captures
+.dev-backups/
+.capture/
+deliverables/**/output/
+deliverables/**/build/
+.hyperframes/

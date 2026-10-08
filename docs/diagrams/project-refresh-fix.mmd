@@ -1,0 +1,9 @@
+flowchart TD
+    A[Renderer初始化 旧localStorage项目甲] --> B[读取projects元数据]
+    B --> C[宿主currentProjectId项目乙]
+    C --> D[显示乙会话和待确认Plan]
+    B --> E[派生导航条目 只读 不调用project]
+    F[用户明确点击切换甲] --> G[project IPC]
+    G --> H[Service保存乙分区并打开甲]
+    I[真实Plan恢复] --> J[核验同Run 同会话 原件hash]
+    J --> K[planConfirm 不重发Plan]

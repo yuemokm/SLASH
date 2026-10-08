@@ -1,0 +1,20 @@
+flowchart TD
+  A[模型 get_task_acceptance] --> B[严格 section filter cursor 输入]
+  B --> C[同会话 工作空间 授权 合同及读取版本核对]
+  C --> D[文件版本 sourceId 分组\n一次读取 readId 独立]
+  D --> E[登记来源链按文件去重 hash\nTXT current 不等于Excel chain current]
+  E --> F{摘要或所选详情}
+  F -->|默认| G[真实ID有限预览 状态 问题\n全部类别数量和分页入口]
+  F -->|reads PRD冻源| H[所选原回执字段几何核验\n共享预算 不合并证明]
+  F -->|其他详情| I[冻结条目或报告投影\n报告重复proof指向reads]
+  E -->|来源链过期或撤权| J[隐藏旧原值与来源衍生引文\n各section同一保护边界]
+  G --> K[整个JSON最多12000字符]
+  H --> K
+  I --> K
+  J --> K
+  K --> L{完整条目能否装入}
+  L -->|能| M[完整 data]
+  L -->|不能| N[原JSON连续UTF16片段\nitemHash offset 未完整标记]
+  N --> O[真实nextCursor继续\n最后片段才前移条目]
+  O --> B
+  P[UI IPC Domain 历史存储] --> Q[保持原完整视图与合同\n同source重选复用原冻回执]

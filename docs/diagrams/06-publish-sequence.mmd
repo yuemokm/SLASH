@@ -1,0 +1,23 @@
+sequenceDiagram
+    actor User as 产品经理
+    participant UI as 工作台
+    participant App as 业务服务
+    participant Gate as 工具网关
+    participant Provider as 发布适配器 / MCP
+    User->>UI: 发布选定原型版本
+    UI->>App: PublishArtifact(versionId, targetId)
+    App->>App: 检查授权、能力、构建清单
+    App->>App: 保存 Operation(prepared)
+    App->>Gate: 执行发布(operationId)
+    Gate->>Provider: 发布不可变构建产物
+    alt 返回可核对的成功回执
+        Provider-->>Gate: deploymentId / URL
+        Gate-->>App: succeeded
+        App->>App: 保存回执并投影 DeliveryRecord
+        App-->>UI: DeliveryPublished
+    else 超时或连接中断
+        Gate-->>App: outcome_unknown
+        App->>Provider: 有能力时查询原操作状态
+        Provider-->>App: 已成功 / 已失败 / 仍未知
+        App-->>UI: 核对结果或待人工核对
+    end

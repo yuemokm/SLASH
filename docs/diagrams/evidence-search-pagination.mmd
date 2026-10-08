@@ -1,0 +1,16 @@
+flowchart TD
+    A[主代理或子代理 search_files] --> B[严格校验 query / mountId / limit / offset / version]
+    B --> C[复核现有授权和子代理目录 / 能力 / 白名单]
+    C --> D[枚举前限定 mountId]
+    D --> E[原有扫描预算内读取与真实命中排序]
+    E --> F[读取前 / 后 / 返回前复核授权]
+    F --> G[生成当前查询与文件版本 hash]
+    G --> H{旧页版本一致?}
+    H -->|否| I[明确拒绝并要求第一页重搜]
+    H -->|是或第一页| J[完整条目与有界诊断计入整个 JSON 预算]
+    J --> K{下一完整条目能放入?}
+    K -->|否且一条也无法放入| L[明确单项超预算 不跳过命中]
+    K -->|可返回整页| M[items + coverage + limitations + nextOffset + version]
+    M --> N{nextOffset 非空?}
+    N -->|是| A
+    N -->|否| O[当前已发现命中结束 仍保留扫描覆盖限制]

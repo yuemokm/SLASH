@@ -1,0 +1,17 @@
+flowchart TD
+  HTML[当前 HTML 内容与版本] --> MIME[过滤非 JavaScript script MIME]
+  MIME --> Native[保留原生 submit/reset/summary 与 HTML 路径]
+  MIME --> AST[Acorn 有界只读 AST 解析]
+  AST --> Proof[按具体控件证明 lookup/helper/alias/委托绑定]
+  AST --> Limits[动态或跨脚本变更/解析失败/预算限制]
+  Proof --> Bound[bound：仅语法绑定，不证明行为正确]
+  Proof --> Absent[完整可判范围无绑定：unbound]
+  Limits --> Unknown[unknown：明确 warning，不声称无实现]
+  Absent --> Block[真实缺入口继续 blocking]
+  Native --> Report[新静态报告 slash-quality-4]
+  Bound --> Report
+  Unknown --> Report
+  Block --> Report
+  Report --> Browser[原严格浏览器与内容审查继续]
+  History[旧版本 static evidence] --> Stale[只在读取副本标 stale/unverified]
+  Stale --> Preserve[历史原件不改，不自动重跑]

@@ -1,0 +1,11 @@
+flowchart TD
+  Create[新建或打开项目] --> Detect{已有结构}
+  Detect -->|新项目| Default[skills / 模板 / 参考资料]
+  Detect -->|旧默认且无待应用编辑| Migrate[更新默认分类]
+  Detect -->|自定义| Preserve[保留结构与内容]
+  Migrate --> Clean[精确识别未修改内置文件并清理]
+  Default --> Empty[只建空目录]
+  Clean --> Index[同步 agent.md 资料索引]
+  Empty --> Index
+  Preserve --> Index
+  Index --> Run[任务前读取索引]

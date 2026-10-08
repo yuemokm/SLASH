@@ -1,0 +1,31 @@
+flowchart TD
+  User[真实用户输入与追加指令] --> Contract[冻结原始输入与候选验收要求]
+  Sources[只读来源快照与PRD假设] --> Contract
+  Draft[草稿changeId与内容hash] --> Dependencies[同目录依赖复用预览格式规则 文档仍独立检查]
+  Dependencies --> Snapshot[宿主授权快照 保留owner及hash与base冲突检查]
+  Applied[正式成果与内容hash] --> Snapshot
+  Contract --> Static[复用适用静态检查]
+  Snapshot --> Static
+  Contract --> Cases[复用真实原型与业务检查器]
+  Snapshot --> Cases
+  Baseline[冻结旧关键用例] --> Regression[独立回归检查]
+  Snapshot --> Regression
+  Static --> Report[宿主不可变验收报告]
+  Cases --> Report
+  Regression --> Report
+  Snapshot --> Packet[冻结真实成果与已读来源及请求]
+  Sources --> Packet
+  Contract --> Packet
+  Packet --> Review[同配置Pi无工具独立审查]
+  Review --> Bound[宿主绑定原句与版本及覆盖限制]
+  Bound --> Report
+  Report --> Auto[具体自动检查结果]
+  Report --> Coverage[业务覆盖与假设尚待核对]
+  Change[用户输入或文件与来源版本变化] --> Stale[旧记录失效为未验证]
+  Report --> Stale
+  Report --> Repairable{确定性失败或已绑定局部候选且预算允许}
+  Repairable -->|至多两轮| Pi[原Pi session修正草稿]
+  Pi --> Snapshot
+  Saved[用户显式保存] --> Applied
+  Saved --> Rebind[绑定实际正式hash重新检查]
+  Rebind --> Snapshot

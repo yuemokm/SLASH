@@ -1,0 +1,9 @@
+flowchart LR
+  Token[WindowsIdentity当前进程SID] --> Lookup[只读SID规范账号与用户/组类型]
+  Local[Get-LocalUser / CIM fallback] --> Match[按SID关联与去重]
+  Lookup --> Match
+  ACL[共享显式ACL SID与类型] --> Select[仅当前SID的个人Allow匹配]
+  Match --> Select
+  Select --> Granted[已有个人授权：更新当前账号]
+  Select --> NoGrant[无个人授权：添加当前并保留现有组]
+  Select --> Unknown[身份未知或Deny：明确提示与手输]

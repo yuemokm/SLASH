@@ -1,0 +1,20 @@
+flowchart LR
+  Source[参考原件：只读] --> Read[授权阅读]
+  Source --> Copy[创建带后缀处理副本 / 记录源哈希]
+  Copy --> Working[过程目录工作副本]
+  Working --> Extract[受控格式解析]
+  Working --> Sandbox[隔离 JavaScript：仅副本数据]
+  Working -->|不支持直接预览| Metadata[只注入已核验副本元数据 / 正文未提取]
+  Metadata -->|Build 后续处理| Sandbox
+  Extract --> Output[带后缀新输出 / 不覆盖]
+  Sandbox --> Output
+  Write[草稿 / 恢复 / 导出] --> Guard[统一路径保护]
+  Guard -->|参考目标：拒绝| Source
+  Guard -->|授权成果目标| Output
+  Context[历史 + 新输入 + 系统与工具说明] --> Budget[预算检查 / 必要时一次 Pi 压缩]
+  Budget -->|仍不足| Explain[明确提示减少引用或新会话]
+  Budget -->|可发送| Payload[最终请求生成预算复核]
+  Payload --> Model[模型响应]
+  Model --> Reason[核对停止原因]
+  Reason -->|完整| Done[完成]
+  Reason -->|输出上限| Resume[保留部分内容 / 等待继续]

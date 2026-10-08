@@ -1,0 +1,25 @@
+flowchart TB
+  UI[桌面界面：会话 / 资源 / 成果 / 设置] --> IPC[类型化 IPC]
+  IPC --> HOST[Slash 应用服务：Run 与业务状态]
+  HOST --> CTX[上下文装配：规则 / AGENTS.md / 检索 / Skills]
+  CTX --> PI[Pi 0.86.1：模型循环 / 原生会话 / 压缩 / 重试]
+  HOST --> INPUT[运行中补充与排队输入]
+  INPUT --> PI
+  PI --> GW[工具网关：模式 / 权限 / 参数 / 预算 / 脱敏]
+  GW --> FILES[授权文件读取 / 图片读取 / 处理副本]
+  GW --> DRAFT[草稿 / 版本哈希 / ChangeSet]
+  DRAFT --> QUALITY[质量检查 / 原型浏览器验收]
+  QUALITY --> DELIVERY[交付门禁 / 外部操作账本]
+  GW --> EXT[MCP / CLI / 网页]
+  DELIVERY --> EXT
+  PI --> OBS[真实运行事件：重试 / 压缩 / 上下文 / 队列]
+  OBS --> UI
+  HOST --> DB[(SQLite：Run / 审批 / 操作 / 事件 / 产品记录)]
+  PI --> SESSION[(Pi JSONL：模型上下文)]
+  DRAFT --> DISK[(项目文件 / 草稿 / 历史版本)]
+  FUTURE[后续：独立执行进程 / 完整子 Agent / 跨机共享锁 / 系统评估集]
+  HOST -.架构演进.-> FUTURE
+  classDef repair fill:#fff0d6,stroke:#b7781f,color:#302412
+  classDef later fill:#eeeeee,stroke:#888888,color:#333333
+  class CTX,INPUT,FILES,OBS repair
+  class FUTURE later

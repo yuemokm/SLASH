@@ -1,0 +1,14 @@
+flowchart TD
+  Agent[Pi Agent] --> Vision{选定模型确认支持图片?}
+  Vision -->|否| Reject[明确拒绝/提示选择视觉模型]
+  Vision -->|是| Gateway[现有工具网关/当前授权]
+  Gateway --> File[read_image: Files路径+二进制+版本复核]
+  Gateway --> Runner[run_prototype_acceptance: 沙箱Chromium]
+  Runner --> Evidence[成果哈希+case+CSS视口+截图哈希]
+  Evidence --> Read[read_prototype_screenshot受控入口]
+  Read --> Verify[授权+绑定+保存图片哈希复核]
+  File --> Image[真实Pi image content]
+  Verify --> Image
+  File --> Receipt[只存元数据的读取回执]
+  Verify --> Receipt
+  Receipt --> UI[工作台实际加载记录]

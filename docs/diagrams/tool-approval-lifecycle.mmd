@@ -1,0 +1,16 @@
+flowchart TD
+    Run[Run 保存模式与权限快照] --> Gate[Plan / 明确 deny / Run 活跃检查]
+    Gate --> Decision{能力策略与模式}
+    Decision -->|正常 allow / 完全访问 ask| Execute[工具执行与目录原件版本校验]
+    Decision -->|标准 ask| Pending[审批记录 + 真实 waiter + 截止时间]
+    Pending --> UI[只呈现当前活跃 pending 卡片]
+    UI --> Resolve[处理决定前复核 waiter / Run / 截止 / 当前策略]
+    Resolve -->|有效允许| Execute
+    Resolve -->|有效拒绝| Denied[denied 终态]
+    Resolve -->|迟到 / 重复 / 冲突| Result[实际终态与友好提示，无新权限或重执行]
+    Pending -->|取消 / 结束 / 关闭| Cancelled[cancelled 终态]
+    Pending -->|超时 / 重启| Expired[expired 终态]
+    Execute --> History[保存真实执行与授权记录]
+    Denied --> History
+    Cancelled --> History
+    Expired --> History

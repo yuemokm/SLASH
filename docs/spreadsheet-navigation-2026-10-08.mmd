@@ -1,0 +1,21 @@
+flowchart TD
+    A[既有Pi locate_spreadsheet] --> G[workspace_read网关 / Plan只读允许]
+    G --> V[共用登记原件/副本/应用TXT链核验]
+    V --> X[同一安全包校验/解析/原样序列化]
+    X --> M{导航模式}
+    M -- sheets --> S[真实名称/隐藏状态/行列数\n完整条目预算分页]
+    M -- rows --> R[指定表/列窗口真实位置\n原文512字符/格及精确offset]
+    M -- find_rows --> N[指定名称列批量字面查找\n命中行与显式类别/对象格整体分页]
+    N --> E
+    R --> Q{字面query}
+    Q -- 有 --> L[有界扫描/每格首命中片段\n其它出现位置未列出]
+    Q -- 无 --> T[长格/稀疏行按cursor继续]
+    S --> E[尾部字节/权限/取消复核]
+    L --> E
+    T --> E
+    E --> C[current位置导航\n全文未读 / 语义未确认]
+    C --> P[模型返回边界：相同默认元数据只说明一次\n原文/例外/来源/游标无损，较小页保持原格式]
+    P --> F[既有read_spreadsheet_field_evidence\n严格字段/列头/值关系核验]
+    C -. 不生成字段证据 .-> U[fullBodyRead=false\nfieldRelationshipVerified=false]
+    W[当前工作流首包] --> V
+    S --> B[目录仅元数据 included=0\n沿用4000/16000预算与真实cursor]

@@ -1,0 +1,22 @@
+flowchart TB
+    User["产品经理"] --> Chat["会话：任务与确认卡"]
+    User --> Settings["设置弹窗：模型 / 连接 / 权限 / 目录 / 任务与回执"]
+    Chat --> Pi["Pi SDK + 自定义工具"]
+    Pi --> Gateway["工具网关：策略、当前授权、操作记录"]
+    Settings --> Policy["权限策略与目录授权"]
+    Policy --> Gateway
+    Gateway -->|询问| Approval["绑定当前操作的待确认项"]
+    Approval --> Chat
+    Chat -->|批准 / 拒绝| Approval
+    Approval --> Gateway
+    Gateway --> Files["文件工具：草稿、版本、冲突检查"]
+    Gateway --> Web["有边界的网页读取"]
+    Gateway --> Process["本机进程：当前 Windows 用户权限"]
+    Gateway --> Registry["统一 CLI / MCP 注册表"]
+    Settings --> Registry
+    Registry --> Settings
+    Registry --> Adapter["CLI / MCP 调用与回执"]
+    Settings --> Models["模型列表 + 接口协议 + 系统加密凭据"]
+    Models --> Pi
+    User --> Wizard["共享向导：选择目录 / 粘贴邀请"]
+    Wizard --> Windows["系统检测 + SMB 创建 / 普通用户盘符"]

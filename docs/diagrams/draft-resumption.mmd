@@ -1,0 +1,20 @@
+flowchart TD
+  input[恢复按钮或精确继续词] --> exact{继续词条件匹配最新 Run?}
+  exact -->|普通输入或不匹配| send[普通 send；不可接管旧草稿]
+  exact -->|匹配或恢复按钮| parent{同会话 failed/interrupted 可恢复且已退出?}
+  parent -->|否| reject[拒绝恢复]
+  parent -->|是| scope{模式权限项目一致且无未知结果?}
+  scope -->|否| reject
+  scope -->|是| link[执行前建立新 Run 父关系]
+  link --> reason{model_output_limit?}
+  reason -->|是| bounded[保留完整目标；先完整小范围工具调用、等回执后逐块]
+  reason -->|否| metadata[附受限授权草稿定位清单；无正文]
+  bounded --> metadata
+  metadata --> read[read_draft 取得最新 ID 与 hash]
+  read --> chain{草稿来自显式安全祖先链?}
+  chain -->|否| denied[DRAFT_OTHER_RUN]
+  chain -->|是| edit{精确 ID/hash 正式基线与资源锁核对}
+  edit -->|缺 ID| iderror[DRAFT_ID_REQUIRED；不写入]
+  edit -->|冲突| conflict[VERSION_CONFLICT；不转移]
+  edit -->|通过| commit[原卡增量提交；转移所有者并记来源历史]
+  commit --> review[待审完整成果；独立验证后应用版本]

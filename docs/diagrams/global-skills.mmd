@@ -1,0 +1,22 @@
+flowchart TD
+  Settings[设置：全局技能] --> Manage[宿主技能管理服务]
+  Chat[会话安装请求] --> Gate[Build 与现有权限网关]
+  Gate --> Manage
+  Local[本地技能目录] --> Copy[只读复制原始资料]
+  GitHub[公开 GitHub 仓库或子目录] --> Download[固定提交并核对文件哈希]
+  Copy --> Validate[路径、容量和 SKILL.md 校验]
+  Download --> Validate
+  Manage --> Copy
+  Manage --> Download
+  Validate --> Registry[Slash userData/global-skills]
+  Registry --> UI[来源、启停、更新、卸载]
+  Registry --> Snapshot[每次任务冻结有效技能范围与版本]
+  Project[项目技能：同名优先] --> Discover[复用 Pi loadSkills 发现]
+  Snapshot --> Discover
+  Discover --> Context[描述进入 Pi 上下文]
+  Context --> Load[按任务加载正文与 references]
+  Load --> Recheck[授权、版本与只读范围复核]
+  Recheck --> Evidence[实际读取回执]
+  Recheck --> Pi[现有 Pi 会话与工具循环]
+  Pi --> Tools[原有工具权限：安装不自动执行脚本]
+  Registry --> Recovery[持久锁和 journal：恢复或明确报错]

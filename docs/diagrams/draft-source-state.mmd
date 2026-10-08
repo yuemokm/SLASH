@@ -1,0 +1,15 @@
+flowchart TD
+  read[read_draft核对当前状态] --> state{同文件存在授权pending?}
+  state -->|是| pending[source=pending；返回ID和hash]
+  pending --> edit[传当前ID/hash增量修改原卡]
+  pending --> apply[用户可在生成中应用；记录apply_draft来源]
+  apply --> reread[重新read_draft]
+  reread --> state
+  state -->|否| formal[source=applied；正式文件；无ID]
+  formal --> old{edit仍传历史ID?}
+  old -->|是| stale[DRAFT_ID_STALE；无写入；要求重读并省略ID]
+  stale --> reread
+  old -->|否| hash{最新hash及正式基线/资源锁匹配?}
+  hash -->|否| conflict[VERSION_CONFLICT；不覆盖]
+  hash -->|是| new[以当前正式文件为基线创建新pending卡]
+  new --> read

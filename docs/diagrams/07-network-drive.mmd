@@ -1,0 +1,16 @@
+flowchart LR
+    subgraph Owner["创建者电脑"]
+        OwnerApp["slash<br/>选择目录、设置授权、复制邀请"]
+        Helper["受限提权助手<br/>创建共享、配置权限"]
+        SMB["Windows SMB 服务<br/>账号认证、共享权限"]
+        Folder["指定本地文件夹<br/>文件系统权限"]
+        OwnerApp --> Helper --> SMB --> Folder
+    end
+    subgraph Peer["同事电脑"]
+        PeerApp["slash<br/>解析邀请、选择盘符、认证"]
+        Mapper["DriveMappingManager<br/>当前桌面用户、持久映射"]
+        Explorer["此电脑 / 资源管理器<br/>共享资源 P:"]
+        PeerApp --> Mapper --> Explorer
+    end
+    OwnerApp -.->|"复制格式化文本"| PeerApp
+    Explorer <-->|"SMB 文件访问"| SMB

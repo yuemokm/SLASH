@@ -1,0 +1,17 @@
+flowchart TD
+    Request[Build 请求处理登记副本] --> Guard[核验副本、权限、项目和取消状态]
+    Guard --> Lookup[按来源版本、副本版本、格式、解析器版本查找]
+    Lookup -->|可信且实际已应用| Verify[重新核对原件、旧副本、输出与请求副本]
+    Verify -->|有效| Reuse[返回原登记链和复用说明<br/>不新增草稿、不产生阅读回执]
+    Verify -->|旧文件缺失或变化| Parse[内置解析]
+    Verify -->|撤权或未知错误| Refuse[明确失败，不返回旧结果]
+    Lookup -->|未命中、无可信标记或未应用| Parse
+    Parse --> Package[原有 Office 包与资源限额校验]
+    Package --> Docx[Mammoth 结构转换<br/>SAX 有界标题、列表和表格渲染]
+    Package --> Xlsx[原有 XLSX 提取]
+    Docx --> Draft[生成处理文本草稿<br/>保留诊断与来源链]
+    Xlsx --> Draft
+    Draft --> Trusted[内置路径登记可信版本索引]
+    Trusted --> Apply[原有显式应用流程]
+    Apply -.-> Lookup
+    Docx -.-> Future[后续未实现：明确模板选择<br/>成果绑定、结构验收和有限修正]

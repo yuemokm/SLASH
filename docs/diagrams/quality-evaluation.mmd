@@ -1,0 +1,15 @@
+flowchart TD
+  Originals[用户真实业务原件 只读] --> Hash[原件SHA256与隔离副本]
+  Hash --> Parser[既有Office解析器 仅处理副本]
+  Parser --> Facts[工作表 单元格 流程 阶段独立核验]
+  Facts --> Manifest[16条基准 提示与独立预期 来源模型技能代码版本]
+  Manifest --> Unknown[离线预检 未执行指标unknown]
+  Manifest --> Gate[显式单case run与allow-cloud 防重复锁]
+  Gate --> IPC[隐藏隔离Electron 官方IPC Pi与工具网关]
+  IPC --> Draft[实际模型草稿]
+  Draft --> Apply[官方保存 版本哈希 前后差异]
+  Apply --> Review[独立人工与浏览器检查 实际证据文件]
+  Review --> Score[满足 违背 未知 缺项 耗时 人工修改次数]
+  Hash --> Protect[原件 副本 提取文本前后哈希保护]
+  IPC --> Protect
+  Protect --> Score

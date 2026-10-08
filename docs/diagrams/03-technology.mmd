@@ -1,0 +1,30 @@
+flowchart TB
+    subgraph Client["本机：Windows / Electron 安装包"]
+        subgraph Views["展示层"]
+            UI["React + TypeScript<br/>工作台、编辑器、任务状态"]
+            Preview["独立 WebContents<br/>HTML 交互预览"]
+        end
+        Bridge["Preload / contextBridge<br/>白名单、类型化 IPC、运行时校验"]
+        Main["Electron Main<br/>窗口、生命周期、进程管理"]
+        App["Node / TypeScript 业务服务<br/>设计包、版本、资源、交付<br/>单一任务调度与事件记录"]
+        Agent["Pi SDK 工作进程<br/>AgentRuntime 适配<br/>上下文、会话、模型事件"]
+        Gateway["ToolGateway<br/>策略检查、Operation 记录、取消和超时"]
+        Jobs["按任务启动的工作进程<br/>解析、Pandoc、HTML 构建与检查"]
+        Adapters["集成适配器<br/>MCP、官方 CLI、共享提供方"]
+        Data["本地存储<br/>工作空间文件、版本快照<br/>SQLite、Pi 会话、系统凭据"]
+        UI --> Bridge --> Main --> App
+        Main --> Preview
+        App <--> Agent
+        App --> Gateway
+        Agent --> Gateway
+        Gateway --> Jobs
+        Gateway --> Adapters
+        App --> Data
+        Jobs --> Data
+        Jobs -->|"loopback 预览服务"| Preview
+    end
+    Agent <-->|"HTTPS"| Model["模型 API"]
+    Adapters <-->|"stdio / Streamable HTTP"| MCP["draw.io 及发布 MCP"]
+    Adapters --> CLI["本机 lark-cli / dws"]
+    CLI <-->|"HTTPS"| Cloud["飞书 / 钉钉"]
+    Adapters <-->|"SMB + 当前用户盘符映射"| Share["同事设备上的共享资源<br/>资源管理器可直接访问"]

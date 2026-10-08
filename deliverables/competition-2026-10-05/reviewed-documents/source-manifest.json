@@ -1,0 +1,19 @@
+{
+  "authorship": "本对话助手协助的人工审阅建议；非真实云模型Run结果",
+  "formalWorkspaceModified": false,
+  "basedOnHashes": {
+    "PRD.md": "ccfe7a5bfbe8d04f0e9d5e837beada05d1e28905ea8d30a7c93f6d9c33efb82e",
+    "约束对照.md": "7da9c5b2857ebb88dde114aa507f773abd245c3fa670631002d3632c1f0243c2",
+    "index.html": "9533e2dc10ab5bc094b6141d8275c54fe69e98de42f4a42464cd23e323b51d73"
+  },
+  "suggestions": {
+    "suggested-PRD.md": {
+      "sha256": "634e24d5a0486b1393607a5b3bee2232b91d425f4b18d150327df2cb4cf4be8c",
+      "bytes": 20687
+    },
+    "suggested-constraints.md": {
+      "sha256": "7780c265ef29caf4fe1084a8833d2bfdb8b99ef4ef1902c4fa173bf470c575d0",
+      "bytes": 6812
+    }
+  }
+}

@@ -1,0 +1,19 @@
+flowchart TD
+  A[同一已解析模型 maxTokens] --> B[仅验证限额
+请求上限保持配置值]
+  C[Service 原字符选段
+完整 snapshot 与 partial 不变] --> D[冻结 input 与 prompt hash]
+  D --> E[原 ModelRuntime.completeSimple
+同模型协议思考与 signal 无工具]
+  B --> E
+  E --> F[Pi 原生上下文 clamp
+provider thinking policy]
+  D -. 公开 normalize 与 estimate .-> G[hostPiEstimatedInputTokens]
+  B -. 同 packet 基础 clamp .-> H[hostPiBaseClampedOutputTokens]
+  G -. 仅宿主估计 .-> I[可选安全 responseDiagnostics]
+  H -. 并非上游实际 token .-> I
+  F --> J{正常 stop 且严格协议及真引用有效}
+  J -->|否| K[未验证
+不因 length 或格式添加重试]
+  J -->|是| L[模型审查结果
+业务人工确认仍独立]

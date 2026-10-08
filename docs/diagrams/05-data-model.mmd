@@ -1,0 +1,12 @@
+erDiagram
+    WORKSPACE ||--o{ DESIGN_PACKAGE : contains
+    DESIGN_PACKAGE ||--o{ REQUIREMENT : scopes
+    DESIGN_PACKAGE ||--o{ ARTIFACT : produces
+    ARTIFACT ||--o{ ARTIFACT_VERSION : versions
+    ARTIFACT_VERSION ||--o{ DELIVERY_RECORD : delivers
+    DESIGN_PACKAGE ||--o{ RUN : executes
+    RUN ||--o{ OPERATION : invokes
+    RUN ||--o{ CHANGE_SET : proposes
+    REQUIREMENT ||--o{ EVIDENCE_REF : cites
+    EVIDENCE ||--o{ EVIDENCE_REF : supports
+    ARTIFACT ||--o{ ARTIFACT_LINK : relates

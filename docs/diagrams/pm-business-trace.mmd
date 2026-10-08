@@ -1,0 +1,18 @@
+flowchart LR
+  Sources[只读资料 / 登记副本提取文本] --> Read[授权读取]
+  Read --> Pi[Pi 研究与生成]
+  Pi --> Gate[工具网关 / Plan与Build权限]
+  Gate --> Rules[需求候选规则 / 来源原文快照]
+  Gate --> Draft[ChangeSet / 成果版本]
+  Draft --> Bind[规则到成果位置的版本绑定]
+  Rules --> Check[只读核对：哈希与原文定位]
+  Bind --> Check
+  Check --> Current[证据版本有效 / 业务待人工核对]
+  Check --> Stale[版本变化 / 未定位 / 未关联 / 不可读]
+  Current --> UI[既有工作问题中的折叠明细]
+  Stale --> UI
+  UI --> Human[PM 核对业务与真实交互]
+  Human --> Pi
+  Rules --> History[旧候选及绑定保留]
+  History --> New[同字段维度阶段的替代候选]
+  New --> Rules

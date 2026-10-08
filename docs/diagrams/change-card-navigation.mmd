@@ -1,0 +1,13 @@
+flowchart TD
+  Card[会话成果卡片] --> Click{文件名操作}
+  Click -->|普通点击| Preview[沿用查看草稿或保存版本]
+  Click -->|Ctrl 左键 / Ctrl Enter| IPC[changeReveal 仅传修改 ID]
+  IPC --> Change[主进程从当前修改读取挂载和相对路径]
+  Change --> Guard{挂载有效且路径与链接在授权范围内}
+  Guard -->|否| Deny[拒绝定位并提示原因]
+  Guard -->|是| Exists{目标文件存在}
+  Exists -->|是| Select[资源管理器选中文件]
+  Exists -->|否| Parent[查找最近已有且授权内的父目录]
+  Parent --> Open[打开目录并提示尚未保存或文件不存在]
+  Card -->|pending 显式保存到项目| Apply[沿用 apply 权限 / 锁 / 版本检查]
+  Apply --> Saved[已保存版本 / 无保存按钮]

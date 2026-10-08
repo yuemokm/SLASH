@@ -1,0 +1,46 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"></head><body><template><style>
+#scene-05-repair{position:absolute;inset:0;width:1920px;height:1080px;background:#f7f5f2;color:#18212d;overflow:hidden;font-family:inherit}
+#scene-05-repair .header{position:absolute;left:48px;right:48px;top:20px;height:62px;display:flex;align-items:center;justify-content:space-between}
+#scene-05-repair .chapter{font:400 22px "IBM Plex Mono","Slash Caption",monospace;color:#9c321e;letter-spacing:.04em}
+#scene-05-repair h1{font-size:34px;font-weight:700;letter-spacing:-.025em;margin:0}
+#scene-05-repair .footage{position:absolute;left:32px;top:91px;width:1856px;height:878px;object-fit:contain;background:#f7f5f2}
+#scene-05-repair .footage-window{position:absolute;left:32px;top:91px;width:1856px;height:878px;overflow:hidden}
+#scene-05-repair .focus{position:absolute;left:0;top:0;width:1856px;height:878px;transform-origin:100% 50%}
+#scene-05-repair .focus .footage{left:0;top:0}
+#scene-05-repair .repair-note{position:absolute;left:80px;top:152px;width:970px;height:790px}
+#scene-05-repair .repair-note h2{font-size:56px;line-height:1.4;margin:0 0 28px}
+#scene-05-repair .repair-note p{font-size:30px;line-height:1.65;margin:0 0 22px}
+#scene-05-repair .repair-note p.small{font-size:26px;color:#455363}
+#scene-05-repair .repair-note p.hash{font:400 21px "IBM Plex Mono",monospace;color:#455363}
+#scene-05-repair .repair-mask{position:absolute;left:1218px;top:91px;width:568px;height:878px;overflow:hidden}
+#scene-05-repair .repair-video{position:absolute;inset:0 auto auto -149px;width:864px;height:878px;object-fit:fill}
+#scene-05-repair .repair-overview{position:absolute;left:32px;top:91px;width:1856px;height:878px;object-fit:contain;background:#f7f5f2}
+#scene-05-repair .caption{position:absolute;inset:auto 48px 18px;width:1824px;height:76px;display:flex;align-items:center;justify-content:center;background:#f7f5f2}
+#scene-05-repair .caption p{margin:0;font-size:30px;line-height:1.45;font-weight:700;letter-spacing:-.02em;text-align:center}
+#scene-05-repair .progress{position:absolute;bottom:0;left:0;width:1920px;height:4px;background:#d84a2a;transform-origin:left center}
+#scene-05-repair .evidence-still{position:absolute;left:48px;top:205px;width:1152px;height:620px;object-fit:contain}
+#scene-05-repair .editorial{position:absolute;left:1280px;top:220px;width:560px}
+#scene-05-repair .eyebrow{color:#9c321e;font-size:23px;margin:0 0 20px}
+#scene-05-repair h2{font-size:70px;line-height:1.3;font-weight:700;letter-spacing:-.05em;margin:0 0 30px}
+#scene-05-repair .editorial p:not(.eyebrow){font-size:28px;line-height:1.7}
+#scene-05-repair .editorial p.small{font-size:23px;color:#455363}
+#scene-05-repair .evidence-slide{position:absolute;top:140px;left:80px;width:1760px;height:790px;display:flex;align-items:center;justify-content:center}
+#scene-05-repair .evidence-slide img{width:1080px;max-height:720px;object-fit:contain}
+#scene-05-repair .evidence-slide .closing{position:absolute;left:220px;top:320px;font-size:48px;line-height:1.7;font-weight:700}
+#scene-05-repair-export img{position:absolute;top:150px;width:1760px;max-width:1760px}
+#scene-05-repair-export .closing{top:360px}
+#scene-05-repair .fixture-label{position:absolute;top:99px;left:80px;font-size:22px;color:#455363;margin:0}
+</style><section id="scene-05-repair" data-composition-id="scene-05-repair" data-width="1920" data-height="1080"><div class="header"><span class="chapter">05 / 反馈到修订 · 实际生成成果</span><h1>经反馈修订，再实际复验</h1></div><div id="scene-05-repair-note" class="clip repair-note" data-start="4" data-duration="46" data-track-index="0"><p class="eyebrow">真实HTML · 局部反馈修订</p><h2>失败可复现<br>输入未丢失<br>调整后可重试</h2><p>经3轮局部修订后<br><b>13项独立界面交互通过</b></p><p class="small">只针对所列HTML交互。<br>PRD与约束对照需单独核对；<br>模拟不代表后台业务已验收。</p><p class="hash">HTML 9533e2dc10ab…b51d73</p></div><div class="repair-mask"><video id="scene-05-repair-video" class="clip repair-video" src="assets/footage/05-repair-compact.mp4" muted data-start="0" data-duration="50" data-track-index="0"></video></div><img id="scene-05-repair-overview" class="clip repair-overview" src="assets/footage/05-application.png" alt="当前HTML在实际应用中的来源全景" data-start="0" data-duration="4" data-track-index="1"><div id="scene-05-repair-caption-0" class="clip caption" data-start="0" data-duration="5" data-track-index="2"><p>实际HTML经3轮局部修订；先明确本次验证的成果版本。</p></div>
+<div id="scene-05-repair-caption-1" class="clip caption" data-start="5" data-duration="7" data-track-index="2"><p>本地模拟服务失败后，名称与详细地址输入仍然保留。</p></div>
+<div id="scene-05-repair-caption-2" class="clip caption" data-start="12" data-duration="5" data-track-index="2"><p>修改详细地址，旧服务错误即时清除。</p></div>
+<div id="scene-05-repair-caption-3" class="clip caption" data-start="17" data-duration="10" data-track-index="2"><p>关闭失败开关，重试提交进入模拟成功。</p></div>
+<div id="scene-05-repair-caption-4" class="clip caption" data-start="27" data-duration="23" data-track-index="2"><p>13项独立HTML交互通过；PRD、约束对照与后台业务需分别核对。</p></div><div id="scene-05-repair-progress" class="progress" aria-hidden="true"></div></section><script>{const tl=gsap.timeline({paused:true});
+// Registry staggered-fade-up integration: finite opacity/y reveal on actual copy.
+tl.fromTo('#scene-05-repair-caption-0 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},0.1);
+tl.fromTo('#scene-05-repair-caption-1 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},5.1);
+tl.fromTo('#scene-05-repair-caption-2 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},12.1);
+tl.fromTo('#scene-05-repair-caption-3 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},17.1);
+tl.fromTo('#scene-05-repair-caption-4 p',{opacity:0,y:18},{opacity:1,y:0,duration:.5,ease:'power3.out'},27.1);
+
+tl.fromTo('#scene-05-repair-progress',{scaleX:0},{scaleX:1,duration:50,ease:'none'},0);
+window.__timelines=window.__timelines||{};window.__timelines['scene-05-repair']=tl;}</script></template></body></html>

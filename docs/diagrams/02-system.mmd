@@ -1,0 +1,41 @@
+flowchart TB
+    subgraph Desktop["本机：slash 桌面应用"]
+        UI["可信界面进程<br/>会话 · 资源 · 设计包 · 编辑器"]
+        Preview["独立原型预览进程<br/>无 Node 权限 · 无业务 IPC<br/>仅受控元素选择消息"]
+        Main["Electron 主进程<br/>窗口 · 生命周期 · 白名单 IPC"]
+        App["本地业务服务进程<br/>设计包 · 资源 · 变更 · 交付<br/>任务队列 · 恢复 · 事件分发"]
+        Agent["Agent 工作进程<br/>Pi SDK · 会话与压缩<br/>上下文组装 · Skills"]
+        Gate["工具执行网关<br/>参数校验 · 读写范围 · 操作授权<br/>超时取消 · 操作记录"]
+        Workers["任务工作进程<br/>文档解析 · 转换 · 原型构建<br/>预览服务 · 交互检查"]
+        MCP["MCP 适配层<br/>pi-mcp-adapter 候选<br/>连接 · 认证 · 工具发现"]
+        CLI["官方 CLI 适配层<br/>lark-cli · dws<br/>参数与结构化结果"]
+        Share["共享资源适配层<br/>Windows SMB + 网络驱动器映射<br/>盘符 · 身份认证 · 连接状态"]
+        FS[("本地工作空间<br/>设计包 · 源文件 · 快照 · 构建产物")]
+        DB[("本地 SQLite<br/>任务与操作记录 · 搜索索引<br/>会话映射 · 连接元信息")]
+        Secrets[("系统凭据存储<br/>密钥 / 凭据引用<br/>官方 CLI 自管登录")]
+    end
+
+    UI <-->|"类型化 IPC"| Main
+    Main <-->|"请求与事件"| App
+    Main -->|"创建隔离视图"| Preview
+    App <-->|"启动 / 停止 / 流式事件"| Agent
+    Agent <-->|"模型请求；仅选定上下文"| Models["模型提供方 API"]
+    Agent -->|"工具请求"| Gate
+    App -->|"确定性操作"| Gate
+    Gate --> Workers
+    Gate --> MCP
+    Gate --> CLI
+    Gate --> Share
+    Gate -->|"受控文件操作"| FS
+    Workers -->|"指定输入与输出目录"| FS
+    Workers -->|"本地预览地址"| Preview
+    App --> FS
+    App --> DB
+    App --> Secrets
+    MCP --> Secrets
+
+    MCP <-->|"MCP"| Draw["draw.io 官方 MCP<br/>及其他已配置 MCP"]
+    MCP <-->|"发布 / 查询"| Host["原型托管服务<br/>发布 MCP 适配器"]
+    CLI <-->|"HTTPS"| Docs["飞书 / 钉钉"]
+    Share <-->|"局域网；仅指定资源"| Peer["同事共享目录 / 服务"]
+    Draw -->|"图表成果"| FS

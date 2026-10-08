@@ -1,0 +1,23 @@
+flowchart TD
+  S[Pi session 初始化完成] --> T{用户显式配置近期保留量?}
+  T -->|有| U[沿用用户原生配置]
+  T -->|无| V[仅当前 session 设置 min 原生默认值与窗口八分之一]
+  U --> A[Build 会话]
+  V --> A
+  A --> P[Pi 原生估算 切分 摘要 与有界恢复]
+  P --> B[read_draft / workspace_read]
+  B --> C[授权可写文本目标 / 最新当前 run pending]
+  C --> D[分页文本 + changeId + contentHash + baseHash]
+  D --> E[edit_draft / artifact_write + workspace_read]
+  E --> Q[调用与接收边界只投影 mountId/path 不把编辑参数传入成果目标]
+  Q --> R[修改前冻结已required或previous_verified旧基线]
+  R --> F[Pi mutation queue / applying / 资源锁含目录别名]
+  F --> G[宿主原文件版本与草稿 ID/hash 校验]
+  G --> H[Pi createEditToolDefinition / 内存 EditOperations]
+  H --> I[Pi 原生匹配与 diff / 暂存输出]
+  I --> J{取消 授权 原件版本 最终草稿 CAS}
+  J -->|失败| K[无新草稿 / 旧稿保持]
+  J -->|通过| L[同 ID 更新 pending / 保留原始 before]
+  L --> M[既有变更卡 / 用户应用]
+  M --> N[既有锁 版本备份 两次 hash 校验 Files.apply]
+  N --> O[正式文件或冲突保留]

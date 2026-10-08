@@ -1,0 +1,14 @@
+flowchart TD
+  start[单次任务尝试] --> policy[DEFAULT_RUN_LIMITS：30分钟 / 120工具调用]
+  policy --> run[使用Pi原生runtime与网络策略]
+  run --> tool{下一次调用计数 ≤ 120?}
+  tool -->|是| gateway[原能力网关：权限/版本/锁/取消检查]
+  gateway --> run
+  tool -->|否| toolLimit[TOOL_BUDGET_EXCEEDED；不执行第121次]
+  policy --> deadline[固定30分钟宿主截止时间]
+  deadline --> hostAbort[沿现有cancel路径中止runtime]
+  hostAbort --> timeLimit[TIME_BUDGET_EXCEEDED；保留准确原因]
+  toolLimit --> retain[保留草稿与恢复检查点；不自动重放]
+  timeLimit --> retain
+  run -->|用户停止| cancel[cancelled；不可恢复]
+  run -->|未知外部结果| reconcile[先核对结果，禁止盲目重试]

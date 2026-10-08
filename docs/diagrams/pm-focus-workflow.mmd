@@ -1,0 +1,20 @@
+flowchart LR
+  User[产品经理] --> Chat[会话：描述 / 引用 / 工作流]
+  Chat --> Plan[Plan 研究与方案确认]
+  Chat --> Build[Build 执行]
+  Plan -->|用户确认| Build
+  Sources[项目资料与成果版本] --> Read[授权读取与来源回执]
+  Read --> Plan
+  Read --> Build
+  Build --> Pi[Pi Agent 与受控工具网关]
+  Pi --> Draft[草稿 / ChangeSet]
+  Draft --> Check[适用的静态检查与问题提示]
+  Check --> Confirm[用户核对 / 应用修改]
+  Confirm --> Version[成果版本 / 确定性差异]
+  Version --> Preview[交互预览 / 文档阅读 / 局部引用]
+  Preview --> Chat
+  Version --> Deliver[本地导出 / CLI 或 MCP 交付]
+  Deliver --> Receipt[版本绑定回执 / 未知结果待核对]
+  Decisions[待确认事项与处理历史] <--> Chat
+  Decisions <--> Check
+  Settings[模型 / 连接 / 权限 / 高级参数] --> Pi

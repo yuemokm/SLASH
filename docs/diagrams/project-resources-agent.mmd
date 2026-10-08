@@ -1,0 +1,14 @@
+flowchart LR
+  Settings[设置] --> Prompt[已保存系统提示词]
+  Settings --> Tree[项目结构配置]
+  Tree --> Apply[校验并增建目录]
+  Apply --> Resources[资源子目录与成果子目录]
+  Resources --> Watch[变更监测与导入事件]
+  Watch --> Index[agent.md 管理区域]
+  Task[开始任务 / 确认 Plan / 恢复] --> Sync[同步并读取资料索引]
+  Index --> Sync
+  Prompt --> Runtime[Pi 会话]
+  Sync --> Runtime
+  Rules[AGENTS.md 与宿主权限] --> Runtime
+  Runtime --> Reply[回复与运行记录]
+  Reply --> Footer[复制 / 完成时间 / 耗时]

@@ -1,0 +1,10 @@
+flowchart LR
+  Original[只读原始资料] -->|登记版本| Copy[处理副本]
+  Copy -->|处理时版本| Extract[提取文本草稿]
+  Extract --> Changes[应用 ChangeSet]
+  Changes --> Rule[规则引用文本位置]
+  Rule --> Check[按需核对版本链]
+  Original --> Check
+  Copy --> Check
+  Check --> Status[有效 / 变化 / 无法完整核对]
+  Status --> Conversation[回会话重新读取和提取]

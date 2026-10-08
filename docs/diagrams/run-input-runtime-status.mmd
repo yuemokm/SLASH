@@ -1,0 +1,24 @@
+flowchart TD
+  U[用户明确追加文字] --> H[同Run严格IPC / UUID幂等 / 有界输入]
+  H --> Q[(Slash SQLite: queued与发送意图)]
+  Q --> A[检查冻结模式/模型与当前授权]
+  A --> S[复用授权技能准备]
+  S --> P[Pi原生steer / followUp]
+  P --> N[真实用户message_start + ID/hash匹配]
+  N --> D[(Slash: delivered回执)]
+  P --> J[(Pi原生会话消息文件)]
+  Q --> X[取消/撤权/任务结束: clearQueue并清除异步迟插入]
+  X --> C[cancelled或unknown; 不自动重放]
+  Q --> R[重启: 未确认queued转unknown]
+  R --> C
+  P --> E[真实重试/压缩/摘要/token事件白名单]
+  E --> T[(Run快照 + 既有安全事件日志)]
+  T --> V[简洁运行提示 + 折叠记录]
+  D --> V
+  C --> V
+  P --> F[Pi当前prompt结束]
+  F --> K[停止接收追加 / finish队列]
+  K --> B[拒绝未完成的准备审批]
+  B --> W[等待迟到提交并清旧session队列]
+  W --> O[发布终态并同步回复完成字段/检查点/active退出]
+  J -. 独立存储; 非原子checkpoint .-> D

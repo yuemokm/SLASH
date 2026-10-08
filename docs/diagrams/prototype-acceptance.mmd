@@ -1,0 +1,23 @@
+flowchart LR
+  PM[产品经理] --> Chat[会话定义候选验收场景]
+  Chat --> Pi[Pi Agent]
+  Pi --> Gateway[模式与权限网关]
+  Gateway --> Spec[工作空间用例定义与修订]
+  PM --> Confirm[确认当前验收范围]
+  Confirm --> Spec
+  Preview[HTML 成果预览] --> Run[执行原型验收]
+  Gateway --> Run
+  Spec --> Run
+  Files[已授权成果与来源] --> Snapshot[宿主不可变快照与哈希]
+  Snapshot --> Run
+  Run --> Browser[隔离浏览器：固定操作与断言]
+  Browser --> Evidence[宿主结果与截图]
+  Evidence --> Quality[既有 QualityReport 仓库]
+  Files --> Freshness[重新核对版本与权限]
+  Spec --> Freshness
+  Quality --> Freshness
+  Freshness --> Preview
+  Preview -->|失败证据| Chat
+  Freshness --> Gate[现有交付门禁]
+  Confirm --> Gate
+  Gate --> Delivery[绑定版本的交付]

@@ -1,0 +1,27 @@
+flowchart TD
+  Source[选择真实来源与版本] --> Guard[原有授权与文件变化复核]
+  Guard --> Hash[完整原件或版本SHA256回执]
+  Hash --> Kind{来源类型}
+  Kind -->|change_summary| Diff[真实旧新内容与确定性差异]
+  Kind -->|metadata_only| Metadata[仅元数据：正文未提取]
+  Kind -->|普通来源| Preview[正文预览：每来源4000字符 / 总16000字符]
+  Kind -->|当前登记XLSX提取TXT| CatalogGuard[宿主验证原件 / 副本 / 已应用输出链]
+  CatalogGuard -->|current且页预算足够| Catalog[真实sheet目录 / producer预算分页 / 保留nextCursor]
+  CatalogGuard -->|不适用或预算不足| Preview
+  CatalogGuard -->|权限 / 取消 / 版本错误| Error[向上传递失败]
+  Catalog --> CatalogReceipt[目录JSON计入4k/16k / 正文included=0 / truncated=true]
+  CatalogReceipt --> Locate[已有locate_spreadsheet按对象与行定位]
+  Locate --> Pi
+  Preview --> Coverage[总字符 / 实际包含字符 / truncated]
+  Coverage --> Partial{当前版本且部分正文}
+  Partial -->|是| Next[宿主nextRead：字符偏移 / 12000 / 正文hash]
+  Partial -->|否| Limited[完整正文或历史片段状态]
+  Next --> Read[已有read_file字符分页]
+  Read --> Recheck[原有授权 / hash / 取消复核]
+  Recheck --> Receipt[实际正文与真实覆盖回执]
+  Diff --> Pi[Pi原生循环与上下文机制]
+  Metadata --> Pi
+  Limited --> Pi
+  Receipt --> Pi
+  Pi --> Status[真实终态与未验证项]
+  Preview -. 字符预览上限不保证供应商容量 .-> Pi

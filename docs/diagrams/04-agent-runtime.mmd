@@ -1,0 +1,21 @@
+flowchart LR
+    Intent["用户目标 / 页面操作"] --> Run["业务服务创建 Run<br/>状态、阶段、尝试次数"]
+    Run --> Plan["任务计划卡<br/>范围、步骤、验收提示"]
+    Plan --> Context["ContextBuilder<br/>规则、技能、证据、成果引用"]
+    Context --> Pi["Pi SDK 主 Agent"]
+    Pi --> Gateway["ToolGateway<br/>策略、授权、操作日志"]
+    Gateway --> Tools["业务工具 / 文件工具<br/>MCP / CLI / 构建与检查"]
+    Tools --> Draft["任务草稿目录"]
+    Draft --> Checks["结构与交互校验"]
+    Checks --> Change["ChangeSet<br/>差异、影响、基准版本"]
+    Change --> Commit["业务服务提交新版本"]
+    Tools -->|"结构化结果"| Pi
+    Checks -->|"修复意见，有次数上限"| Pi
+    Pi -->|"事件"| Run
+    Pi -->|"流式增量"| StreamUI["会话流式视图<br/>Decrypted Text · Markdown"]
+    StreamUI --> Follow["消息末尾跟随锚点<br/>动画帧合并滚动<br/>手动上滚可暂停"]
+
+    PlanMode["研究型 Plan Run<br/>只读资料/知识库/网页工具<br/>禁止写入、执行和外部发布"] --> Proposal["模型方案选项 + 自定义编辑<br/>awaiting_plan"]
+    Proposal -->|用户确认原样输入| BuildRun["Build Run<br/>权限快照 + 来源 Plan"]
+    BuildRun --> Gateway
+    Full["权限模式：standard / accept_edits / full_access<br/>显式 deny 始终优先"] --> Gateway

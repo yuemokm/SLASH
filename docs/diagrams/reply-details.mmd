@@ -1,0 +1,11 @@
+flowchart LR
+  Reply[助手回复 / 真实流式回复] --> Footer[复制 / 时间 / 两个功能按钮]
+  Footer -->|点击生成与执行| Exact[该消息的 runId]
+  Exact --> Lazy[按 ID 读取检查点]
+  Lazy --> Execution[执行 / 来源 / 方案 / 恢复操作]
+  Footer -->|点击工作记录与项目历史| Conversation[当前会话相关记录]
+  Conversation -->|显式查看项目历史| Project[当前项目记录]
+  Anchor[尚无正文的待处理 Run] --> Footer
+  Anchor --> Placement[按 startedAt 插回原任务位置]
+  Placement --> History[对应用户消息之后 / 历史时间位置]
+  Host[审批 / 草稿 / 运行状态] --> Visible[必要操作继续可见]

@@ -1,0 +1,11 @@
+flowchart LR
+    Rail[全局导航：图标与文字] --> Projects[可收起的项目与会话列表]
+    Projects --> Chat[会话：正文与多行输入]
+    Rail --> Files[项目资源 / 成果 / 模板]
+    Files --> Preview[文件预览：标题与工具 / 正文]
+    Preview -->|引用文件、选段或元素| Chat
+    Chat --> Status[任务摘要与待处理动作]
+    Status -->|按需展开| Evidence[计划 / 来源 / 执行记录 / 变更]
+    Preview --> Reports[质量报告 / 差异 / 历史 / 交付]
+    Rail --> Settings[设置：居中双栏面板]
+    Settings --> Form[新增 / 编辑表单：固定头尾与独立滚动]

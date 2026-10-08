@@ -1,0 +1,14 @@
+flowchart TD
+  A[模型工具输入] --> B[统一 io input JSON Schema]
+  B --> C[Pi 校验及宿主严格 Zod 解析]
+  C --> D{真实目标身份}
+  D -->|错误 artifactId 或路径冲突| E[保留失败并说明身份区别\n草稿无需先应用或注册]
+  D -->|mountId path draft 或真实 artifact| F[授权及真实 Change owner 检查]
+  F --> G{已存在规格或历史}
+  G -->|无| H[不读取依赖树\n无可复用执行请求]
+  G -->|有| I[共享一次有界快照\n入口 依赖 原件基线 hash]
+  I -->|版本不可核验| J[unavailable 原因\n历史失效报告仍可查看]
+  I -->|当前可核验| K[canonical target 和 runRequest\n不等于来源有效或验收通过]
+  K --> L[执行时再次核对授权 规格 来源 hash]
+  L -->|来源变更或取消| M[浏览器不执行\n保留未知或陈旧证据]
+  L -->|有效| N[既有浏览器验收与报告\n业务含义仍独立核对]

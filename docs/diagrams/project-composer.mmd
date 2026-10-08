@@ -1,0 +1,11 @@
+flowchart LR
+  Composer[输入区模型菜单] --> Route[确定本次模型配置]
+  Route --> Capability[能力解析与快照]
+  Catalog[Pi 已适配目录] --> Capability
+  Metadata[上游只读模型元数据] --> Capability
+  Capability --> Known[已确认档位]
+  Capability --> Unknown[未知或不支持：说明原因]
+  Known --> Slider[离散滑块]
+  Slider --> Validate[发送前校验]
+  Validate --> Pi[Pi 会话与协议适配]
+  Pi --> Run[运行记录与恢复]

@@ -1,0 +1,20 @@
+flowchart TD
+    A[显式源profile 只读模型字段与密文] --> B[全新隔离profile与合成MD/xlsx]
+    B --> C[真实Electron初始化 safeStorage解密]
+    C --> D[Plan读取MD 待确认 无成果写入]
+    D --> E[真实planConfirm 仅PRD]
+    E --> F[Excel处理副本与提取文本登记]
+    F --> G[测试操作员按真实回执应用过程txt]
+    G --> H[PRD单草稿 校验范围后apply]
+    H --> I[HTML生成 真实草稿apply 保存基线快照]
+    I --> J[明确反馈40改30 read_draft/edit_draft]
+    J --> K[真实apply 版本与原件hash核对]
+    K --> L[关闭重启 只读恢复检查 不重发任务]
+    L --> M[独立读取PRD与实际HTML DOM验收]
+    M --> O[具体反馈 纯文本渲染与完整超长输入]
+    O --> P[唯一第五Run 真实read/edit增量草稿]
+    P --> Q[核验范围后apply 保存text-safe-html与历史版本]
+    Q --> R[独立DOM复验 与执行回执分开]
+    E --> N[任何失败或超时 保留真实终态 不自动重试]
+    I --> N
+    J --> N

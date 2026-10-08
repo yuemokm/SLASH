@@ -1,0 +1,20 @@
+flowchart TD
+  Brief[用户范围 / 现有界面 / 实际读取的规范] --> Design[简短设计判断与任务状态]
+  Saved[已保存协作提示] --> Match{精确匹配已知旧默认?}
+  Match -->|是 / 只读解析| Default[当前默认建议 / 不写回保存记录]
+  Match -->|否| Custom[原样保留自定义提示]
+  Default --> Advice[新任务接受时固定提示 / 原型工作流建议]
+  Custom --> Advice
+  Pending[已接受任务的固定快照] -->|保持原内容| Design
+  Advice --> Design
+  Design --> First[write_draft 保存紧凑可运行首稿]
+  First --> Read[read_draft 同一待应用稿 / 最新哈希]
+  Read --> Edit[edit_draft 分区补齐内容与交互]
+  Edit --> Complete{用户范围已补齐?}
+  Complete -->|否| Read
+  Complete -->|是| Review[查看真实渲染 / 检查任务与边界状态]
+  Review -->|发现问题| Read
+  Review --> Report[说明待应用 / 已验证 / 未验证与缺失]
+  Report --> Apply[用户应用成果]
+  Apply --> Acceptance[已有原型验收工具执行具体用例]
+  Acceptance --> Evidence[版本绑定行为结果 / 视觉与业务分别评审]
