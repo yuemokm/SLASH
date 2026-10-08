@@ -1,10 +1,25 @@
+# Dependencies and build outputs
 node_modules/
 dist/
 release/
+*.tsbuildinfo
+
+# Local test data and reports
 .test-data/
+coverage/
+playwright-report/
+test-results/
 *.log
 *.sqlite*
+
+# Local environment configuration (allow sanitized examples)
 .env*
+!.env.example
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini
 
 # Local backups and generated presentation captures
 .dev-backups/
