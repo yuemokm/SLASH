@@ -1,8 +1,0 @@
-{
-  "referenceText": "这是 Slash，一个给产品经理用的 Agent。",
-  "text": "这是 Slash，一个给产品经理用的 Agent。给它参考资料，就可以让它帮你整理需求、写需求文档，或者改原型。生成之后，我们就在右侧预览，看看关键规则有没有遗漏。",
-  "language": "中英混合",
-  "cut": "按中文句号。切",
-  "speed": 1,
-  "referenceAudio": "reference-clear-warm-4.4s.wav"
-}

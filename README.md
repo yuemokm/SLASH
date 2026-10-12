@@ -73,7 +73,7 @@ scripts/       Development, verification, and maintenance scripts
 tests/         Automated tests
 docs/          Specifications, architecture, and verification records
 exa-results/   Research supporting product decisions
-deliverables/  Existing presentation and demonstration source materials
+knowledge-web/ Historical knowledge publishing source and compatibility contracts
 ```
 
 The renderer does not access files, SQL, or the shell directly. Agent tools go through the host gateway. Changes to multiple resources use version checks and resource locks; conflicting files must not be silently overwritten.
@@ -104,5 +104,7 @@ Read [`AGENTS.md`](AGENTS.md) before changing the project. Product behavior chan
 ## Repository hygiene
 
 [`.gitignore`](.gitignore) excludes dependencies, builds, test data, local backups, environment files, and generated presentation captures. Keep credentials and personal workspace data outside tracked files. Commit `package-lock.json` alongside dependency changes.
+
+Presentation materials (`deliverables/`), generated deliverables (`output/`), UI references (`ui参考/`), and root acceptance JSON reports are local files excluded from the repository and are not provided by cloning it. Engineering documents, research conclusions, development scripts, tests, and historical compatibility source remain tracked. Manual SFA replays require the original local materials; normal development and automated tests do not. See the [repository cleanup record](docs/repository-hygiene-2026-10-12.md).
 
 No project license has been added. Third-party components and assets retain their respective licenses.

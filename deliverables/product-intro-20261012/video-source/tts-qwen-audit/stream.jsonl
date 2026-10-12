@@ -1,2 +1,0 @@
-{"event": "heartbeat", "data": null}
-{"event": "complete", "data": [{"path": "/tmp/gradio/957d4467eb411340d0c51baff0ecc5605ca3d4e2628524a82e1e1cb5c1cc206a/audio.wav", "url": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/957d4467eb411340d0c51baff0ecc5605ca3d4e2628524a82e1e1cb5c1cc206a/audio.wav", "size": null, "orig_name": "audio.wav", "mime_type": null, "is_stream": false, "meta": {"_type": "gradio.FileData"}}, "Generation completed successfully!"]}

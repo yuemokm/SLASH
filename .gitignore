@@ -46,3 +46,15 @@ __pycache__/
 ~$*
 deliverables/**/.tts-local/
 deliverables/**/tts-local-cache/
+
+# Local presentation/reference materials and generated acceptance evidence
+/deliverables/
+/output/
+/ui参考/
+/docs/competition-demo-outline.md
+/contract-race-changed-evidence.json
+/contract-race-control-evidence.json
+/current-zip-byte-equality.json
+/default-registry-service-negative.json
+/lost-restart-evidence.json
+/mount-revoke-evidence.json

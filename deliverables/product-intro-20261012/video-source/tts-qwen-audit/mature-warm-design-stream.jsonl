@@ -1,2 +1,0 @@
-{"event": "heartbeat", "data": null}
-{"event": "complete", "data": [{"path": "/tmp/gradio/4fcbfb528ed384fe715de8d6ffbc4602063eefbe26e6339f1bf0528c1a044764/audio.wav", "url": "https://qwen-qwen3-tts.hf.space/gradio_api/file=/tmp/gradio/4fcbfb528ed384fe715de8d6ffbc4602063eefbe26e6339f1bf0528c1a044764/audio.wav", "size": null, "orig_name": "audio.wav", "mime_type": null, "is_stream": false, "meta": {"_type": "gradio.FileData"}}, "Voice design generation completed successfully!"]}
