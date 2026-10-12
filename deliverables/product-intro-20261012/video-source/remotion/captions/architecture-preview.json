@@ -1,0 +1,66 @@
+[
+  {
+    "text": "这些基础能力复用了 Pi 的 SDK，能少写一套模型接入和会话管理。",
+    "startMs": 400,
+    "endMs": 6937,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "OpenClaw 早期也用过 Pi。",
+    "startMs": 7137,
+    "endMs": 9543,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "一次任务是这样跑起来的。",
+    "startMs": 9743,
+    "endMs": 12585,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "你在会话里提出要求，Slash 把相关资料、规则和技能交给 Pi。",
+    "startMs": 12785,
+    "endMs": 18670,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "Pi 调用模型，决定下一步用哪个工具。",
+    "startMs": 18870,
+    "endMs": 22798,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "工具执行前，要先检查模式和文件权限。",
+    "startMs": 22998,
+    "endMs": 26926,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "读到的内容会回给模型，修改则先保存成草稿，经过检查和预览，再由用户确认。",
+    "startMs": 27126,
+    "endMs": 34533,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "任务状态、对话历史和文件版本分别保存，进度和结果回到会话里。",
+    "startMs": 34733,
+    "endMs": 41052,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  }
+]

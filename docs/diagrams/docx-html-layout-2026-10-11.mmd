@@ -1,0 +1,13 @@
+flowchart TD
+ A[已登记处理副本和真实内容hash] --> B[Office包安全校验]
+ B --> C[Mammoth生成HTML 无网络或OCR]
+ C --> D[Saxes保留原表 行 格 文本与跨度]
+ D --> E[按当前展开槽位预算验证矩形占用]
+ E -->|完整有效| F[转换HTML布局列与完整结构覆盖行 不是Word坐标]
+ E -->|冲突 越界 嵌套 空洞 超限| G[整表布局unknown 保留原文本和限制]
+ F --> H[原格旁附紧凑布局标识 不认定业务表头]
+ G --> I[Office解析v6 紧凑列标注 新缓存身份 不回填历史]
+ H --> I
+ I --> J[真实Agent读取覆盖仍待新任务证明]
+ K[Files.read授权DOCX宿主快照] --> C
+ K --> L[后续读取身份补丁 已接Office v6 真实模型收益待验]

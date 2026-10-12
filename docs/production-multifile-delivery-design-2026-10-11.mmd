@@ -1,0 +1,17 @@
+flowchart TD
+  Source[已授权真实项目与任务输出] --> Build[已有批准进程构建<br/>或原生静态无需构建]
+  Build --> Receipt[真实构建回执与源清单绑定]
+  Receipt --> Artifact[宿主不可变静态产物<br/>全部files字节与manifestHash]
+  Artifact --> Browser[同一快照浏览器检查]
+  Browser --> Review[当前报告人工核对<br/>不自动确认]
+  Artifact --> Local[同一bytes Map本地静态包]
+  Artifact --> Adapter[明确注册且验证的发布适配器]
+  Adapter --> Payload[宿主构造或完整核对payload<br/>逐文件和整个args绑定]
+  Review --> Approval[批准当前完整manifest版本]
+  Payload --> Approval
+  Approval --> Connect[已有MCP连接及catalog]
+  Connect --> SendGuard[真正callTool或dispatch前<br/>复验产物 / 来源 / 人审 / 权限]
+  SendGuard -->|全部当前| Publish[现有连接派发及真实线上验收]
+  SendGuard -->|变化 / 体积超限 / 证据缺失| Block[保留产物与事实<br/>不发送]
+  Publish -->|回执丢失| Unknown[结果未知不重试]
+  Scope[设计未实施<br/>单文件文本不等于多文件完成] --> Adapter

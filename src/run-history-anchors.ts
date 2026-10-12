@@ -4,12 +4,12 @@ import type { Message, Run } from "../shared/types";
 export function runHistoryAnchors(
   messages: readonly Message[],
   runs: readonly Run[],
-  { activeRunId, currentRunId }: { activeRunId?: string; currentRunId?: string },
+  { activeRunId, currentRunId, outputRunIds = [] }: { activeRunId?: string; currentRunId?: string; outputRunIds?: readonly string[] },
 ): Map<number, Run[]> {
   const associated = new Set(messages.filter(message => message.role === "assistant").map(message => message.runId));
   const anchors = new Map<number, Run[]>();
   const candidates = runs.filter(run => run.id !== activeRunId && !associated.has(run.id)
-    && (run.id === currentRunId || run.proposal?.status === "pending" || run.resumable || run.error));
+    && (outputRunIds.includes(run.id) || run.id === currentRunId || run.proposal?.status === "pending" || run.resumable || run.error));
   // Do not use updatedAt: restart/resume changes it without moving the original task.
   candidates.sort((a, b) => {
     const first = Date.parse(a.startedAt), second = Date.parse(b.startedAt);

@@ -1,0 +1,20 @@
+{
+  "checkedAtUtc": "2026-10-11T19:23:59.6101673Z",
+  "state": "awaiting_local_narration",
+  "finalMp4Exists": false,
+  "voiceAcceptedReference": "tts-qwen-audit/qwen-clear-warm-design.wav",
+  "finalNarrationEngine": null,
+  "architecture": {
+    "path": "remotion/public/architecture.mp4",
+    "durationSeconds": 30,
+    "sha256": "6c1c4a19d913b3287b375dd694b37aac9037ce00868200c80332593ca096b8b8"
+  },
+  "checks": {
+    "prdStill": "still-prd-focus-final.log exit0",
+    "typescript": "visual-typecheck-ready.log exit0",
+    "ownRenderProcessesClosed": true,
+    "modelStill": "still-model-focus-attempt2.log exit0"
+  },
+  "captionMethod": "Actual per-sentence WAV durations; no word-level transcription",
+  "originalProductCodeModified": false
+}

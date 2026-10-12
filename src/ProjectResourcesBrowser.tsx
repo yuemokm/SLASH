@@ -29,7 +29,7 @@ export function ProjectResourcesBrowser({kind,initialProjectId,navigationKey,cal
  const chooseCategory=(name:string)=>{setCategory(name);setFolder(categoryFolder(project,name));setQuery('');setPreview(undefined);previewRequest.current++;};
  const open=async(file:ProjectFileRef)=>{const request=++previewRequest.current;try{if(project?.current){await onOpen(file);}else{const result=await call({type:'projectReadDocument',projectId:file.projectId,mountId:file.mountId,path:file.path}) as ProjectDocumentView;if(previewRequest.current===request)setPreview(result);}}catch(error){onError(String((error as Error).message||error));}};
  return <section className="project-resource-browser" aria-label={kind==='resource'?'项目资源浏览':'项目成果浏览'}>
-  <div className="page-heading"><div><span className="eyebrow">{project?`项目 · ${project.name}`:'所有项目'}</span><h1>{kind==='resource'?'资源':'成果'}</h1><p className="muted">{project?`所属项目：${project.name} · ${project.root}`:'选择项目文件夹，按目录查看已授权文件。'}</p></div><button onClick={()=>setRevision(value=>value+1)}>刷新</button></div>
+  <div className="page-heading"><div><span className="eyebrow">{project?`项目 · ${project.name}`:'所有项目'}</span><h1>{kind==='resource'?'资源':'成果'}</h1><p className="muted">{project?project.root:'选择项目文件夹，按目录查看已授权文件。'}</p></div><button onClick={()=>setRevision(value=>value+1)}>刷新</button></div>
   <div className="project-browser-tabs" role="tablist" aria-label={kind==='resource'?'资源分类':'成果分类'}>
    <button role="tab" aria-selected={!category} onClick={()=>{chooseCategory('');setProjectId('');}}>项目目录</button>
    {availableCategories.map(name=><button key={name} role="tab" aria-selected={category===name} onClick={()=>chooseCategory(name)}>{name}</button>)}

@@ -1,0 +1,17 @@
+flowchart TD
+  Run[原始 Run 与 Change 记录] --> Exact[按 change.runId 归属]
+  Exact --> Active{活动 Run}
+  Active -->|是| Live[当前流式回复下唯一成果组]
+  Active -->|否且有助手回复| Last[所属 Run 最后一条回复下]
+  Active -->|否且无助手回复| Anchor[原任务时间处保留成果入口]
+  Live --> Card[查看 / 保存 / 冲突与版本保留]
+  Last --> Card
+  Anchor --> Card
+  Reply[回复末尾 生成与执行] --> Details[执行记录]
+  Details --> Runtime[运行状态 / 冻结配置 / 补充记录与清除]
+  Reply --> Attention[授权 / 错误 / 可继续 / 等待重试短提示]
+  Composer[适中且可增长的输入框] --> Main{任务活动}
+  Main -->|是| Stop[唯一主按钮 停止任务]
+  Main -->|是| Supplement[次要文字 加入补充 / Enter]
+  Main -->|否| Send[发送]
+  Supplement --> Enqueue[复用 runInputEnqueue]

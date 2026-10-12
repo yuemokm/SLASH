@@ -2,6 +2,9 @@ import {createHash} from 'node:crypto';
 import {businessPathKey} from './business-rules.js';
 import type {WorkflowSourceReceipt} from '../shared/types.js';
 import type {TaskAcceptanceView} from '../shared/task-acceptance.js';
+import type {TaskAcceptanceReport} from '../shared/task-acceptance.js';
+import type {VisualReviewReceipt} from '../shared/prototype-visual-review.js';
+import {isCurrentVisualReview} from './prototype-visual-review.js';
 import {TASK_MODEL_VIEW_LIMIT,taskModelViewResponseSchema,type TaskModelView,type TaskModelViewRequest,type TaskModelViewItem} from '../shared/task-acceptance-model-view.js';
 
 export const TASK_MODEL_VIEW_NOTICE='这里只是有界目录/所选详情。未展开要求与旧基线仍有效，partial不等于不存在。sourceId标识文件版本，readId标识一次读取；目录/多片段不累计成全文，字段几何证据不确认业务含义。encoding=json片段须按itemHash及offset取齐后解析，不是完整有效evidence。nextCursor原样续读，版本变化从第一页开始。';
@@ -19,8 +22,10 @@ export function taskModelSourceIndex(reads:TaskModelRead[]){const groups=new Map
 export function taskModelReportProjection(value:unknown):unknown{
  if(Array.isArray(value))return value.map(taskModelReportProjection);
  if(!value||typeof value!=='object')return value;
- return Object.fromEntries(Object.entries(value).map(([key,data])=>['spreadsheetEvidence','fieldEvidence'].includes(key)&&Array.isArray(data)?[key,{omitted:true,count:data.length,details:{section:'reads'},notice:'原字段证明请从对应readId按需核对，不从报告重复展开'}]:[key,taskModelReportProjection(data)]));
+ return Object.fromEntries(Object.entries(value).map(([key,data])=>key==='visualReview'?[key,visualReviewModelProjection(data as VisualReviewReceipt)]:['spreadsheetEvidence','fieldEvidence'].includes(key)&&Array.isArray(data)?[key,{omitted:true,count:data.length,details:{section:'reads'},notice:'原字段证明请从对应readId按需核对，不从报告重复展开'}]:[key,taskModelReportProjection(data)]));
 }
+function visualReviewModelProjection(receipt:VisualReviewReceipt){if(!isCurrentVisualReview(receipt))return{status:'unverified',versionState:receipt?.versionState??'unavailable',notice:'当前视觉证据无法核对，旧意见已隐藏'};return{id:receipt.id,inputHash:receipt.inputHash,status:receipt.status,versionState:receipt.versionState,reason:receipt.reason,stopReason:receipt.stopReason,coverageLimits:receipt.coverageLimits,images:receipt.images.map(({ref,outputId,receipt:r})=>({ref,outputId,reportId:r.reportId,screenshotId:r.screenshotId,caseId:r.caseId,entryHash:r.entryHash,contentHash:r.contentHash,viewport:r.viewport})),findings:receipt.findings};}
+export function taskModelVisualReviewSummary(report:TaskAcceptanceReport|undefined,readable=true){const receipt=report?.visualReview,current=readable&&report?.versionState==='current'&&receipt&&isCurrentVisualReview(receipt);return{required:report?.visualReviewRequired??false,status:current?receipt.status:'unverified',versionState:receipt?.versionState??'unavailable',notice:(report?.visualReviewNotice??receipt?.reason??'只审查有限截图，业务与交互仍待核对').slice(0,300),imageInputCount:current?receipt.images.length:0,candidateCount:current?receipt.findings.length:0,candidates:current?receipt.findings.slice(0,2).map(f=>({id:f.id,outputId:f.outputId,confidence:f.confidence,explanation:f.explanation.slice(0,120)})):[],coverageLimits:current?receipt.coverageLimits.slice(0,2).map(s=>s.slice(0,200)):[],details:{section:'report'}};}
 export type TaskModelEntry={id:string;load:()=>unknown|Promise<unknown>};
 const splitsPair=(text:string,offset:number)=>offset>0&&offset<text.length&&text.charCodeAt(offset-1)>=0xd800&&text.charCodeAt(offset-1)<=0xdbff&&text.charCodeAt(offset)>=0xdc00&&text.charCodeAt(offset)<=0xdfff;
 /** Serialize only host-authorized entries. Whole JSON overhead and escaping are

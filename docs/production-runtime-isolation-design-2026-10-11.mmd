@@ -1,0 +1,12 @@
+flowchart LR
+  UI[会话与工作台] --> Host[Service 宿主生命周期与权限]
+  Host --> Proxy[带 run attempt sequence 的严格协议]
+  Proxy --> Worker[Pi 公开 SDK 工作进程]
+  Worker -->|固定工具请求| Host
+  Host --> Gateway[Operation ChangeSet SQLite]
+  Gateway -->|实际结果| Proxy
+  Worker --> Session[单一写者的持久会话]
+  Worker -->|流式事件与终态| Proxy
+  Proxy --> Fence[拒绝旧 attempt 和重复事件]
+  Fence --> Host
+  Host --> Recovery[崩溃保留草稿 未知操作须核对]

@@ -1,0 +1,25 @@
+flowchart TD
+  Input[模型工具输入 / 宿主参数检查] --> NotSent[SQLite: not_sent]
+  NotSent --> Approval[现有网关授权与前置版本校验]
+  Approval -->|拒绝 / 尚未派发退出| SafeStop[failed / cancelled<br/>verified_not_done]
+  Approval --> Dispatch[先持久化 may_have_run]
+  Dispatch --> Effect[现有宿主工具实际执行]
+  Effect -->|可信成功回执| Atomic[SQLite事务保存终态与 settled]
+  Effect -->|退出 / 写后错误 / 取消| Unknown[副作用待核对<br/>保留原操作与草稿]
+  Unknown --> Gate[resumeRun 与 send 宿主屏障]
+  Gate --> Review[核对原操作 / 原来源 / 当前副本]
+  Review -->|撤权 / 来源冲突 / 旧token| Hold[保留未决，不执行]
+  Review -->|用户绑定当前版本确认| Receipt[追加核对侧记录<br/>保留执行前与观察后hash]
+  Receipt --> ManualResume[用户继续剩余任务]
+  ManualResume --> Approval
+  Atomic --> Fact[真实终态保留，不能倒退]
+  Read[只读工具退出] --> SafeStop
+  Legacy[旧 executing 缺派发证据] --> Classify[复用宿主 effect]
+  Classify -->|只读| SafeStop
+  Classify -->|副作用 / 未知| Unknown
+  Memory[记忆 write / forget / restore] --> MemoryPrecheck[schema / 当前权限 / 原来源预检]
+  MemoryPrecheck -->|拒绝且未发送| SafeStop
+  MemoryPrecheck --> MemorySend[真实 worker mutation send 前落标]
+  MemorySend --> Dispatch
+  BeforeCancel[handler 尚未执行时取消] --> SafeStop
+  GenericError[未知 handler 进入后抛取消 / SyntaxError] --> Unknown

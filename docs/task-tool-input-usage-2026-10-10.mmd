@@ -1,0 +1,23 @@
+flowchart LR
+  R[选定模型协议] --> S{openai-responses?}
+  S -->|是| T{compat 显式 false?}
+  T -->|否| U[公开 supportsStrictMode true]
+  U --> V[Pi 原生 strict false: 字段仍可省略]
+  T -->|是| W[保留原省略 strict 路径]
+  S -->|否| X[保留原协议适配]
+  V --> A[模型查看当前任务: {}]
+  W --> A
+  A --> B[Pi公开input schema: 字段可省略]
+  B --> C[原Zod校验: 默认summary/limit10]
+  C --> D[原宿主Run权限与有界分页]
+  B --> E[空ID拒绝]
+  C --> F[不适用过滤字段拒绝]
+  G[已选模型公开字段] --> H[原白名单投影保留proxyUrl]
+  H --> I[隔离profile]
+  I --> J[正式IPC回读模型与路由]
+  J --> K{与复制配置一致?}
+  K -->|是| L[原云授权门槛下执行基准]
+  K -->|否| M[发送前阻断]
+  N[原型 pending 查看] --> O[复制 read/edit 最新目录路径与草稿 owner/hash]
+  O --> P[省略 artifactId: 禁 current/占位值]
+  P --> Q[原身份/版本/权限核验后返回真实 runRequest]

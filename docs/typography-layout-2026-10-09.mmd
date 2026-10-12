@@ -1,0 +1,13 @@
+flowchart LR
+  Tokens[统一字号与间距 token] --> Shell[60+220 导航 / 52头 / 24与32边距]
+  Tokens --> Chat[会话与原生阅读器 16/26 / 最大760]
+  Tokens --> Settings[总题20/26 / 页题24/32 / 72头]
+  Tokens --> Pages[资源 / 成果 / 测试用例 / 知识库]
+  Pages --> Scope[项目归属只呈现一次]
+  Pages --> Narrow[窄预览按钮完整 / 动作换行]
+  Existing[Run成果归属 / 停止 / 权限 / 配置] --> Preserved[保持并回归验证]
+  Shell --> Verify[隔离Electron file页 / 字形 / DPR / 三主题]
+  Chat --> Verify
+  Settings --> Verify
+  Pages --> Verify
+  UserHTML[用户HTML原型iframe] --> Isolated[独立样式 / 不注入外壳字体]

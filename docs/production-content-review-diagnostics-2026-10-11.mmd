@@ -1,0 +1,16 @@
+flowchart TD
+  %% 2026-10-11 baseline局部集成；回执production-safe-review-and-fence-integration-20261011/integration.json，check通过，统一构建待验。
+  A[冻结来源版本与授权] --> B[本次官方全文读取及hash核验]
+  B --> C{来源容器}
+  C -->|纯文本| D[本次审查完整文字读取]
+  C -->|Office或PDF提取| E[原容器覆盖仍partial]
+  D --> F[现有context按预算选择原始区间]
+  E --> F
+  F --> G[宿主输入coverage元数据]
+  H[生成sourceReads保留原样] -.不同证据含义.-> A
+  I[审查响应JSON] --> J[有界数量与安全schema错误码]
+  J --> K[既有验证与丢弃无效finding]
+  G --> L[既有receipt resultHash绑定]
+  K --> L
+  L --> M[既有Operation保存安全结构诊断]
+  N[旧回执缺字段保持unknown] --> L

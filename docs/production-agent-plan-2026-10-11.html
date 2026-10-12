@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slash Agent 开发方案</title>
+<link rel="stylesheet" href="C:/Users/yuemokm/.codex/skills/html-plan/runtime/htmlplan.css">
+<script src="C:/Users/yuemokm/.codex/skills/html-plan/runtime/htmlplan.js" defer></script>
+<style>
+:root{--sans:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;--serif:var(--sans);--accent:#216b5c;--accent-soft:#e4f0eb;--col:820px;--wide:1120px}
+body{line-height:1.75}h1{letter-spacing:-.025em}doc-note{line-height:1.8}.pl-claim{line-height:1.65}doc-ask label{line-height:1.75}doc-ask small{display:block;color:var(--ink-3)}.scope-list{padding-left:22px}.scope-list li{margin-bottom:10px}.package-links a{margin-right:12px}a{overflow-wrap:anywhere}
+@media(max-width:600px){h1{font-size:25px}.pl-row{gap:8px}.pl-meta{max-width:82px;font-size:11px}}
+</style>
+<style data-mock-shared>
+.ui{font:14px/1.75 "Microsoft YaHei UI","Microsoft YaHei",sans-serif;background:#fff;color:#25322e;border:1px solid #dbe4df;border-radius:10px;overflow:hidden}.hd{padding:14px 17px;border-bottom:1px solid #e8eeea;display:flex;justify-content:space-between;gap:10px;font-weight:600}.body{padding:16px 17px}.row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #eef1ee}.row:last-child{border-bottom:0}.small{font-size:12px;color:#6c7973}.good{color:#216b5c}.warn{color:#966318}.bad{color:#ac3f32}.tag{font-size:12px;border:1px solid #dce6df;padding:1px 7px;border-radius:4px;white-space:nowrap;font-weight:400}.ft{display:flex;flex-wrap:wrap;gap:9px;padding:13px 17px;border-top:1px solid #e8eeea;background:#f7f9f7}.btn{font-size:13px;border:1px solid #cedbd3;padding:6px 11px;border-radius:6px;background:white}.pri{background:#216b5c;color:#fff;border-color:#216b5c}.muted{color:#77867c}.stack{display:grid;gap:10px}.fact{background:#f2f6f3;padding:10px 12px;border-radius:5px}.meter{height:4px;background:#e5ece7;border-radius:4px;margin:12px 0}.meter i{display:block;width:62%;height:4px;background:#498d71}.score{font:600 28px/1.3 "Segoe UI",sans-serif}.caption{margin:8px 0 0}.table{width:100%;border-collapse:collapse;font-size:13px}.table td,.table th{padding:9px 10px;text-align:left;border-bottom:1px solid #e8eeea;vertical-align:top}.table th{color:#708077;font-size:12px;font-weight:400}.table .tight{white-space:nowrap}b{font-weight:600}p{margin:0 0 10px}p:last-child{margin:0}.paired{display:grid;grid-template-columns:1fr 1fr;gap:12px}.paired>div{padding:12px;background:#f5f8f5;border-radius:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Slash 生产级 Agent 开发方案</h1>
+  <doc-changes new="12" changed="30"></doc-changes>
+  <details class="thread"><summary>依据 · 你的目标与已确认约束</summary>
+    <doc-quote via="prompt" from="你" at="2026-10-11">帮我设计后续开发和优化产出结果的方案，目的是构建出生产级的agent</doc-quote>
+    <doc-quote via="prompt" from="你" at="2026-10-11">检查目前的项目架构和系统代码是否符合主流agent规范</doc-quote>
+    <doc-quote via="doc" from="项目 AGENTS.md" at="2026-10-10">原型质量须通过实际任务流程、桌面/手机体验及业务回归，局部 DOM 通过不等于设计感或实用性达标。</doc-quote>
+    <doc-quote via="doc" from="项目 AGENTS.md">替换现有模块须同时比较实际效果与稳定性。稳定性为硬门槛，不能仅凭下载量、宣传倍率或一次成功试验切换默认路径</doc-quote>
+    <doc-quote via="tools" from="本页审阅提交 · 交付选择" at="2026-10-11 15:08（北京时间）">你接受非关键限制后，可带说明交付</doc-quote>
+    <doc-quote via="tools" from="本页审阅提交 · 任务选择" at="2026-10-11 15:08（北京时间）">质量优先，保留当前 30 分钟上限</doc-quote>
+    <doc-quote via="prompt" from="你" at="2026-10-11">代码执行用 6.1sol high的subagent，这个写在agents.md里</doc-quote>
+  </details>
+</header>
+<main>
+<doc-plan>
+
+<doc-claim id="recovery">
+  <p>任务中断后，已做的操作不会被盲目重做。</p>
+  <doc-machine name="recovery" caption="拟议恢复流程。点选状态可看对应反馈；不承诺任意外部系统的恰好一次执行。">
+<script type="text/plain">
+machine recovery initial pending
+state pending "待核对" # 任务已中断，副作用尚未核对。
+state checking "核对中" # 只读核对本地或远端结果。
+state ready "可继续" # 已核实操作结果，可继续剩余工作。
+state held "待确认" final # 没有足够证据，保留草稿与历史。
+state resumed "已续作" final # 新一轮只承接明确剩余工作。
+| pending | checking | ready |
+| .       | held     | resumed |
+pending -inspect-> checking : 核对结果
+checking -verified-> ready : 结果明确
+checking -unknown-> held : 证据不足
+ready -resume-> resumed : 继续任务
+</script>
+    <div data-state="pending"><doc-mock frame="none" w="420"><template><div class="ui"><div class="hd">任务已中断<span class="tag warn">需核对</span></div><div class="body"><p>命令可能已修改文件。先核对结果，再继续剩余工作。</p><p class="small">原稿、草稿和执行记录已保留。</p></div><div class="ft"><span class="btn pri">核对结果</span><span class="btn">查看草稿</span></div></div></template></doc-mock></div>
+    <div data-state="checking"><doc-mock frame="none" w="420"><template><div class="ui"><div class="hd">正在核对结果</div><div class="body">读取文件版本与原操作回执…<p class="small">本次核对不重复运行命令。</p></div></div></template></doc-mock></div>
+    <div data-state="ready"><doc-mock frame="none" w="420"><template><div class="ui"><div class="hd">可以继续<span class="tag good">已核实</span></div><div class="body"><p>已确认前一步完成，剩余内容将从现有草稿继续。</p><p class="small">核对依据和确认人保留在工作记录。</p></div><div class="ft"><span class="btn pri">继续剩余工作</span></div></div></template></doc-mock></div>
+    <div data-state="held"><doc-mock frame="none" w="420"><template><div class="ui"><div class="hd">等待你核对</div><div class="body"><p>目前无法确定前一步是否完成，已停止后续执行。</p><p class="small">可查看原操作与实际文件，不自动重试。</p></div><div class="ft"><span class="btn">查看核对依据</span><span class="btn">保留草稿</span></div></div></template></doc-mock></div>
+    <div data-state="resumed"><doc-mock frame="none" w="420"><template><div class="ui"><div class="hd">继续处理剩余内容</div><div class="body">已完成的步骤保持不变；新的执行记录关联原任务。</div><div class="ft"><span class="btn">停止任务</span></div></div></template></doc-mock></div>
+  </doc-machine>
+  <doc-note tone="risk">A01 已隔离复现：未决 PowerShell 重启后仍为 executing，恢复却能进入 send。先修此缺口。关联 F02 / PF03 / PF09。</doc-note>
+  <doc-claim>
+    <p>宿主记录实际派发阶段，再决定如何恢复。</p>
+    <doc-schema id="recovery-schema" lang="ts" title="shared/run-recovery.ts · sketch" caption="先定义可执行契约，再迁移和接线；阶段由宿主写入，模型和工具正文不能修改。">
+<script type="text/plain">
+const recoveryRecordSchema = z.object({
+  operationId: z.string().uuid(),
+  runId: z.string().uuid(),
+  effect: toolExecutionPolicySchema.shape.effect,
+  dispatch: z.enum(['not_sent', 'may_have_run', 'settled']),
+  resolution: z.enum(['pending', 'verified_done', 'verified_not_done']),
+  evidenceRefs: z.array(z.string()).default([]),
+  resolvedBy: z.enum(['host', 'user']).optional(),
+}).strict();
+// 先持久化 may_have_run，再调用产生副作用的 handler。
+// 崩溃遗留 executing 且缺少派发证据：保守待核对。
+// 只读重查也须重新验证权限、版本和来源。
+</script>
+    </doc-schema>
+    <doc-claim at="main/tool-execution-policy.ts:5"><p><b>main/tool-execution-policy.ts:5</b> · toolExecutionPolicySchema</p><doc-code src="main/tool-execution-policy.ts" lines="5-18" wrap caption="复用现有工具 effect，不新建一份容易失配的工具名单。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>未知副作用核对前，恢复入口不能继续执行。</p>
+    <doc-calls title="恢复入口与真实终态" caption="新增核对记录；保持已成功工具的事实和原调用身份。">
+<script type="text/plain">
+~ Service.recoverPersistedRuns()                  @ main/service.ts:182
++   **classifyInterruptedOperations**()           @ main/run-recovery.ts:1
+~ Service.resumeRun()                             @ main/service.ts:913
++   **assertReconciled**(runId)                    @ main/run-recovery.ts:1
+    Service.send()                                @ main/service.ts:802
+    Store.finishOperation()                       @ main/store.ts:25
+</script>
+    </doc-calls>
+    <doc-claim at="main/service.ts:913"><p><b>main/service.ts:913</b> · resumeRun()</p><doc-code src="main/service.ts" lines="913-923" wrap caption="当前只拦 outcome_unknown；必须覆盖崩溃遗留的未决副作用。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>崩溃、取消与资料变更都通过故障注入验收。</p>
+    <doc-code lang="ts" title="tests/run-recovery-crash.test.ts · sketch">
+<script type="text/plain">
+const faultWindows = [
+  'before_dispatch', 'after_effect_before_receipt', 'after_receipt',
+];
+const effects = ['powershell', 'run_process', 'process_processing_copy'];
+// 每种工具 × 每个窗口，真实子进程退出并重开 Store。
+// 不使用用户目录；模拟外部计数器验证没有重复副作用。
+// 成功回执不倒退；未知结果阻止 send；只读不能误锁死。
+// 补审批尚未允许、撤权、过期草稿、未知旧工具的反例。
+// 备份和旧版本可读；未核对操作不被标成已成功。
+</script>
+    </doc-code>
+  </doc-claim>
+</doc-claim>
+
+<doc-claim id="authority">
+  <p>连接和工具只能访问明确授权的资源。</p>
+  <doc-mock frame="none" w="430" caption="拟议 Slash 连接反馈；不增加常驻安全中心。"><template><div class="ui"><div class="hd">连接需要处理<span class="tag warn">未连接</span></div><div class="body"><p>登录服务请求访问未授权的内部地址，已停止。</p><div class="fact">如需连接公司内网服务，请在该连接中明确配置允许的地址。</div><p class="small caption">已有登录与项目资料保持原样。</p></div><div class="ft"><span class="btn">查看连接设置</span><span class="btn">查看原因</span></div></div></template></doc-mock>
+  <doc-note tone="info">A02：URL 校验接受回环与内网 HTTPS，尚未发送攻击请求。改 OAuth 地址策略；保留 MCP SDK、PKCE 与系统凭据。关联 F03 / PF11。</doc-note>
+  <doc-claim>
+    <p>登录、刷新和跳转使用同一目的地策略。</p>
+    <doc-calls title="统一网络访问边界" caption="复用当前公网地址核验思路；OAuth 登录、刷新和 MCP 传输均需实际接线验证。">
+<script type="text/plain">
+~ McpOAuthBroker.login()                          @ main/mcp-oauth.ts:42
++   **createAuthorizedOAuthFetch**()              @ main/network-target-policy.ts:1
+      resolvePublicAddress()                      @ main/capabilities.ts:36
+~ connectMcp()                                    @ main/mcp-client.ts:43
++   createAuthorizedOAuthFetch()                  @ main/network-target-policy.ts:1
+    mcpSingleSubmissionFetch()                     @ main/mcp-client.ts:21
+~ host-managed MCP transport                      @ main/pi-mcp-runtime.ts:1
++   createAuthorizedOAuthFetch()                  @ main/network-target-policy.ts:1
+</script>
+    </doc-calls>
+    <doc-claim at="main/mcp-oauth.ts:70"><p><b>main/mcp-oauth.ts:70</b> · fetchFn</p><doc-code src="main/mcp-oauth.ts" lines="61-77" wrap caption="已有 HTTPS 与重定向保护；补私有地址、DNS 和刷新路径，不能绕开已有单次派发保护。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>企业内网例外必须绑定到具体连接。</p>
+    <doc-schema id="network-schema" lang="ts" title="main/network-target-policy.ts · sketch" caption="普通公网连接默认拒绝内部目标；模型不能添加例外。">
+<script type="text/plain">
+type NetworkGrant = {
+  connectionId: string;
+  allowedOrigins: string[];    // 方案：用户明确选择，精确匹配
+  allowPrivate: boolean;      // 只限本连接已批准 origin
+  revision: string;
+};
+// 验证 URL、DNS 全部结果和每次跳转；请求固定到核验的地址。
+// IPv4/IPv6/映射地址一致处理；生产不放宽 TLS 校验。
+// OAuth loopback 回调仅监听本机，不自动授予出站回环访问。
+// 连接修改/撤销后，旧请求与旧授权失效。
+</script>
+    </doc-schema>
+  </doc-claim>
+  <doc-claim>
+    <p>高权限命令不会绕过原件与发布保护。</p>
+    <doc-code lang="ts" title="tests/mcp-network-policy.test.ts · sketch" caption="实现时使用本地协议夹具，另做已授权真实账号联调。">
+<script type="text/plain">
+const requiredCases = [
+  'metadata_to_loopback', 'private_ipv4_ipv6', 'dns_rebinding',
+  'redirect_to_private', 'refresh_same_policy', 'revoked_connection',
+  'explicit_enterprise_origin', 'write_401_never_replayed',
+];
+// 注入网页“忽略权限”、恶意技能文本与工具返回，验证网关仍拒绝。
+// Plan 零写入；只读参考原件有内容时继续禁用通用宿主命令。
+// 未获批的本地 MCP 启动命令不能被连接发现自动执行。
+// 通用 Shell 仍是高权限能力；进程隔离不宣传成系统沙箱。
+</script>
+    </doc-code>
+  </doc-claim>
+</doc-claim>
+
+<doc-claim id="quality">
+  <p>PRD与原型交付前，完成业务与体验核对。</p>
+  <doc-mock frame="none" w="450" caption="拟议交付卡。检查结果属于 Slash；生成的产品界面只显示业务内容。"><template><div class="ui"><div class="hd">门店录入 · 交付检查<span class="tag warn">还有待核对项</span></div><div class="body"><div class="row"><span>来源与关键规则</span><b class="good">已核对</b></div><div class="row"><span>提交、重复、失败保留输入</span><b class="good">已通过</b></div><div class="row"><span>手机操作与完整阅读</span><b class="warn">待核对</b></div><div class="row"><span>PRD、原型与本次版本一致</span><b class="good">已核对</b></div><p class="small caption">草稿可预览和保存；未验证内容不算已完成。</p></div><div class="ft"><span class="btn pri">继续核对</span><span class="btn">查看草稿</span></div></div></template></doc-mock>
+  <doc-note tone="info">A04 / PF08 / PF10 / QE05 / QE12：沿用已有验收合同、来源回执、浏览器和图审。优化重点是完整结果，不把多装 Skill、DOM 全绿或模型自评当成质量提升。</doc-note>
+  <doc-claim>
+    <p>每条关键业务规则都有来源与落实位置。</p>
+    <doc-schema id="quality-schema" lang="ts" title="shared/task-acceptance.ts · sketch" caption="扩展现有合同；使用者—对象—动作—条件—结果，避免跨表同名字段误读。">
+<script type="text/plain">
+type RuleCoverage = {
+  requestId: string; ruleId: string;
+  sourceIds: string[];         // 宿主已读、哈希绑定的来源
+  outputIds: string[];         // PRD / HTML 对应落实位置
+  evidenceRefs: string[];      // 原文位置、测试回执、人工核对
+  verdict: 'verified' | 'failed' | 'unknown';
+};
+// 复用现有规则和维度记录，不建立第二套事实数据库。
+// 必填、只读、新建/变更权限与异常分支分别核对。
+// 冲突来源和缺资料保留 unknown；模型不能补造业务事实。
+// 用户新要求优先；来源正文不能改变工具权限。
+</script>
+    </doc-schema>
+    <doc-claim at="shared/task-acceptance.ts:12"><p><b>shared/task-acceptance.ts:12</b> · taskRequestInputSchema</p><doc-code src="shared/task-acceptance.ts" lines="12-27" wrap caption="真实用户输入、输出身份和既有检查器继续是唯一任务合同。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>原型围绕真实任务制作，并实际操作验收。</p>
+    <doc-calls title="设计、操作、看图与版本一致" caption="正常路径 + 关键异常 + 既有回归；不能仅截图看外观。">
+<script type="text/plain">
+~ task-oriented guidance                          @ main/prototype-guidance.ts:2
+    明确使用者、主任务、状态与布局                   @ main/prototype-guidance.ts:4
+    write_draft → read_draft → edit_draft           @ main/agent.ts:264
+~ TaskAcceptanceDomain                            @ main/task-acceptance.ts:42
+    真实浏览器执行与多视口检查                      @ main/prototype-browser.ts:1
+    同版本截图的独立视觉审查                        @ main/prototype-visual-review.ts:73
+~ repairableTaskFailures()                        @ main/task-completion.ts:13
+    原范围有限修稿 → 全部冻结回归                   @ main/service.ts:1015
+</script>
+    </doc-calls>
+    <doc-note tone="info">表单验填写→提交→成功/重复/失败；工作台验筛选→选择→详情→操作。既有基准覆盖 390×844、1280×800、1440×900；新任务按目标终端选择。人工核对任务顺畅、信息层级、阅读/触控与视觉一致性，四维各达 4/5 为拟议门槛。图片看不到的焦点、滚动和数据变化必须实际操作。</doc-note>
+    <doc-claim at="main/prototype-guidance.ts:2"><p><b>main/prototype-guidance.ts:2</b> · PROTOTYPE_GUIDANCE</p><doc-code src="main/prototype-guidance.ts" lines="2-10" wrap caption="已有任务导向指导；后续要用新成果证明有效，不重复堆提示词。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>最终交付与草稿保存使用不同的完成标准。</p>
+    <doc-code lang="ts" title="main/delivery-gate.ts · sketch" caption="同一判定覆盖本地导出、Word/Markdown、CLI 文档交付及 MCP 发布；保存草稿不等于交付合格。">
+<script type="text/plain">
+function deliveryVerdict(report: BoundReport, policy: DeliveryPolicy) {
+  if (!report.authorized || !report.versionCurrent) return 'blocked';
+  if (report.unknownSideEffects || report.requiredFailed || report.optionalFailed) return 'blocked';
+  if (report.requiredUnknown) return 'needs_human';
+  if (report.optionalUnknown && policy === 'all_verified') return 'needs_human';
+  if (report.optionalUnknown && !report.boundHumanAcceptance) return 'needs_human';
+  return report.optionalUnknown ? 'accepted_with_limits' : 'verified';
+}
+// 普通稿件按实际任务检查，不机械强制完整 PRD 七章。
+// 风险、缺资料与未集成说明保存在 Slash 交付记录。
+// 用户确认绑定具体版本；改稿后旧确认失效。
+// 不得在检查失败后，把关键项改名为“非关键”以放行。
+</script>
+    </doc-code>
+    <doc-ask id="delivery-policy">
+      <p>非关键项待核对时，如何最终交付？</p>
+      <label><input type="radio" name="delivery-policy" value="all_verified">全部约定项核对后交付<small>未完成时保留草稿；对外不标成已完成。</small></label>
+      <label><input type="radio" name="delivery-policy" value="accepted_limits" checked>你接受非关键限制后，可带说明交付<small>关键业务仍须通过；记录你接受的具体限制与成果版本。权限、版本冲突与未知副作用绝不能豁免。</small></label>
+    </doc-ask>
+    <doc-note tone="info">本次已选择“接受非关键限制后交付”。以后每份成果仍要列出实际限制，取得绑定该版本的确认；这次选择不等于预先接受未来所有限制。已有明确失败的检查不得标成通过。</doc-note>
+    <doc-claim at="main/delivery-gate.ts:23"><p><b>main/delivery-gate.ts:23</b> · DeliveryGate</p><doc-code src="main/delivery-gate.ts" lines="23-38" wrap caption="扩展既有宿主门禁与版本绑定确认，不让模型发一句“完成”就放行。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>修稿只改授权范围，并证明没有破坏原功能。</p>
+    <doc-code lang="ts" title="tests/task-regression-service.test.ts · sketch">
+<script type="text/plain">
+const revisionProof = {
+  sourceHashes: '修改前后保持一致',
+  frozenRequests: '原始要求与追加纠正均保留',
+  protectedBehavior: '用户锁定的业务规则未回退',
+  outputHashes: 'PRD、HTML、截图、报告同一版本',
+  applyAndExport: '保存、重开、导出后实际回归',
+};
+// 沿用精确 edit_draft 和 ChangeSet，不宽松覆盖冲突。
+// 连续两轮修正后仍不达标，说明阻断并保留可继续稿。
+// 不以缩减验收范围、删失败用例来“提高成功率”。
+</script>
+    </doc-code>
+  </doc-claim>
+</doc-claim>
+
+<doc-claim id="long-runs">
+  <p>长任务可见进度、可停止，不拖垮工作台。</p>
+  <doc-mock frame="none" w="430" caption="拟议会话内执行反馈，不新增常驻任务中心。"><template><div class="ui"><div class="hd">正在核对原型交互<span class="tag">执行中</span></div><div class="body"><div class="stack"><span class="good">✓ 资料与规则已读取</span><span class="good">✓ 第一版草稿已保存</span><span>正在检查提交、重复与失败状态</span></div><p class="small caption">按实际阶段显示进度。停止后保留已有草稿。</p></div><div class="ft"><span class="btn">查看草稿</span><span class="btn">补充要求</span><span class="btn pri">停止任务</span></div></div></template></doc-mock>
+  <doc-claim>
+    <p>Agent 工作进程失效，不带走任务与资料。</p>
+    <doc-schema id="runtime-protocol" lang="ts" title="shared/agent-runtime-protocol.ts · sketch" caption="Service 仍是唯一调度者、授权者和业务库写入者；IPC 载荷用 Zod 校验。">
+<script type="text/plain">
+type RuntimeEnvelope = {
+  version: 1; runId: string; attempt: number; sequence: number;
+  kind: 'start' | 'tool_request' | 'tool_result' | 'event' | 'cancel';
+  requestId: string; payload: unknown;
+};
+// 主进程：授权、Operation、ChangeSet、SQLite、生命周期监督。
+// 工作进程：复用 Pi 推理循环、流式事件、压缩与会话适配。
+// 工具请求回宿主；子进程不能自行读写业务数据库。
+// 会话文件单一活动写者；旧 attempt 的迟到回执拒绝。
+// 崩溃不自动重放写入；先按 claim 1 核对结果。
+</script>
+    </doc-schema>
+    <doc-note tone="info">先抽接口，再迁移主 Agent。工作进程隔离主要解决卡死/崩溃；它与主进程同用户运行，不是 OS 安全沙箱。任意命令仍高权限且有原件限制。首版不承诺无人值守任意代码执行。</doc-note>
+    <doc-claim at="main/service.ts:167"><p><b>main/service.ts:167</b> · RuntimeFactory 注入</p><doc-code src="main/service.ts" lines="167-180" wrap caption="沿用注入点；先保留原适配器用于隔离回归，默认切换前必须验证状态和取消。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>任务预算同时覆盖生成、审查与修正。</p>
+    <doc-schema id="budget" lang="ts" title="运行预算与度量 · sketch" caption="既有 120 次工具、最多两轮修稿继续生效；选择改变时间目标，不放宽数据保护。">
+<script type="text/plain">
+type RunBudget = {
+  durationMs: number;          // 质量模式沿用 30 分钟硬上限
+  maxToolCalls: 120; maxRepairRounds: 2;
+  actualTokens?: number;
+  providerCost?: number;      // 只有真实计费依据才填写
+  budgetStatus: 'known' | 'unverified';
+};
+// 首先度量读取、生成、检查、审批等待四类耗时。
+// 按需资料与小批 edit_draft，避免同版本重复读取/审查。
+// 已读片段可复用；哈希或权限变化必须失效。
+// 不加第二套上下文压缩，不自动提高限额或切换模型。
+</script>
+    </doc-schema>
+    <doc-ask id="task-priority">
+      <p>复杂任务更重完整质量，还是更快出稿？</p>
+      <label><input type="radio" name="task-priority" value="quality" checked>质量优先，保留当前 30 分钟上限<small>本次已选择。先优化完成率；目标是九成任务在10分钟内有可运行草稿，最终质量门槛不降低。</small></label>
+      <label><input type="radio" name="task-priority" value="fast_draft">先出可运行稿，首轮最多 10 分钟<small>到时保留未完成项，由你继续下一轮；新增“先出稿”执行档，不能把部分稿标成完整交付。</small></label>
+    </doc-ask>
+    <doc-note tone="warn">这些是拟议目标，不是当前性能。真实费用上限尚需在首轮云评测前按服务商余额/账单核定；本方案提交不代表允许无限付费试跑。尚未核定时可继续所有离线开发与本地夹具验收。</doc-note>
+    <doc-claim at="main/run-limits.ts:1"><p><b>main/run-limits.ts:1</b> · DEFAULT_RUN_LIMITS</p><doc-code src="main/run-limits.ts" lines="1-3" caption="当前只有宿主时间和工具次数边界；先复用再补齐度量。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>现有 Pi 继续运行，升级必须证明收益。</p>
+    <doc-schema id="reuse" lang="ts" title="依赖取舍 · 2026-10-11 只读核验" caption="月下载为 pi.dev 目录 /mo 四舍五入展示值，不是用户数；peer 声明兼容不等于实际验收。">
+<script type="text/plain">
+const keep = {
+  pi: '0.86.1',                // MIT；npm 当前 1.1.0，先做隔离比较
+  mcp: '5.1.0',               // MIT；1.6M/mo；公开 host-managed API
+  subagents: '0.76.1',        // MIT；622.1K/mo；包内入口有升级风险
+  web: '0.37.0',              // MIT；693.5K/mo；公开 stdio MCP
+  lens: '4.4.0',              // MIT；108.2K/mo；现有草稿检查
+  tracing: '0.1.2',           // MIT；322.1K/mo；继续默认关闭
+};
+// Pi Durable 1.1.0 / MIT：官方仍标 experimental，月下载未核验。
+// 不默认接入；对照取消、恢复、工具、数据迁移后再决定。
+// 不替换 pi-memory，不恢复云知识库，不叠加压缩器。
+</script>
+    </doc-schema>
+    <doc-note tone="info">先查高使用量包，复用公开接口，只补 Slash 权限、版本与交付适配。当前 MCP SDK 与 adapter 内部 SDK 边界继续隔离。<span class="package-links"><a href="https://pi.dev/packages" target="_blank" rel="noreferrer">Pi 目录</a><a href="https://earendil.com/posts/pi-durable/" target="_blank" rel="noreferrer">Durable 官方说明</a></span></doc-note>
+    <doc-claim at="main/pi-subagents.ts:31"><p><b>main/pi-subagents.ts:31</b> · loadPackageFactory()</p><doc-code src="main/pi-subagents.ts" lines="29-40" wrap caption="现有子 Agent 有明确版本约束，但不能把包内入口当作稳定公开 API。"></doc-code></doc-claim>
+  </doc-claim>
+</doc-claim>
+
+<doc-claim id="release">
+  <p>每次升级都用相同真实任务证明质量与稳定性。</p>
+  <doc-mock frame="none" w="460" caption="拟议版本验收记录；下面是目标，当前尚未达成。"><template><div class="ui"><div class="hd">个人版生产验收<span class="tag">目标值</span></div><table class="table"><thead><tr><th>门槛</th><th>拟议通过条件</th></tr></thead><tbody><tr><td>安全与数据</td><td>既定反例零越权、零原件损坏、零盲目重放</td></tr><tr><td>真实任务</td><td>16例 × 3轮；完整通过至少44/48</td></tr><tr><td>关键闭环</td><td>QE05 / QE12 / QE16 合计9/9</td></tr><tr><td>回归与体验</td><td>已有回归全过；关键任务无阻断缺陷</td></tr><tr><td>外部渠道</td><td>按真实账号与设备逐项验收</td></tr></tbody></table><div class="body small">48次是小样本发布门槛，不是生产成功率的统计保证。试用中继续记录失败。</div></div></template></doc-mock>
+  <doc-note tone="info">生产级按当前个人桌面产品定义：安全可靠、成果可验、失败可恢复、版本可回退、成本可核对。没有新增团队权限平台或 SaaS 运维范围。</doc-note>
+  <doc-claim>
+    <p>全量回归与测试稳定性先恢复到可依赖。</p>
+    <doc-calls title="G0：清楚且可重复的基线" caption="现状 1052/1056；串行复跑 13/14。不能沿用历史全绿，不能删失败记录。">
+<script type="text/plain">
+~ 按最新产品要求更新真实请求断言                   @ tests/project-context.test.ts:69
+~ 等待明确 ready，而非固定启动假设                  @ tests/pi-worker-lifecycle.test.ts:22
+~ 收到流式事件后触发取消，分开测发送前取消            @ tests/prd-review-responses-proxy.test.ts:36
+    npm run check                                 @ package.json:14
+    npm test                                      @ package.json:15
+    npm run build                                 @ package.json:12
++ **releaseEvidence**()                          @ scripts/production-agent-evaluation.mjs:1
+</script>
+    </doc-calls>
+    <doc-note tone="info">三个时序敏感场景定向重复 10 次；通过后跑一次全量。每次运行保留环境、版本、失败原因。普通改动跑相关测试；跨运行时集成再做完整回归与真实桌面验收，不日常打安装包。</doc-note>
+  </doc-claim>
+  <doc-claim>
+    <p>业务完成率只统计完整且有证据的结果。</p>
+    <doc-schema id="benchmark" lang="ts" title="shared/quality-evaluation.ts · sketch" caption="扩展现有16例；能力挑战和已通过回归分开，固定版本与分母。">
+<script type="text/plain">
+type ReleaseEvaluation = {
+  modelId: string; runtimeHash: string; sourceHashes: string[];
+  caseId: string; repetition: 1 | 2 | 3;
+  outcome: 'verified' | 'failed' | 'blocked' | 'not_run';
+  ruleEvidence: string[]; interactionReports: string[];
+  humanReviewRef?: string; outputHashes: string[];
+  firstDraftMs?: number; completedMs?: number; actualCost?: number;
+};
+// 原稿、同版本修改、保存/重开/导出是一个完整 trial。
+// 不因超时、失败、未跑而缩小分母；同时报告不可运行原因。
+// 先跑 QE05/12/16 的9次，再扩展完整48次；云预算先核定。
+// 关键规则、安全每次均须通过；人工评分校准模型审查。
+</script>
+    </doc-schema>
+    <doc-note tone="info">优化按一次只改一个主要变量：资料选段 → 工具输入 → 分段修稿 → 布局/视觉反馈。保留一组不参与调参的新资料，防止只针对原门店样例优化。模型/底座候选用相同输入对比，收益指标看完整通过率与人工修正次数，其次才看耗时与实际费用。</doc-note>
+    <doc-claim at="shared/quality-evaluation.ts:41"><p><b>shared/quality-evaluation.ts:41</b> · evaluateBenchmark()</p><doc-code src="shared/quality-evaluation.ts" lines="41-54" wrap caption="复用既有业务基准，不用新建评分中心代替真实任务。"></doc-code></doc-claim>
+  </doc-claim>
+  <doc-claim>
+    <p>每批开发都有交付物与明确退出条件。</p>
+    <doc-flow caption="按依赖推进，不给未经验证的日历承诺。G2 完整任务证明后，再扩大到 G3。">
+<script type="text/plain">
+g0 = G0 回归基线 / 测试可重复
+g1 = G1 安全恢复 / 故障反例通过
+g2 = G2 质量闭环 / 真实同稿通过
+g3 = G3 运行隔离 / 崩溃可恢复
+g4 = G4 发布验收 / 真实渠道核验
+g5 = G5 持续优化 / 失败进入回归
+| g0 | g1 |
+| g3 | g2 |
+| g4 | g5 |
+g0 -> g1 : 基线可依赖
+g1 -> g2 : 副作用可控
+g2 -> g3 : 质量可比较
+g3 -> g4 : 隔离不回退
+g4 -> g5 : 有限试用
+</script>
+    </doc-flow>
+    <doc-note tone="info">G0交付可重复测试报告；G1交付核对入口、迁移和故障证据；G2交付真实PRD/原型/修改记录；G3交付运行时接口与桌面验证；G4交付验收矩阵、备份恢复与交付说明。G2的离线输入准备可在G1期间进行。流程以门槛驱动，不用加功能数量代表进度。</doc-note>
+  </doc-claim>
+  <doc-claim>
+    <p>发布失败可回退，历史资料和记录不丢失。</p>
+    <doc-code lang="ts" title="tests/production-release-gate.test.ts · sketch" caption="本地核心、模型接入、MCP/CLI、SMB分别留真实证据。缺设备/账号的一项记未验证，不能对外承诺已认证。">
+<script type="text/plain">
+const releaseEvidence = [
+  'current_schema_old_data_readable', 'migration_restart_safe',
+  'backup_restore_verified', 'worker_crash_ui_responsive',
+  'stop_cancels_children', 'no_late_events_after_close',
+  'same_version_apply_export_reopen', 'model_tool_vision_cancel',
+  'mcp_publish_query_unknown', 'feishu_dingtalk_roundtrip',
+  'smb_two_devices_standard_user_drive_visible',
+];
+// 原件/版本/Operation 均保留；不删除回退需要的旧适配器。
+// 默认先在隔离 profile 比较，不向真实目标双写做影子测试。
+// 每个渠道单独通过，完整承诺范围达标才称整体生产交付。
+</script>
+    </doc-code>
+  </doc-claim>
+</doc-claim>
+
+<doc-claim aux="shared">
+  <p>共享契约与文件清单支撑所有验收。</p>
+  <doc-schema id="migration" lang="sql" title="main/store-migrations.ts · sketch" caption="新增侧表保存恢复证据，不重写旧 operations；SQLite 迁移先备份、事务执行并验证版本。">
+<script type="text/plain">
+CREATE TABLE IF NOT EXISTS operation_recovery (
+  operation_id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL,
+  effect TEXT NOT NULL,
+  dispatch TEXT NOT NULL CHECK(dispatch IN ('not_sent','may_have_run','settled')),
+  resolution TEXT NOT NULL CHECK(resolution IN ('pending','verified_done','verified_not_done')),
+  evidence_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+-- 仅在当前 user_version=2 时事务迁移到3；拒绝未知更新版本。
+-- 回退运行适配器，不把数据库降级；旧二进制不得直接开新库。
+-- 旧版本恢复另用副本核对，不覆盖迁移后新增的用户资料。
+</script>
+  </doc-schema>
+  <doc-note tone="warn">下列12新建、30修改是完整方案的拟议触及范围，按G0—G4逐批实施，实施时核定。新文件尚不存在；代码 sketch 是契约草案，不代表已实现。所有新增状态先写 Zod/schema、接口样例与迁移用例，再接业务。</doc-note>
+  <doc-claim>
+    <p>新增文件只承接明确缺口与对应验收。</p>
+    <doc-tree caption="12个拟议新文件，不新增第二套Agent框架。">
+<script type="text/plain">
+shared/
+  + run-recovery.ts
+  + agent-runtime-protocol.ts
+main/
+  + run-recovery.ts
+  + store-migrations.ts
+  + network-target-policy.ts
+  + agent-runtime-host.ts
+  + agent-runtime-worker.ts
+tests/
+  + run-recovery-crash.test.ts
+  + mcp-network-policy.test.ts
+  + agent-runtime-worker.test.ts
+  + production-release-gate.test.ts
+scripts/
+  + production-agent-evaluation.mjs
+</script>
+    </doc-tree>
+  </doc-claim>
+  <doc-claim>
+    <p>既有代码按职责定向调整，文档同步更新。</p>
+    <doc-tree caption="30个拟议修改文件；代码实现、修改及对应检查固定由GPT-6.1 Sol / High子代理执行，主代理负责设计、审查、集成验收。约定已写入AGENTS.md。">
+<script type="text/plain">
+main/
+  ~ store.ts
+  ~ service.ts
+  ~ agent.ts
+  ~ main.ts
+  ~ tool-execution-policy.ts
+  ~ capabilities.ts
+  ~ mcp-oauth.ts
+  ~ mcp-client.ts
+  ~ pi-mcp-runtime.ts
+  ~ prototype-guidance.ts
+  ~ content-review.ts
+  ~ prototype-visual-review.ts
+  ~ task-acceptance.ts
+  ~ task-completion.ts
+  ~ delivery-gate.ts
+  ~ pm-workflows.ts
+  ~ quality-evaluation.ts
+shared/
+  ~ task-acceptance.ts
+  ~ quality-evaluation.ts
+  ~ types.ts
+src/
+  ~ TaskAcceptanceStatus.tsx
+  ~ ReplyDetails.tsx
+tests/
+  ~ project-context.test.ts
+  ~ pi-worker-lifecycle.test.ts
+  ~ prd-review-responses-proxy.test.ts
+  ~ task-regression-service.test.ts
+docs/
+  ~ product-spec.md
+  ~ development-handoff.md
+  ~ architecture-current.md
+  ~ architecture-current-system.mmd
+</script>
+    </doc-tree>
+  </doc-claim>
+</doc-claim>
+
+<doc-claim aux="scope">
+  <p>范围保持个人PM工作台，已有资料与底座继续保留。</p>
+  <ul class="scope-list">
+    <li>会话发起成果编辑；资源与成果用于浏览、引用和定位。保留原型、PRD、资料研究、测试用例与修改交付。</li>
+    <li>继续 Pi、Electron、SQLite、文件版本与 SMB；云知识库/向量退出范围。暂不增加微服务、无人值守任意执行、团队租户平台或插件市场。</li>
+    <li>保留用户原件、草稿、版本与处理记录；不自动启用云追踪、不扩大资料发送范围、不自动换默认模型。</li>
+    <li>生产标准是此产品的工程验收门槛，不是行业认证。计划目标不冒充当前成绩；本轮只产出方案，未改产品代码。</li>
+    <li>日常验证使用“双击启动开发环境.bat”；主进程修改需重启。未明确要求不制作安装包，不继续PPT或视频。</li>
+    <li>依据：2026-10-11本地架构审查（1052/1056，复跑13/14）；QE05/QE12历史真实验收；<a href="https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents" target="_blank" rel="noreferrer">Agent评测方法</a>、<a href="https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices" target="_blank" rel="noreferrer">MCP安全实践</a>、<a href="https://www.anthropic.com/engineering/managed-agents" target="_blank" rel="noreferrer">执行与状态分离</a>。外部资料提供方法，Slash阈值是本方案建议。</li>
+  </ul>
+</doc-claim>
+</doc-plan>
+</main>
+<script>
+// 本页只翻译审阅控件；不改决策值、提交协议或共享技能运行时。
+document.addEventListener('DOMContentLoaded', () => {
+  const translate = (s) => s.replace(/(\d+) to answer/g, '还有 $1 项待看')
+    .replace(/(\d+) decisions?/g, '$1 项取舍').replace(/Decision (\d+) of (\d+)/g, '取舍 $1 / $2')
+    .replace(/Suggested/g, '已选方案').replace(/Proposed/g, '拟议范围')
+    .replace(/(\d+) files/g, '$1 个文件').replace(/ new\b/g, ' 新增').replace(/ changed\b/g, ' 修改')
+    .replace(/Tap a state to see its screen/g, '点状态查看反馈').replace(/^Contents$/, '目录');
+  const repaint = () => {
+    observer.disconnect();
+    document.querySelectorAll('doc-changes,.nw-next,.pl-bdg,doc-ask .sug,.mc-now i,.nw-toc .ttl').forEach(el => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) { const n = walker.currentNode; const t = translate(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t; }
+    });
+    document.querySelectorAll('doc-ask[data-n]').forEach(el => { const t = translate(el.dataset.n); if (t !== el.dataset.n) el.dataset.n = t; });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['data-n'] });
+  };
+  const observer = new MutationObserver(repaint);
+  repaint();
+});
+</script>
+</body>
+</html>

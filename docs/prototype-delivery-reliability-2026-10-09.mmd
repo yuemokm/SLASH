@@ -1,0 +1,16 @@
+flowchart TD
+  Draft[同一任务的原型草稿] --> Static[复用静态检查<br/>识别明确离线依赖问题]
+  Draft --> Browser[既有离线浏览器<br/>固定操作与截图]
+  Browser --> Evidence[版本绑定证据<br/>首次异常位置与有界诊断]
+  Static -->|确定的阻断项| Repair[原有最多两轮修稿<br/>同权限 / 同预算 / 原标准]
+  Evidence --> Status[通过 / 失败 / 未验证<br/>不把未知当成功]
+  ReadonlyUnknown[只读验收结果未知] -.->|不再误当外部副作用| Repair
+  ExternalUnknown[真实外部写入结果未知] -->|先核对，禁止重放| Hold[保留记录]
+  Repair --> Draft
+  Draft --> Save[显式保存<br/>权限 / 版本 / 冲突保护]
+  Save --> Export[本地导出入口检查]
+  Export --> Enabled{质量检查开启？}
+  Enabled -->|是| Gate[阻断问题先修正]
+  Enabled -->|显式关闭| Skipped[明确记录已跳过]
+  Gate --> Version[写出绑定字节<br/>复核源版本与授权]
+  Skipped --> Version

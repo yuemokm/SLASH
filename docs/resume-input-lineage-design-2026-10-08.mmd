@@ -1,0 +1,16 @@
+flowchart TD
+  Status[最小修复已实施 / 本机定向通过 / 根代理集成待完成] --> Resume[显式恢复待恢复 Run]
+  Resume --> Guard[现有退出 / 权限 / 结果未知检查]
+  Guard --> Chain[沿 resumedFromRunId 核验真实身份与项目范围]
+  Chain -->|缺父 / 环 / 身份冲突| Stop[停止恢复 / 保留历史 / 说明来源无法核实]
+  Chain --> Root[无恢复父节点的根 Run]
+  Root --> Input[根 input 优先 / 再精确消息 runId]
+  Input -->|旧数据| Legacy[只允许唯一同 startedAt 输入 / 禁止大于等于时间猜测]
+  Input -->|来源明确| Compose[一次恢复说明 + 原目标 + 上一轮最新检查点]
+  Legacy -->|唯一可靠| Compose
+  Legacy -->|不唯一或缺失| Stop
+  Guard --> Current[当前 workflow / 附件 / 权限 / 草稿元数据]
+  Current --> Compose
+  Compose --> Send[复用现有 send / 不重放成功写入或未知追加输入]
+  Send --> Preserve[保留合同 / 追加输入 / Pi 历史 / 不宣称清除历史 token]
+  Manual[普通手工新任务] --> OwnRoot[无恢复父身份 / 以自身为根]

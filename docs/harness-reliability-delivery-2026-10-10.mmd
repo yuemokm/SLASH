@@ -1,0 +1,16 @@
+flowchart TD
+  Call[Pi工具批次] --> Mode{含顺序依赖工具?}
+  Mode -->|是| Serial[Pi原生顺序执行]
+  Mode -->|否| Parallel[Pi原生并行读取]
+  Serial --> Gateway[既有授权与工具网关]
+  Parallel --> Gateway
+  Gateway --> Result{工具结果}
+  Result -->|已完成| Finished[记录真实完成事实]
+  Finished --> Cancel{Run已取消?}
+  Cancel -->|是| Stop[停止后续执行<br/>保留已完成结果]
+  Cancel -->|否| Continue[继续原任务]
+  Result -->|可修正错误| Feedback[反馈模型<br/>原预算与权限]
+  Feedback --> Continue
+  Result -->|明确宿主致命故障| Halt[记录故障并中止Pi]
+  Result -->|外部结果未知| Reconcile[停止自动重放<br/>保留核对入口]
+  Result -->|提交前取消| NoWrite[记录取消<br/>不得提交]

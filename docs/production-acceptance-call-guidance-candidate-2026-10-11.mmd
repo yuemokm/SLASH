@@ -1,0 +1,13 @@
+flowchart TD
+  S[根已合入\n真实本机Pi/Service定向3项通过\n待新云任务效果验证] -.范围.-> A
+  A[读取真实要求与宿主成果ID] --> B{本次成果已有ID?}
+  B -->|有| C[复用真实ID]
+  B -->|无| D[write_draft完整首稿]
+  D --> E[等待宿主自动登记回执]
+  E --> F[get_task_acceptance读取ID]
+  F --> C
+  C --> G[define_task_acceptance: 非空outputIds与prd.sourceIds]
+  G --> H[严格schema与宿主身份校验]
+  H --> I[候选验收要求登记 不等于业务通过]
+  G --> J[顶层sourceIds或空数组仍拒绝]
+  H --> K[虚构ID仍拒绝]

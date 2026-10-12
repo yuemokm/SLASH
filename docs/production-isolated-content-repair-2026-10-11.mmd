@@ -1,0 +1,28 @@
+flowchart TD
+  Root[9文件精确根集成 必要检查与统一全量待验 真实模型修稿未验] -.-> A
+  A[宿主冻结审查 input / prompt / wire4] --> B[真实 assertCurrent 前核对]
+  B --> C[原 Runtime 只读审查]
+  C --> D[正常 stop 无错 未取消]
+  D --> E[真实 assertCurrent 后核对]
+  E --> F[根协议与 coverage 身份合法]
+  F --> G{单条 finding 是否有效}
+  G -->|有效| H[连续原句绑定与原请求候选规则]
+  G -->|无效| I[保留 invalidFindings]
+  H --> J{全部有效 / 存在局部无效}
+  J -->|全部有效| K[保留原 completed 路径]
+  J -->|局部无效且全局有效| L[invalid / unverified + host isolatedRepair]
+  I --> L
+  B -->|失败| X[无局部资格]
+  D -->|失败| X
+  E -->|失败| X
+  F -->|失败| X
+  L --> M[receipt 全量 resultHash / strict 一致性]
+  K --> M
+  M --> N[Service getReport 真实刷新全部当前输入]
+  N --> O{活跃 / 未取消 / 权限版本 / 原预算 / 无未知副作用}
+  O -->|过期或失败| X
+  O -->|当前| P[重新计算有限候选 最多2轮]
+  P --> Q[现有草稿 ID与hash / 锁内CAS]
+  Q --> A
+  L --> R[正式交付继续独立 TaskDelivery]
+  R --> S[完整业务与视觉核对 / 合法人工替代证据]

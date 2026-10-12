@@ -1,0 +1,10 @@
+flowchart TD
+  Request[多个 read_file 行分页调用] --> Scope[逐次授权检查]
+  Scope --> Key[每次调用独立随机标识和虚拟键]
+  Key --> Ref[调用独享来源引用]
+  Ref --> Pi[Pi 官方读取与分页截断]
+  Pi --> Verify[重新核对授权和源内容哈希]
+  Verify -->|成功| Receipt[记录正确来源哈希 字符数和行范围]
+  Verify -->|真实版本冲突或撤权| Reject[拒绝本次读取]
+  Receipt --> Cleanup[仅清理本次虚拟键]
+  Reject --> Cleanup

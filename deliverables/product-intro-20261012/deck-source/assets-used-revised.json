@@ -1,0 +1,86 @@
+[
+  {
+    "slideNumber": 2,
+    "key": "models",
+    "file": "03-model-connection-fields.png",
+    "alt": "Slash真实添加模型窗口的基本配置字段",
+    "crop": {
+      "left": 0.28,
+      "top": 0.257,
+      "right": 0.28,
+      "bottom": 0.39
+    },
+    "provenance": "baseline采集当前built独立Electron profile；真实添加模型表单，API密钥为空，未触发新模型测试；裁切仅放大配置字段。",
+    "sha256": "c33c89ed5ae3f36916aa315b548088032581dffeb6ec057cd9c938cc3d833e8f"
+  },
+  {
+    "slideNumber": 3,
+    "key": "skills",
+    "file": "05-skills-local-github.png",
+    "alt": "Slash真实添加技能窗口的本地文件夹与GitHub来源选项",
+    "crop": {
+      "left": 0.2914,
+      "top": 0.4167,
+      "right": 0.5369,
+      "bottom": 0.4
+    },
+    "provenance": "baseline采集当前built独立Electron profile；真实添加技能表单，未安装技能到用户环境，未虚构内置Skill Creator。",
+    "sha256": "ea311f363e1c062398f238e9dd1859539a1212a9ac46aca43ae760820bbfc1f4"
+  },
+  {
+    "slideNumber": 3,
+    "key": "mcp",
+    "file": "15-mcp-official-presets.png",
+    "alt": "Slash真实Supabase官方MCP连接表单",
+    "crop": {
+      "left": 0.285,
+      "top": 0.248,
+      "right": 0.292,
+      "bottom": 0.363
+    },
+    "provenance": "真实独立Electron profile官方MCP预设表单，历史本机协议测试；未登录真实账号或调用云端。原图.test-data/mcp-ui-1791469886291/official-presets.png。",
+    "sha256": "6d97cf4879d71257614daf1b329f11ea5c032c956c2c967e6b837eba44f06fc0"
+  },
+  {
+    "slideNumber": 4,
+    "key": "sharing",
+    "file": "09-smb-sharing.png",
+    "alt": "真实SMB共享文件夹入口",
+    "crop": {
+      "left": 0.214,
+      "top": 0.132,
+      "right": 0.014,
+      "bottom": 0.446
+    },
+    "provenance": "真实共享管理入口；未创建共享或连接网络盘，双机未验。",
+    "sha256": "cd6b84714c9671fc1a3478cc4b4085d4ee33eac883487dff697674237d5f4e7c"
+  },
+  {
+    "slideNumber": 4,
+    "key": "resources",
+    "file": "11-right-source-files.png",
+    "alt": "真实右侧文件栏与会话草稿",
+    "crop": {
+      "left": 0.823,
+      "top": 0.05,
+      "right": 0,
+      "bottom": 0.61
+    },
+    "provenance": "真实合成需求文件与右侧文件栏；仅裁切侧栏，当时任务检查中。",
+    "sha256": "b4dc03a5e22f956bc2e1d41ba561d8d5834391d3f797d1fbe04f6b58d787f36a"
+  },
+  {
+    "slideNumber": 5,
+    "key": "prd",
+    "file": "14-prd-final-preview.png",
+    "alt": "真实任务结束后的预约管理PRD待应用草稿",
+    "crop": {
+      "left": 0.209,
+      "top": 0.045,
+      "right": 0.173,
+      "bottom": 0.38
+    },
+    "provenance": "真实最终草稿与任务状态，自动检查passed、业务覆盖unverified，草稿未应用；裁切放大上半部。",
+    "sha256": "bd975890159253b6b8a0f35c8d805824d47522e07afa21085ff3dfa8d54f76df"
+  }
+]

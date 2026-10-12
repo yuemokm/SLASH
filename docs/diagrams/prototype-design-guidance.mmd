@@ -7,7 +7,11 @@ flowchart TD
   Custom --> Advice
   Pending[已接受任务的固定快照] -->|保持原内容| Design
   Advice --> Design
-  Design --> First[write_draft 保存紧凑可运行首稿]
+  Design --> Content[业务文案服务操作 / 系统字段不伪装待填]
+  Content --> Notes[来源坐标与技术批注放可定位说明 / 保留映射]
+  Notes --> Truth[模拟身份与动作结果如实提示 / 不虚构已确认事实]
+  Truth --> Mobile[移动地址可读 / 状态不挤压 / 主次清楚]
+  Mobile --> First[write_draft 保存紧凑可运行首稿]
   First --> Read[read_draft 同一待应用稿 / 最新哈希]
   Read --> Edit[edit_draft 分区补齐内容与交互]
   Edit --> Complete{用户范围已补齐?}

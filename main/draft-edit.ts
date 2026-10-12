@@ -15,9 +15,21 @@ export interface DraftEditHost {
  canUsePending?:(runId:string,change:Change)=>boolean;
  transaction:<T>(target:Target,runId:string,operation:()=>Promise<T>)=>Promise<T>;
  commit:(change:Change,receipt:DraftEditReceipt)=>void;
+ validate?:(change:Change)=>Promise<void>;
  signal?:(runId:string)=>AbortSignal|undefined;
 }
 const key=(p:string)=>process.platform==='win32'?path.normalize(p).toLowerCase():path.normalize(p);
+function nativeMatchFailure(error:unknown,virtualPath:string,totalEdits:number){
+ if(!(error instanceof Error))return;
+ for(let index=0;index<totalEdits;index++){
+  const missing=totalEdits===1?`Could not find the exact text in ${virtualPath}. The old text must match exactly including all whitespace and newlines.`:`Could not find edits[${index}] in ${virtualPath}. The oldText must match exactly including all whitespace and newlines.`;
+  if(error.message===missing)return{code:'DRAFT_MATCH_NOT_FOUND',failedEditIndex:index};
+  const duplicate=/^Found ([1-9]\d*) occurrences of /.exec(error.message);
+  if(!duplicate)continue;
+  const ambiguous=totalEdits===1?`Found ${duplicate[1]} occurrences of the text in ${virtualPath}. The text must be unique. Please provide more context to make it unique.`:`Found ${duplicate[1]} occurrences of edits[${index}] in ${virtualPath}. Each oldText must be unique. Please provide more context to make it unique.`;
+  if(error.message===ambiguous)return{code:'DRAFT_MATCH_AMBIGUOUS',failedEditIndex:index};
+ }
+}
 function textGuard(filePath:string,content:string){
  if(!/\.(md|txt|html?|css|js|jsx|tsx?|json|csv|xml|drawio|svg|yaml|yml)$/i.test(filePath))throw Error('DRAFT_TEXT_ONLY: 仅支持已知 UTF-8 文本扩展');
  if(Buffer.byteLength(content)>2_000_000||content.includes('\0')||Buffer.from(content).toString('utf8')!==content)throw Error('DRAFT_TEXT_ONLY: 内容必须是 2 MB 内有效 UTF-8 文本');
@@ -51,7 +63,7 @@ export class DraftEditDomain {
  }
  async read(runId:string,input:ReadDraftInput):Promise<DraftReadReceipt>{
   const p=readDraftSchema.parse(input),s=await this.snapshot(runId,p),offset=Math.min(p.offset??0,s.content.length),end=Math.min(offset+(p.limit??8000),s.content.length);
-  return{mountId:p.mountId,path:p.path,source:s.pending?'pending':'applied',...(s.pending?{changeId:s.pending.id}:{}),contentHash:s.contentHash,baseHash:s.baseHash,content:s.content.slice(offset,end),offset,total:s.content.length,truncated:offset>0||end<s.content.length,...(end<s.content.length?{nextOffset:end}:{}),notice:'分页仅表示本段已读取；未读部分需继续按 nextOffset 读取。hash 由宿主计算。'+(s.pending?'当前为待应用草稿；编辑须同时传此回执的 changeId 和 contentHash（填入 expectedContentHash）。':'当前为已保存正式文件，没有待应用草稿；编辑须省略 changeId，使用此回执的 contentHash（填入 expectedContentHash）创建新的待应用草稿，不得沿用已应用草稿的旧 ID。')};
+  return{mountId:p.mountId,path:p.path,source:s.pending?'pending':'applied',...(s.pending?{changeId:s.pending.id,parentRunId:s.pending.runId}:{}),contentHash:s.contentHash,baseHash:s.baseHash,content:s.content.slice(offset,end),offset,total:s.content.length,truncated:offset>0||end<s.content.length,...(end<s.content.length?{nextOffset:end}:{}),notice:'分页仅表示本段已读取；未读部分需继续按 nextOffset 读取。hash 由宿主计算。'+(s.pending?'当前为待应用草稿；编辑须同时传此回执的 changeId 和 contentHash（填入 expectedContentHash）。':'当前为已保存正式文件，没有待应用草稿；编辑须省略 changeId，使用此回执的 contentHash（填入 expectedContentHash）创建新的待应用草稿，不得沿用已应用草稿的旧 ID。')};
  }
  async edit(runId:string,input:EditDraftInput):Promise<DraftEditReceipt>{
   const p=editDraftSchema.parse(input);this.guard(runId,true);
@@ -67,12 +79,21 @@ export class DraftEditDomain {
    const native=createEditToolDefinition(path.dirname(s.absolute),{operations});
    // Native edit only consults optional ctx.cwd; no extension context is
    // exposed in this host wrapper (its implementation supports omitted ctx).
-   const output=await native.execute(randomUUID(),{path:path.join(path.dirname(s.absolute),`.slash-edit-${randomUUID()}`),edits:p.edits??[{oldText:p.oldText!,newText:p.newText!}]},this.host.signal?.(runId),undefined,undefined!);
+   const virtualPath=path.join(path.dirname(s.absolute),`.slash-edit-${randomUUID()}`),edits=p.edits??[{oldText:p.oldText!,newText:p.newText!}];
+   const output=await native.execute(randomUUID(),{path:virtualPath,edits},this.host.signal?.(runId),undefined,undefined!).catch(async error=>{
+    const failure=nativeMatchFailure(error,virtualPath,edits.length);if(!failure)throw error;
+    // Preserve cancellation, authority and version failures even when Pi first
+    // notices a match failure. No source text is copied into this recovery hint.
+    const latest=await this.snapshot(runId,p);this.guard(runId,true);
+    if(latest.absolute!==s.absolute||latest.pending?.id!==s.pending?.id||latest.contentHash!==s.contentHash||latest.baseHash!==s.baseHash)throw Error('VERSION_CONFLICT: 编辑期间草稿或原文件已变化');
+    throw Error(`${failure.code}: ${JSON.stringify({mountId:p.mountId,path:p.path,failedEditIndex:failure.failedEditIndex,failedEditNumber:failure.failedEditIndex+1,totalEdits:edits.length,contentHash:latest.contentHash,...(latest.pending?{changeId:latest.pending.id}:{}),position:'unknown',readDraft:{mountId:p.mountId,path:p.path,offset:0,limit:8000},notice:'本次编辑未修改任何草稿；失败位置未知。请用 readDraft 参数调用 read_draft，按 nextOffset 继续读取目标片段，保留原文属性，使用最新回执的 contentHash/changeId 提交较小编辑。'})}`);
+   });
    if(staged===undefined)throw Error('DRAFT_EDIT_FAILED: Pi 未返回编辑内容');textGuard(p.path,staged);
    const latest=await this.snapshot(runId,p);this.guard(runId,true);
    if(latest.absolute!==s.absolute||latest.pending?.id!==s.pending?.id||latest.contentHash!==s.contentHash||latest.baseHash!==s.baseHash)throw Error('VERSION_CONFLICT: 编辑期间草稿或原文件已变化');
    const change:Change=s.pending?{...s.pending,runId,content:staged,...(s.pending.runId!==runId?{originRunId:s.pending.originRunId??s.pending.runId,resumptionHistory:[...(s.pending.resumptionHistory??[]),{fromRunId:s.pending.runId,toRunId:runId,at:new Date().toISOString(),contentHash:s.contentHash}]}:{})}:{id:randomUUID(),runId,mountId:p.mountId,path:p.path,before:s.baseHash,content:staged,status:'pending',createdAt:new Date().toISOString()};
-   const diff=output.details?.diff??'',receipt:DraftEditReceipt={changeId:change.id,path:change.path,status:'pending',contentHash:hash(staged),baseHash:change.before,diff:diff.slice(0,12000),diffHash:hash(diff),diffTruncated:diff.length>12000,firstChangedLine:output.details?.firstChangedLine,notice:'Pi 原生匹配（先精确，必要时规范化模糊匹配）；请核对实际 diff。批量各项匹配同一原内容。未直接写入原文件。'};
+   const diff=output.details?.diff??'',receipt:DraftEditReceipt={changeId:change.id,parentRunId:change.runId,path:change.path,status:'pending',contentHash:hash(staged),baseHash:change.before,diff:diff.slice(0,12000),diffHash:hash(diff),diffTruncated:diff.length>12000,firstChangedLine:output.details?.firstChangedLine,notice:'Pi 原生匹配（先精确，必要时规范化模糊匹配）；请核对实际 diff。批量各项匹配同一原内容。未直接写入原文件。'};
+   await this.host.validate?.(change);
    // No await between final guard/CAS and host commit.
    this.guard(runId,true);
    const current=this.host.changes();

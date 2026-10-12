@@ -47,7 +47,7 @@ test('真实授权来源产生持久回执和上下文，来源中的指令不�
 
 test('目录授权、路径越界、读取能力拒绝和缺失文件在进入模型前拒绝',async t=>{
  const {service,conversationId,calls,source,mount}=await fixture(t);
- for(const [ref,code] of [[{...source,mountId:'unknown'},/PERMISSION_DENIED/],[{...source,path:'../AGENTS.md'},/PERMISSION_DENIED/],[{...source,path:'missing.md'},/ENOENT/]] as const){const id=await sendWorkflow(service,conversationId,{kind:'meeting',sources:[ref]});await terminal(service,id);assert.equal(service.state.runs.find(item=>item.id===id)?.status,'failed');assert.match(service.state.runs.find(item=>item.id===id)?.error??'',code);}
+ for(const [ref,code] of [[{...source,mountId:'unknown'},/MOUNT_ID_UNKNOWN:/],[{...source,path:'../AGENTS.md'},/PERMISSION_DENIED/],[{...source,path:'missing.md'},/ENOENT/]] as const){const id=await sendWorkflow(service,conversationId,{kind:'meeting',sources:[ref]});await terminal(service,id);assert.equal(service.state.runs.find(item=>item.id===id)?.status,'failed');assert.match(service.state.runs.find(item=>item.id===id)?.error??'',code);if(ref.mountId==='unknown')assert.doesNotMatch(service.state.runs.find(item=>item.id===id)?.error??'',/可用目标：/);}
  mount.enabled=false;const disabledId=await sendWorkflow(service,conversationId,{kind:'meeting',sources:[source]});await terminal(service,disabledId);assert.match(service.state.runs.find(item=>item.id===disabledId)?.error??'',/PERMISSION_DENIED/);mount.enabled=true;
  service.setPermission('workspace_read','deny');const deniedId=await sendWorkflow(service,conversationId,{kind:'meeting',sources:[source]});await terminal(service,deniedId);assert.match(service.state.runs.find(item=>item.id===deniedId)?.error??'',/PERMISSION_DENIED/);assert.equal(calls.length,0);
 });

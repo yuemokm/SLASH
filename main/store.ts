@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import type {Event} from '../shared/types.js';
+import {migrateStore} from './store-migrations.js';
+import {recoveryRecordSchema,type RecoveryRecord} from '../shared/run-recovery.js';
 
 export type DurableEvent=Event&{eventId:string;streamId:string;sequence:number;occurredAt:string};
 export type EventReplay={events:DurableEvent[];streamId:string;afterSequence:number;latestSequence:number;earliestSequence:number;gap:boolean;hasMore:boolean};
@@ -13,13 +15,56 @@ export class Store {
  constructor(public dir:string){
   fs.mkdirSync(dir,{recursive:true});
   this.db=new DatabaseSync(path.join(dir,'slash.sqlite'));
-  // CREATE IF NOT EXISTS keeps existing v1 databases readable while adding
-  // the event stream without requiring a destructive migration.
-  this.db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY,value TEXT NOT NULL); CREATE TABLE IF NOT EXISTS operations(id TEXT PRIMARY KEY, run_id TEXT, tool TEXT, state TEXT, result TEXT, created_at TEXT); CREATE TABLE IF NOT EXISTS events(event_id TEXT PRIMARY KEY, stream_id TEXT NOT NULL, sequence INTEGER NOT NULL, type TEXT NOT NULL, run_id TEXT, text TEXT, occurred_at TEXT NOT NULL, payload TEXT NOT NULL); CREATE UNIQUE INDEX IF NOT EXISTS events_stream_sequence ON events(stream_id,sequence); CREATE INDEX IF NOT EXISTS events_stream_occurred ON events(stream_id,occurred_at); PRAGMA user_version=2;');
+  try{migrateStore(this.db,dir);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;');}catch(error){this.db.close();throw error;}
  }
  get<T>(key:string,fallback:T):T{const r=this.db.prepare('SELECT value FROM kv WHERE key=?').get(key);return r?JSON.parse(String(r.value)):fallback;}
  set(key:string,value:unknown){this.db.prepare('INSERT INTO kv VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));}
- operation(id:string,runId:string,tool:string,state:string,result=''){this.db.prepare('INSERT INTO operations VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,result=excluded.result').run(id,runId,tool,state,result,new Date().toISOString());}
+ /** Host-only: one binding claim and its first Operation/recovery receipt share
+  * one transaction. A crashed claimant therefore never leaves a missing receipt. */
+ claimOperationBinding(input:{key:string;operationId:string;runId:string;tool:string;initialResult:string;recovery:RecoveryRecord}){
+  const recovery=recoveryRecordSchema.parse(input.recovery);
+  if(!/^operation-binding:[a-f0-9]{64}$/.test(input.key)||recovery.operationId!==input.operationId||recovery.runId!==input.runId||recovery.tool!==input.tool||recovery.dispatch!=='may_have_run'||recovery.resolution!=='pending'||!recovery.scopeHash||!recovery.requestHash)throw Error('OPERATION_BINDING_IDENTITY');
+  JSON.parse(input.initialResult);
+  this.db.exec('BEGIN IMMEDIATE');try{
+   const owner=this.get<{operationId:string;runId:string;tool:string}|null>(input.key,null);
+   if(owner){const operation=this.operationsForRun(owner.runId).find(value=>value.id===owner.operationId);const record=this.recoveryForOperation(owner.operationId);if(!operation||!record||operation.tool!==owner.tool||record.scopeHash!==recovery.scopeHash||record.requestHash!==recovery.requestHash)throw Error('OPERATION_BINDING_CORRUPT');this.db.exec('COMMIT');return{claimed:false,operation};}
+   if(this.db.prepare('SELECT id FROM operations WHERE id=?').get(input.operationId)||this.recoveryForOperation(input.operationId))throw Error('OPERATION_ID_ALREADY_USED');
+   this.db.prepare('INSERT INTO kv VALUES(?,?)').run(input.key,JSON.stringify({operationId:input.operationId,runId:input.runId,tool:input.tool}));
+   this.db.prepare('INSERT INTO operations VALUES(?,?,?,?,?,?)').run(input.operationId,input.runId,input.tool,'executing',input.initialResult,new Date().toISOString());
+   this.saveRecovery(recovery);this.db.exec('COMMIT');return{claimed:true,operation:this.operationsForRun(input.runId).find(value=>value.id===input.operationId)!};
+  }catch(error){this.db.exec('ROLLBACK');throw error;}
+ }
+ /** Compare exact old result and all host identities. CAS retries only reread
+  * SQLite; this method never dispatches or retries external work. */
+ compareAndSwapOperationResult(input:{key:string;operationId:string;runId:string;tool:string;scopeHash:string;requestHash:string;expectedResult:string;nextResult:string;state:'executing'|'outcome_unknown'|'succeeded';verifiedDone?:boolean}){
+  JSON.parse(input.nextResult);this.db.exec('BEGIN IMMEDIATE');try{
+   const owner=this.get<{operationId:string;runId:string;tool:string}|null>(input.key,null),operation=this.operationsForRun(input.runId).find(value=>value.id===input.operationId),recovery=this.recoveryForOperation(input.operationId);
+   if(!owner||owner.operationId!==input.operationId||owner.runId!==input.runId||owner.tool!==input.tool||!operation||operation.tool!==input.tool||!recovery||recovery.scopeHash!==input.scopeHash||recovery.requestHash!==input.requestHash)throw Error('OPERATION_BINDING_IDENTITY');
+   if(operation.result!==input.expectedResult||['failed','cancelled'].includes(operation.state)||operation.state==='succeeded'&&input.state!=='succeeded'){this.db.exec('COMMIT');return false;}
+   // Like operation(), allow facts to be added to the SAME terminal state;
+   // settled recovery identity/resolution is never changed or reopened.
+   if(recovery.dispatch==='settled'&&!(operation.state==='succeeded'&&input.state==='succeeded'&&recovery.resolution==='verified_done')||input.state==='succeeded'&&!input.verifiedDone||input.verifiedDone&&input.state!=='succeeded')throw Error('OPERATION_RECOVERY_TERMINAL');
+   this.db.prepare('UPDATE operations SET result=?,state=? WHERE id=? AND result=?').run(input.nextResult,input.state,input.operationId,input.expectedResult);
+   if(input.verifiedDone&&recovery.dispatch!=='settled')this.saveRecovery({...recovery,dispatch:'settled',resolution:'verified_done',resolvedBy:'host',evidenceRefs:[...recovery.evidenceRefs,'operation:'+input.operationId],updatedAt:new Date().toISOString()});
+   this.db.exec('COMMIT');return true;
+  }catch(error){this.db.exec('ROLLBACK');throw error;}
+ }
+ operation(id:string,runId:string,tool:string,state:string,result=''){this.db.prepare("INSERT INTO operations VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,result=excluded.result WHERE operations.state NOT IN ('succeeded','failed','cancelled') OR operations.state=excluded.state").run(id,runId,tool,state,result,new Date().toISOString());}
+ /** Finish one tool attempt once. General operation() still permits explicit
+  * report updates and reconciliation of legacy unknown external outcomes. */
+ finishOperation(id:string,runId:string,tool:string,state:'succeeded'|'failed'|'cancelled'|'outcome_unknown',result=''){
+  this.db.exec('BEGIN IMMEDIATE');try{
+   this.db.prepare("INSERT INTO operations VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,result=CASE WHEN excluded.result='' THEN operations.result ELSE excluded.result END WHERE operations.state NOT IN ('succeeded','failed','cancelled','outcome_unknown')").run(id,runId,tool,state,result,new Date().toISOString());
+   const record=this.recoveryForOperation(id),actual=this.operationsForRun(runId).find(item=>item.id===id);
+   // A failure after dispatch is not proof of no effect. Keep the failure
+   // receipt, while separately retaining the unresolved side-effect barrier.
+   if(record&&actual&&actual.state!=='outcome_unknown'&&(actual.state==='succeeded'||(['failed','cancelled'].includes(actual.state)&&(record.dispatch==='not_sent'||record.effect==='read'))))this.saveRecovery({...record,dispatch:'settled',resolution:actual.state==='succeeded'?'verified_done':'verified_not_done',resolvedBy:'host',updatedAt:new Date().toISOString()});
+   this.db.exec('COMMIT');
+  }catch(error){this.db.exec('ROLLBACK');throw error;}
+ }
+ saveRecovery(input:RecoveryRecord){const record=recoveryRecordSchema.parse(input),existing=this.recoveryForOperation(record.operationId);if(existing&&(existing.runId!==record.runId||existing.tool!==record.tool||existing.effect!==record.effect))throw Error('RECOVERY_IDENTITY_MISMATCH');if(existing?.dispatch==='settled'&&(record.dispatch!=='settled'||existing.resolution!==record.resolution))throw Error('RECOVERY_TERMINAL_STATE: 已核对事实不能倒退');this.db.prepare('INSERT INTO operation_recovery VALUES(?,?,?,?,?,?,?) ON CONFLICT(operation_id) DO UPDATE SET dispatch=excluded.dispatch,resolution=excluded.resolution,evidence_json=excluded.evidence_json,updated_at=excluded.updated_at').run(record.operationId,record.runId,record.effect,record.dispatch,record.resolution,JSON.stringify(record),record.updatedAt);return record;}
+ recoveryForOperation(id:string):RecoveryRecord|undefined{const row=this.db.prepare('SELECT evidence_json FROM operation_recovery WHERE operation_id=?').get(id);return row?recoveryRecordSchema.parse(JSON.parse(String(row.evidence_json))):undefined;}
+ recoveryForRun(id:string):RecoveryRecord[]{return this.db.prepare('SELECT evidence_json FROM operation_recovery WHERE run_id=? ORDER BY updated_at').all(id).map(row=>recoveryRecordSchema.parse(JSON.parse(String(row.evidence_json))));}
  operationsForRun(runId:string){return this.db.prepare('SELECT id,run_id as runId,tool,state,result,created_at as createdAt FROM operations WHERE run_id=? ORDER BY created_at DESC').all(runId) as Array<{id:string;runId:string;tool:string;state:string;result:string;createdAt:string}>;}
 
  /** Append one event atomically and assign a monotonic sequence per stream. */

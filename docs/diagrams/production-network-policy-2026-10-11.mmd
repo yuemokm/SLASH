@@ -1,0 +1,22 @@
+flowchart TD
+    Settings[用户保存MCP连接与精确企业origin] --> Host[McpHost: 连接绑定和授权快照]
+    Host --> Login[McpOAuthBroker登录]
+    Host --> Transport[官方SDK HTTP transport: 匿名或已登录]
+    Login --> OAuth[官方SDK: 发现 / DCR / PKCE / 交换]
+    Transport --> Refresh[官方SDK后台刷新]
+    OAuth --> Policy[同一URL和DNS目的地策略]
+    Refresh --> Policy
+    Transport --> Once[工具401/403单次提交保护]
+    Once --> Policy
+    Policy --> Public{全部DNS结果公开或在精确企业origin内?}
+    Public -->|否 / 回环或保留目标| Deny[停止: 不发送协议请求]
+    Public -->|是| Current[重新核对当前连接与允许origin]
+    Current --> Pin[已有undici Agent: 固定核验地址 / 保留Host和TLS]
+    Pin --> Redirect{HTTP 3xx?}
+    Redirect -->|是| Deny
+    Redirect -->|否| Response[响应时再次核对权限 / 流正常排空]
+    Host --> Revoke[变更 / 禁用 / 删除 / 注销]
+    Revoke --> Abort[取消旧请求并失效旧provider]
+    Login --> Browser[初始浏览器授权URL核验]
+    Browser --> External[系统浏览器: 后续导航与DNS由其管理]
+    Login --> Callback[随机127.0.0.1回调 / state核验 / 不授予出站回环]

@@ -1,4 +1,12 @@
+import {PublicationDeliveryRecords} from './NetlifyPublishingControls';
+import {remarkHostWordBreaks} from './word-reading';
+import {testCaseExportIdentity} from "./test-case-export-request";
+import "./test-cases.css";
 import {RunRuntimeStatus} from './RunRuntimeStatus';
+import {RunInputQueuePanel} from './RunInputQueuePanel';
+import {McpElicitationPanel} from './McpElicitationPanel';
+import {runOperationViews} from './run-operation-view';
+import {RunRecoveryPanel} from './RunRecoveryPanel';
 import { Icon, FileIcon } from "./Icon";
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -8,12 +16,18 @@ import "./reference-picker.css";
 import { DecryptedStream } from "./DecryptedStream";
 import { ReplyDetails, type ReplyPanelState } from "./ReplyDetails";
 import { runHistoryAnchors } from "./run-history-anchors";
+import { toolMessageGroups } from "./tool-message-groups";
+import { runOutputMessageIndices } from "./run-output-placement";
 import { browserTree, fileInBrowserNode, fileTreeRole, preservedBrowserDirectories } from "./project-browser";
 import { ComposerModelMenu, ComposerModeMenu, ComposerPermissionMenu, ComposerPopover, type ThinkingCapability, type ThinkingLevel } from "./ComposerControls";
+import {applySlashCommand,matchingSlashCommands as filterSlashCommands} from "./slash-commands";
+import type {SkillDiscoveryReceipt} from "../shared/skills";
 import { appendComposerPreset, resolveComposerIntent } from "./composer-intent";
 import { planThinkingOverride } from "./composer-thinking";
 import { ReferencePicker } from "./ReferencePicker";
 import { WorkIssues, type ProductRecordsView } from "./WorkIssues";
+import { TestCasesPreview } from "./TestCasesPreview";
+import { isTestCasePath } from "../shared/test-cases";
 import { PrototypeAcceptance } from "./PrototypeAcceptance";
 import type { BusinessRuleCheckView } from "../shared/business-rules";
 import "./pm-workflows.css";
@@ -47,6 +61,9 @@ import { SettingsModal } from "./SettingsModal";
 import type { ThemeName } from "./SettingsModal";
 import { SharingPanel } from "./SharingPanel";
 import { ProjectResourcesBrowser } from "./ProjectResourcesBrowser";
+import { KnowledgeCollections } from "./KnowledgeCollections";
+import { TestCasesPage } from "./TestCasesPage";
+import { FeatureProjectScope } from "./FeatureProjectScope";
 import type { ProjectFileRef } from "../shared/project-catalog";
 import { isApprovalActionable, approvalResolutionNotice, type ApprovalResolutionResult } from "../shared/approval";
 import {
@@ -61,6 +78,8 @@ type View =
   | "会话"
   | "资源"
   | "成果"
+  | "测试用例"
+  | "知识库"
   | "规则与模板"
   | "共享文件夹";
 type SelectionContext = {
@@ -107,15 +126,17 @@ const folderTypeLabels: Record<string, string> = {
 function Markdown({
   children,
   className = "markdown",
+  wordStructured = false,
 }: {
   children: string;
   className?: string;
+  wordStructured?: boolean;
 }) {
   return (
     <div className={className}>
       <ReactMarkdown
         skipHtml
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={wordStructured ? [remarkGfm,remarkHostWordBreaks] : [remarkGfm]}
         components={{
           a: ({ children: label }) => (
             <span className="text-link">{label}</span>
@@ -184,10 +205,10 @@ const phaseLabels: Record<string, string> = {
   failed: "执行失败",
 };
 
-function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanConfirm, pendingChanges = 0 }: { run: Run; pendingChanges?: number; checkpoint?: RunCheckpoint; onResume?: () => void; onEdit?: () => void; onPlanDraft?: (ids:string[], text:string)=>void; onPlanConfirm?: (ids:string[], text:string)=>void }) {
+function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanConfirm, onPiReview, pendingChanges = 0, active = false, onClearInputs,call,workspaceRoot }: { call:(request:Request)=>Promise<unknown>;workspaceRoot:string;active?: boolean; onClearInputs?: () => void; run: Run; pendingChanges?: number; checkpoint?: RunCheckpoint; onResume?: () => void; onEdit?: () => void; onPlanDraft?: (ids:string[], text:string)=>void; onPlanConfirm?: (ids:string[], text:string)=>void; onPiReview?:(action:"open"|"cancel")=>void }) {
   const plan = run.plan;
   const proposal = run.proposal;
-  const completedOperations = checkpoint?.completedOperations.filter(operation => ["succeeded", "applied", "completed"].includes(operation.state) && operation.tool !== "read_workflow_sources") || [];
+  const completedOperations = runOperationViews(checkpoint?.completedOperations || []);
   const readSourceCount = run.workflow?.receipts.filter(receipt => receipt.contentStatus !== "metadata_only").length || 0;
   const metadataSourceCount = run.workflow?.receipts.filter(receipt => receipt.contentStatus === "metadata_only").length || 0;
   const needsAttention = Boolean(run.error) || proposal?.status === "pending" || ["waiting_user", "awaiting_plan", "interrupted", "failed"].includes(run.status);
@@ -197,28 +218,30 @@ function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanCon
   useEffect(()=>{if(proposal){setSelected(proposal.selectedOptionIds||[]);setCustomText(proposal.customText||'');}},[proposal?.status, proposal?.selectedOptionIds?.join(','), proposal?.customText]);
   return (
     <article className={`run-plan-card ${needsAttention ? "needs-attention" : ""} ${run.status === "failed" || run.error ? "has-error" : ""}`}>
-      <div className="run-plan-head">
+      {phaseTitle !== "生成与执行" && <div className="run-plan-head">
         <div>
           <b>{phaseTitle}</b>
         </div>
 
-      </div>
+      </div>}
       <details className="run-execution-details">
       <summary>执行记录{completedOperations.length ? ` · ${completedOperations.length} 次工具操作` : ""}{run.workflow?.receipts.length ? ` · 来源输入：正文 ${readSourceCount} 份 · 仅文件信息 ${metadataSourceCount} 份` : ""}</summary>
       <ol className="run-actual-progress" aria-label="实际执行记录">
-        {(run.runtimeStatus||Boolean(run.inputs?.length))&&<li><RunRuntimeStatus run={run} active={false} onClear={()=>{}}/></li>}
+        {run.piChildTasks?.map(task=><li key={task.id} className={task.state==='succeeded'?'done':task.state}><span>只读子任务 · {task.purpose==='research'?'资料研究':'独立检查'} · {({running:'进行中',succeeded:'已完成',failed:'失败',cancelled:'已取消'})[task.state]} · {(task.durationMs/1000).toFixed(1)} 秒<small>模型 {task.modelId} · {task.toolCount} 次工具调用{task.error?' · '+task.error:''}</small></span></li>)}
+        {(run.runtimeStatus||Boolean(run.inputs?.length))&&<li><RunRuntimeStatus run={run} active={active} onClear={()=>onClearInputs?.()}/></li>}
         {run.skillDiscovery && <li><span>已发现 {run.skillDiscovery.skills.length} 个有效项目技能；实际加载 {run.skillLoads?.length || 0} 次。发现列表不代表已读取正文。</span></li>}
         {run.imageReads?.map((image,index)=><li className="done" key={`${image.contentHash}-${index}`}><span>已读取{image.source === 'prototype_screenshot' ? '验收截图' : '图片'}：{image.path} · {image.width}×{image.height}{image.viewport ? ` · CSS视口 ${image.viewport.width}×${image.viewport.height}` : ''}{image.caseId ? ` · 用例 ${image.caseId}` : ''}{image.versionState === 'stale' ? ' · 历史版本，当前成果已变化' : ''}<small>图片哈希：{image.contentHash}{image.entryHash ? ` · 成果哈希：${image.entryHash}` : ''}</small></span></li>)}
         {run.skillLoads?.map((skill,index)=><li className="done" key={`${skill.name}-${index}`}><span>已读取技能 {skill.name} · {skill.path} · {skill.characters} 字符 · {skill.invocation === 'command' ? '用户指定' : '按需加载'}<small>读取时间：{new Date(skill.readAt).toLocaleString()} · 内容哈希：{skill.contentHash}</small></span></li>)}
         {readSourceCount > 0 && <li className="done"><span>输入时已读取 {readSourceCount} 份来源正文，版本见回执</span></li>}
         {metadataSourceCount > 0 && <li className="done"><span>仅核验 {metadataSourceCount} 份副本信息，任务开始时未预载正文；提取结果见本轮草稿或工具记录</span></li>}
-        {completedOperations.map(operation => <li className="done" key={operation.id}><span>{({ write_draft: "已生成修改草稿", read_file: "已读取文件", search_files: "已检索授权资料", apply_change: "已应用修改", check_quality: "已执行成果检查", quality_check: "已执行成果检查" } as Record<string,string>)[operation.tool] || `已执行工具：${operation.tool}`}</span></li>)}
+        {completedOperations.map(operation => <li className={operation.state} key={operation.id}><span>{operation.text}</span></li>)}
         {checkpoint?.assistantText && <li className="done"><span>已输出回复内容</span></li>}
-        {!run.workflow?.receipts.length && !checkpoint?.completedOperations.some(operation => ["succeeded", "applied", "completed"].includes(operation.state)) && !checkpoint?.assistantText && <li><span>{run.status === "succeeded" ? "任务运行已结束，可核对回复与成果" : "读取来源与工具调用后，执行记录会在这里更新"}</span></li>}
+        {!run.workflow?.receipts.length && !completedOperations.length && !checkpoint?.assistantText && <li><span>{run.status === "succeeded" ? "任务运行已结束，可核对回复与成果" : "读取来源与工具调用后，执行记录会在这里更新"}</span></li>}
       </ol>
       {run.skillDiscovery && <details><summary>项目技能与发现问题</summary><ul>{run.skillDiscovery.skills.map(skill=><li key={`${skill.mountId}-${skill.path}`}><b>{skill.name}</b>：{skill.description} · {skill.path}{skill.disableModelInvocation ? '（仅用户显式加载）' : ''}</li>)}{run.skillDiscovery.diagnostics.map((issue,index)=><li key={index}><span>{issue.path || '技能目录'}：{issue.message}（{issue.code}）</span></li>)}</ul></details>}
       <small>第 {run.attempt || 1} 次尝试 · 最近更新 {run.updatedAt ? new Date(run.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "刚刚"}{run.resumable ? " · 可继续" : ""}</small>
       </details>
+      {run.piPlanReview && <div className="plan-proposal"><p>方案批注：{({awaiting_user:"等待评阅",approved:"已确认",needs_changes:"需修改",cancelled:"已关闭"})[run.piPlanReview.status]}</p>{run.piPlanReview.status === "awaiting_user" && <><button onClick={()=>onPiReview?.("open")}>打开方案批注</button><button onClick={()=>onPiReview?.("cancel")}>关闭本次批注</button></>}</div>}
       {plan && <details className="run-intended-plan"><summary>查看任务计划</summary><ol>{plan.steps.map((step, index) => <li key={`${run.id}-plan-${index}`}><span>{step}</span></li>)}</ol><small>实际完成情况见执行记录、检查结果和版本回执。</small></details>}
       {run.mode === "plan" && proposal && (
         <div className="plan-proposal">
@@ -241,7 +264,8 @@ function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanCon
         </details>
       )}
       {run.workflow && run.error && onEdit && <button onClick={onEdit}>调整资料与任务后重试</button>}
-      {run.resumable && onResume && (
+      {['interrupted','failed'].includes(run.status)&&<RunRecoveryPanel key={`${workspaceRoot}:${run.id}`} run={run} workspaceRoot={workspaceRoot} call={call} onResume={run.resumable?onResume:undefined}/>}
+      {!['interrupted','failed'].includes(run.status)&&run.resumable && onResume && (
         <button className="primary" onClick={onResume}>{run.interruptionReason === "model_output_limit" ? "继续生成" : "继续任务"}</button>
       )}
     </article>
@@ -581,7 +605,7 @@ function PreviewPane({
   onClose: () => void;
   onReference: () => void;
   onReveal: () => void;
-  onExport: (format: "copy" | "docx" | "zip") => void;
+  onExport: (format: "copy" | "docx" | "zip" | "test_cases_markdown" | "test_cases_xlsx") => void;
   onWorkflow: (kind: PmWorkflowKind, sources: PmWorkflowSource[]) => void;
   onContinue: (text: string) => void;
   mode: AgentMode;
@@ -813,6 +837,7 @@ function PreviewPane({
           <div className="preview-more-panel">
             <div className="preview-more-actions" onClick={event => { if ((event.target as HTMLElement).closest("button:not(:disabled)")) { if (moreActions.current) moreActions.current.open = false; } }}>
         {preview && <button aria-label="基于原型补 PRD" onClick={() => onWorkflow("prototype_to_prd", [{ mountId: file.mountId, path: file.path, artifactId, contentHash: preview.version }])}>基于原型补 PRD</button>}
+        {!isTestCasePath(file.path) && (preview || documentView) && <button aria-label="根据当前成果创建测试用例" disabled={Boolean(documentView && !/^[a-f0-9]{64}$/i.test(documentView.version))} onClick={() => onWorkflow("test_cases", [{ mountId: file.mountId, path: file.path, artifactId, versionId: versions.find(v => v.contentHash === documentView?.version)?.id || "current", contentHash: preview?.version || documentView?.version }])}>创建测试用例</button>}
         <button onClick={onReveal}>定位文件</button>
         {onProcessingCopy && <button disabled={processingBusy} onClick={onProcessingCopy}>{processingBusy ? "创建中…" : "创建处理副本"}</button>}
         <button
@@ -837,6 +862,7 @@ function PreviewPane({
           {diffBusy ? "计算差异…" : "查看差异"}
         </button>
         <button onClick={() => onExport("copy")}>导出原文件</button>
+        {isTestCasePath(file.path) && <><button onClick={() => onExport("test_cases_xlsx")}>导出 Excel</button><button onClick={() => onExport("test_cases_markdown")}>导出 Markdown</button></>}
         {/\.md$/i.test(file.path) && (
           <button disabled={file.referenceProtected} title={file.referenceProtected ? "请先创建处理副本再转换" : undefined} onClick={() => onExport("docx")}>导出 Word</button>
         )}
@@ -1003,10 +1029,10 @@ function PreviewPane({
           {documentView?.notice && (
             <div className="reader-notice">{documentView.notice}</div>
           )}
-          {documentView?.format === "text" ? (
+          {isTestCasePath(file.path) ? <TestCasesPreview content={documentView?.content || ""} onRevealSource={source => call({type:"reveal",mountId:source.mountId,path:source.path})} /> : documentView?.format === "text" ? (
             <pre>{documentView.content}</pre>
           ) : (
-            <Markdown>{documentView?.content || ""}</Markdown>
+            <Markdown wordStructured={documentView?.format === "word" && documentView.wordPresentation === "host-structured-v1"}>{documentView?.content || ""}</Markdown>
           )}
         </div>
       )}
@@ -1023,19 +1049,42 @@ export function App() {
   useEffect(() => { void window.pm.request({ type: "windowTheme", theme }); }, [theme]);
   const [state, setState] = useState<State>();
   const [view, setView] = useState<View>("会话");
+  const [featureProjectSwitching, setFeatureProjectSwitching] = useState(false);
+  const projectSwitchInFlight = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [requestedSettingsTab,setRequestedSettingsTab]=useState<import("./settings-navigation").SettingsTab>();
   const [conversationId, setConversationId] = useState("");
   const [draft, setDraft] = useState("");
+  const composerInputRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const input = composerInputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 200)}px`;
+  }, [draft, view]);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashIndex, setSlashIndex] = useState(0);
+  const [slashSkills, setSlashSkills] = useState<SkillDiscoveryReceipt>();
+  const [slashSkillsError, setSlashSkillsError] = useState("");
+  const slashMenuRef = useRef<HTMLDivElement>(null);
   const [imageAttachment, setImageAttachment] = useState<{path:string;name:string}>();
   const [referencePickerOpen, setReferencePickerOpen] = useState(false);
   const [referenceAttachments, setReferenceAttachments] = useState<FileRef[]>([]);
   const [workflowKind, setWorkflowKind] = useState<PmWorkflowKind>();
   const [workflowSources, setWorkflowSources] = useState<PmWorkflowSource[]>();
+  const [prdTemplate, setPrdTemplate] = useState<FileRef & PmWorkflowSource>();
+  const templateScope = useRef({ root: state?.root, conversationId });
+  useEffect(() => {
+    if (templateScope.current.root !== state?.root || templateScope.current.conversationId !== conversationId) {
+      setPrdTemplate(undefined);
+      setReferencePickerOpen(false);
+    }
+    templateScope.current = { root: state?.root, conversationId };
+  }, [state?.root, conversationId]);
   const [visionBusy, setVisionBusy] = useState(false);
   const [agentMode, setAgentMode] = useState<"plan"|"build">("build");
-  const [inputDelivery,setInputDelivery]=useState<'steer'|'follow_up'>('steer');
+  const [inputDelivery,setInputDelivery]=useState<'steer'|'follow_up'>('follow_up');
+  const [permissionUpdating,setPermissionUpdating]=useState(false);
   const inputRequest=useRef<{runId:string;text:string;delivery:'steer'|'follow_up';requestId:string}|undefined>(undefined);
   const [permissionMode, setPermissionMode] = useState<"standard"|"accept_edits"|"full_access">("standard");
   const [modelEntryId, setModelEntryId] = useState("");
@@ -1133,6 +1182,14 @@ export function App() {
     if (!response.ok) throw Error(response.error || "请求失败");
     return response.data as unknown;
   }, []);
+  const skillScopeKey=JSON.stringify([state?.root,state?.mounts,state?.permissions?.workspace_read]);
+  useEffect(()=>{
+    if(!slashOpen||settingsOpen)return;
+    let current=true;setSlashSkills(undefined);setSlashSkillsError("");setSlashIndex(0);
+    void call({type:"skillCommands"}).then(receipt=>{if(current){setSlashSkills(receipt as SkillDiscoveryReceipt);setSlashIndex(0);}}).catch(reason=>{if(current)setSlashSkillsError(reason instanceof Error?reason.message:String(reason));});
+    return()=>{current=false;};
+  },[slashOpen,settingsOpen,skillScopeKey,call]);
+  useEffect(()=>{slashMenuRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({block:"nearest"});},[slashIndex]);
   const futureRequest = useCallback(async (request: unknown) => {
     try {
       const response = await (
@@ -1302,7 +1359,9 @@ export function App() {
     );
   }, [act, call, conversationId, state]);
   const pendingPlan = state?.runs.find(run => run.conversationId === conversationId && run.mode === "plan" && run.proposal?.status === "pending");
-  const composerTaskType = !draft.trim() && pendingPlan?.modelRoute?.taskType ? pendingPlan.modelRoute.taskType as import("../shared/types").ModelTaskType : resolveComposerIntent({ draft, workflowKind, view }).taskType;
+  const composerIntent = resolveComposerIntent({ draft, workflowKind: prdTemplate ? "prd" : workflowKind, view });
+  const templateCommandConflict = Boolean(prdTemplate && composerIntent.kind !== "prd");
+  const composerTaskType = !draft.trim() && !prdTemplate && pendingPlan?.modelRoute?.taskType ? pendingPlan.modelRoute.taskType as import("../shared/types").ModelTaskType : composerIntent.taskType;
   thinkingScope.current = `${modelEntryId}:${composerTaskType}`;
   const modelConfigurationKey = JSON.stringify(state?.models?.map(model => [model.id, model.baseUrl, model.modelId, model.protocol, model.updatedAt]));
   useEffect(() => {
@@ -1491,11 +1550,22 @@ export function App() {
   const active = runs.find((run) =>
     ["queued", "running", "waiting_user", "cancelling", "validating"].includes(run.status),
   );
+  const composerScope=JSON.stringify([state?.root,conversationId]);
+  const composerScopeRef=useRef(composerScope);composerScopeRef.current=composerScope;
+  const changePermissionMode=async(value:'standard'|'accept_edits'|'full_access')=>{
+    if(permissionUpdating)return;
+    const scope=composerScope;setPermissionUpdating(true);
+    try{const id=await ensureConversation();await call({type:'runPermissionModeSet',conversationId:id,runId:active?.id,permissionMode:value});await refresh();if(scope===composerScopeRef.current){setPermissionMode(value);setNotice(active?'当前任务权限已更新；明确禁止仍优先。':'权限已更新；明确禁止仍优先。');}}
+    catch(reason){if(scope===composerScopeRef.current)setError(reason instanceof Error?reason.message:String(reason));}
+    finally{setPermissionUpdating(false);}
+  };
   const runStatusLabel = (status?: string) => ({queued:"排队中",running:"进行中",waiting_user:"等待确认",awaiting_plan:"等待方案确认",cancelling:"正在取消",cancelled:"已取消",interrupted:"已中断",validating:"检查中",succeeded:"执行完成",failed:"执行失败"}[status || ""] || "就绪");
   const pendingConversationChanges = state?.changes.filter(change => change.status === "pending" && runs.some(run => run.id === change.runId)).length || 0;
   const conversationStatus = active ? runStatusLabel(active.status) : `${runStatusLabel(runs[0]?.status)}${runs[0]?.status === "succeeded" && pendingConversationChanges ? ` · ${pendingConversationChanges} 份草稿待应用` : ""}`;
   const currentRun = runs.find(run=>run.mode==='plan'&&run.proposal?.status==='pending') || runs[0];
-  const historyAnchors = runHistoryAnchors(current?.messages || [], runs, { activeRunId: active?.id, currentRunId: currentRun?.id });
+  const historyAnchors = runHistoryAnchors(current?.messages || [], runs, { activeRunId: active?.id, currentRunId: currentRun?.id, outputRunIds: state?.changes.map(change=>change.runId) });
+  const outputMessageIndices = runOutputMessageIndices(current?.messages || [], active?.id);
+  const groupedToolMessages = toolMessageGroups(current?.messages || [], runs, new Set(historyAnchors.keys()));
   const lastAssistantIndex =
     current?.messages.reduce(
       (latest, message, index) =>
@@ -1566,6 +1636,9 @@ export function App() {
   const ensureConversation = async () => {
     if (conversationId) return conversationId;
     const id = (await call({ type: "conversation" })) as string;
+    // Creating the first conversation belongs to this same draft. Keep the
+    // chosen template available if the subsequent send fails.
+    templateScope.current = { root: state?.root, conversationId: id };
     setConversationId(id);
     return id;
   };
@@ -1633,7 +1706,24 @@ export function App() {
     setWorkflowKind(undefined);
     setWorkflowSources(undefined);
     setReferenceAttachments([]);
+    setPrdTemplate(undefined);
     setImageAttachment(undefined);
+  };
+  const openProject = async (id:string, nextView:View="会话") => {
+    if (projectSwitchInFlight.current) return;
+    projectSwitchInFlight.current=true;setFeatureProjectSwitching(true);
+    try {
+      await act(async()=>{
+        const result=await call(id==="__choose__"?{type:"project"}:{type:"project",id}) as {currentProjectId?:string};
+        if(id==="__choose__"&&!result?.currentProjectId)return;
+        setProjectId(result?.currentProjectId||id);
+        setConversationId("");setDraft("");setWorkflowKind(undefined);setWorkflowSources(undefined);
+        setReferenceAttachments([]);setPrdTemplate(undefined);setReferencePickerOpen(false);setImageAttachment(undefined);
+        setProductRecords(undefined);setDecisionCenter(undefined);setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);
+        fileLoadVersion.current++;setFiles([]);setProjectTree(undefined);setView(nextView);
+        await refresh();await loadProjects();
+      });
+    } finally {projectSwitchInFlight.current=false;setFeatureProjectSwitching(false);}
   };
   const attachImage = (file?: File) => {
     if (!file || !/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)) { setError("请拖入 PNG、JPEG、WEBP 或 GIF 图片"); return; }
@@ -1652,35 +1742,39 @@ export function App() {
       setError(reason instanceof Error ? reason.message : String(reason));
     }
   };
-  const chooseWorkflow = (kind: PmWorkflowKind, sources?: PmWorkflowSource[], intent?: string) => {
+  const chooseWorkflow = (kind: PmWorkflowKind, sources?: PmWorkflowSource[], intent?: string, template?: PmWorkflowSource) => {
     setWorkflowKind(kind);
+    if (template && kind === "prd") setPrdTemplate({ ...template, size: 0 });
+    else if (kind !== "prd" || sources) setPrdTemplate(undefined);
     setWorkflowSources(sources);
     if (sources) setReferenceAttachments(previous => [...previous, ...sources.map(source => ({ mountId: source.mountId, path: source.path, size: 0 }))].filter((file, i, all) => all.findIndex(other => other.mountId === file.mountId && other.path === file.path) === i));
     setDraft(previous => appendComposerPreset(previous, intent || pmWorkflows[kind].intent));
     setView("会话");
     setNotice("提示词已加入输入区；可直接编辑，或移除任务上下文。");
-    if (["meeting", "prototype_to_prd"].includes(kind) && !sources?.length && !referenceAttachments.length) void openReferencePicker();
+    if (["meeting", "prototype_to_prd", "test_cases"].includes(kind) && !sources?.length && !referenceAttachments.length) void openReferencePicker();
   };
   const send = async () => {
     if(active){
       if(busy||!draft.trim())return;
-      if(imageAttachment||referenceAttachments.length||workflowKind){setNotice('本轮补充仅支持文字；请移除新附件或任务上下文，或等待本轮结束后另发任务。');return;}
+      if(imageAttachment||referenceAttachments.length||workflowKind||prdTemplate){setNotice('本轮补充仅支持文字；请移除新附件或任务上下文，或等待本轮结束后另发任务。');return;}
       if(!['queued','running','waiting_user'].includes(active.status)){setNotice('本轮正在收尾或取消，请等待结束后另发任务。');return;}
       setBusy(true);setError('');
       const previous=inputRequest.current;
-      const request=previous&&previous.runId===active.id&&previous.text===draft&&previous.delivery===inputDelivery?previous:{runId:active.id,text:draft,delivery:inputDelivery,requestId:crypto.randomUUID()};inputRequest.current=request;
-      try{await call({type:'runInputEnqueue',...request});inputRequest.current=undefined;setDraft('');setNotice('补充已加入本轮，沿用本轮模式、权限与模型；运行记录会显示实际送达状态。');}
-      catch(reason){setError(reason instanceof Error?reason.message:String(reason));}finally{setBusy(false);}return;
+      const request=previous&&previous.runId===active.id&&previous.text===draft.trim()&&previous.delivery===inputDelivery?previous:{runId:active.id,text:draft.trim(),delivery:inputDelivery,requestId:crypto.randomUUID()};inputRequest.current=request;
+      const submittedDraft=draft,scope=composerScope;
+      try{await call({type:'runInputEnqueue',...request});inputRequest.current=undefined;if(scope===composerScopeRef.current){setDraft(value=>value===submittedDraft?'':value);setNotice('');}await refresh();}
+      catch(reason){if(scope===composerScopeRef.current)setError(reason instanceof Error?reason.message:String(reason));}finally{setBusy(false);}return;
     }
-    if (!draft.trim() || busy) return;
+    if (busy || (!draft.trim() && !prdTemplate)) return;
+    if (templateCommandConflict) { setError("当前命令与 PRD 模板冲突，请改用 PRD 或移除模板。"); return; }
     if (thinkingLoading && (thinkingDirty || thinkingLevel)) { setNotice("正在确认思考档位，请稍后发送。");return; }
     const parts = draft.trim().split(/\s+/);
-    const { command, kind, taskType } = resolveComposerIntent({ draft, workflowKind, view });
+    const { command, kind, taskType } = composerIntent;
     const commandText: Record<string, string> = { "/plan": "请先研究相关资料并生成可确认的执行方案。", "/research": "请检索已授权资料并整理证据。", "/prd": "请按当前 PRD 模板生成结构化产品需求文档。", "/prototype": "请生成或修改 HTML 交互原型。", "/review": "请对当前成果执行质量检查并发起评审。", "/help": "请说明当前会话可用的 Slash 命令和操作方式。" };
     if (command === "/plan") setAgentMode("plan");
-    const requestText = commandText[command] ? `${commandText[command]}${parts.slice(1).join(" ") ? `\n补充要求：${parts.slice(1).join(" ")}` : ""}` : draft.trim();
-    const sources = workflowSources || referenceAttachments.map(({ mountId, path }) => ({ mountId, path }));
-    if (kind && ["meeting", "prototype_to_prd"].includes(kind) && !sources.length) { setError("请先选择实际来源资料，再发送任务。"); await openReferencePicker(); return; }
+    const requestText = commandText[command] ? `${commandText[command]}${parts.slice(1).join(" ") ? `\n补充要求：${parts.slice(1).join(" ")}` : ""}` : draft.trim() || pmWorkflows.prd.intent;
+    const sources = (workflowSources || referenceAttachments.map(({ mountId, path }) => ({ mountId, path }))).filter(source => !prdTemplate || source.mountId !== prdTemplate.mountId || source.path !== prdTemplate.path);
+    if (kind && ["meeting", "prototype_to_prd", "test_cases"].includes(kind) && !sources.length) { setError("请先选择实际来源资料，再发送任务。"); await openReferencePicker(); return; }
     if (kind === "change_summary" && sources.length !== 2) { setError("请从成果预览的版本差异中选择旧版与当前版，再生成变更说明。"); return; }
     setBusy(true);
     setError("");
@@ -1696,10 +1790,11 @@ export function App() {
         const attachment = await call({ type: "visionAttach", path: imageAttachment.path }) as { id: string };
         attachmentIds = [attachment.id];
       }
-      await call({ type: "send", id, text: finalText, mode: command === "/plan" ? "plan" : agentMode, permissionMode, modelEntryId: modelEntryId || undefined, thinkingLevel: thinkingLoading ? undefined : thinkingLevel, taskType, attachmentIds, workflow: kind ? { kind, sources } : undefined });
+      await call({ type: "send", id, text: finalText, mode: command === "/plan" ? "plan" : agentMode, permissionMode:current?.permissionMode??permissionMode, modelEntryId: modelEntryId || undefined, thinkingLevel: thinkingLoading ? undefined : thinkingLevel, taskType, attachmentIds, workflow: kind ? { kind, sources, template: prdTemplate ? { mountId: prdTemplate.mountId, path: prdTemplate.path, versionId: prdTemplate.versionId, contentHash: prdTemplate.contentHash } : undefined } : undefined });
       setDraft("");
       setImageAttachment(undefined);
       setReferenceAttachments([]);
+      setPrdTemplate(undefined);
       setReferencePickerOpen(false);
       setWorkflowKind(undefined);
       setWorkflowSources(undefined);
@@ -1711,15 +1806,15 @@ export function App() {
       setBusy(false);
     }
   };
-  const slashCommands = [
-    ["/plan", "先研究并生成执行方案"],
-    ["/research", "检索已授权资料并整理证据"],
-    ["/prd", "按模板生成结构化 PRD"],
-    ["/prototype", "生成或修改 HTML 交互原型"],
-    ["/review", "发起成果质量和评审检查"],
-    ["/help", "查看可用命令和当前权限"],
-  ] as const;
-  const matchingSlashCommands = slashCommands.filter(([command]) => command.startsWith(draft.trim().split(/\s+/)[0] || "/"));
+  const matchingSlashCommands = filterSlashCommands(draft, slashSkills?.skills??[]);
+  const clearSkillWorkflow=()=>{
+    if(workflowSources?.length)setReferenceAttachments(previous=>[...previous,...workflowSources.map(({mountId,path})=>({mountId,path,size:0}))].filter((file,index,all)=>all.findIndex(other=>other.mountId===file.mountId&&other.path===file.path)===index));
+    setWorkflowKind(undefined);setWorkflowSources(undefined);setPrdTemplate(undefined);
+  };
+  const selectSlashCommand=(command:string)=>{
+    if(command.startsWith("/skill:")){clearSkillWorkflow();}
+    setDraft(previous=>applySlashCommand(previous,command));setSlashOpen(false);composerInputRef.current?.focus();
+  };
   const savePlanDraft = async (runId:string, ids:string[], customText:string) => { try { await call({type:"planDraft",id:runId,selectedOptionIds:ids,customText}); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); } };
   const confirmPlan = async (runId:string, ids:string[], customText:string) => { if(thinkingLoading && (thinkingDirty || thinkingLevel)){setNotice("正在确认思考档位，请稍后确认方案。");return;} setBusy(true); setError(""); try { await call({type:"planConfirm",id:runId,selectedOptionIds:ids,customText,permissionMode,modelEntryId:modelEntryId || undefined,thinkingLevel:planThinkingOverride(thinkingLevel,thinkingDirty)}); setAgentMode("build"); await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); } finally { setBusy(false); } };
   const resumeRun = async (runId: string) => {
@@ -1856,6 +1951,7 @@ export function App() {
       setDraft(previous => (previous + `\n处理副本（copyId=${copy.id}，mountId=${target.mountId}）：${target.path}\n转换或脚本仅处理这个副本，保留参考原件。\n`).trimStart());
       setWorkflowKind(undefined);
       setWorkflowSources(undefined);
+      setPrdTemplate(undefined);
       setView("会话");
       setNotice("已创建处理副本并加入会话；参考原件保留。");
       setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);setSelection(undefined);setVersions([]);setVersionLabel("");
@@ -1875,6 +1971,7 @@ export function App() {
     setDraft(text);
     setWorkflowKind(undefined);
     setWorkflowSources(undefined);
+    setPrdTemplate(undefined);
     setView("会话");
   };
   const visibleConversations: ConversationItem[] =
@@ -2135,8 +2232,9 @@ export function App() {
               mountId: selected.mountId,
               path: selected.path,
               format,
-            })) as { path: string; report?: { notice?: string } } | null;
-            if (result) setNotice("已导出至 " + result.path + (result.report?.notice ? " · " + result.report.notice : ""));
+              ...((format.startsWith("test_cases_") || format === "copy" && isTestCasePath(selected.path)) ? await testCaseExportIdentity(documentView?.version, selected, state?.changes || [], documentView?.content) : {}),
+            })) as { path: string; report?: { notice?: string }; quality?: { status: 'passed' | 'skipped'; notice: string } } | null;
+            if (result) setNotice("已导出至 " + result.path + (result.report?.notice ? " · " + result.report.notice : "") + (result.quality?.notice ? " · " + result.quality.notice : ""));
           })
         }
         onVersions={() => void act(loadVersions)}
@@ -2153,11 +2251,48 @@ export function App() {
 
   const workIssues = (inConversation: boolean, expanded = false) => <WorkIssues expanded={expanded} key={`${state?.root}:${inConversation ? conversationId : selectedArtifactId}`} records={productRecords} decisions={decisionCenter} conversationId={inConversation ? conversationId || undefined : undefined} artifactId={inConversation ? undefined : selectedArtifactId || undefined} artifactFile={inConversation ? undefined : selected} businessAccessKey={JSON.stringify([state?.permissions, state?.mounts.map(m => [m.id, m.path, m.enabled, m.write])])} runIds={inConversation ? runs.map(run => run.id) : []} onContinue={prefill} onOpen={file => void act(() => openFile(file))} onRefresh={() => void act(async () => { setProductRecords((await call({ type: "productRecords" })) as ProductRecordsView); await loadDecisionCenter(); })} onDecision={(id,status) => void transitionDecision(id,status)} onReview={transitionReviewIssue} onBusinessCheck={async input => (await call({ type: "businessRuleCheck", ...input })) as BusinessRuleCheckView} onCreate={createDecision} onAnswer={async (requirementId, questionId, answer) => Boolean(await act(async () => { const cid = await ensureConversation(); await call({ type: "requirementQuestionAnswer", requirementId, conversationId: cid, answers: [{ questionId, answer }], expectedRevision: productRecords?.revision }); setProductRecords((await call({ type: "productRecords" })) as ProductRecordsView); await loadDecisionCenter(); setNotice("答复已保存到需求记录与会话，问题标记为已答复。"); return true; }))} />;
   const replyKey = (message: State["conversations"][number]["messages"][number], index: number) => message.runId ? `run:${message.runId}:${current?.messages.slice(0,index).filter(item=>item.role === "assistant" && item.runId === message.runId).length || 0}` : `legacy:${message.time}:${index}`;
-  const replyDetails = (message: State["conversations"][number]["messages"][number], run: Run | undefined, key: string, streaming = false) => <ReplyDetails key={`${state?.root}:${conversationId}:${key}`} message={message} run={run} streaming={streaming} state={replyPanels[key] || {execution:false,records:false}} onToggle={panel=>setReplyPanels(previous=>{const value=previous[key]||{execution:false,records:false};return {...previous,[key]:{...value,[panel]:!value[panel]}};})} call={call} execution={checkpoint=><RunPlanCard run={run!} pendingChanges={state?.changes.filter(change=>change.runId===run?.id&&change.status==="pending").length||0} checkpoint={checkpoint} onResume={run?.resumable?()=>void resumeRun(run.id):undefined} onEdit={()=>{if(run?.workflow)chooseWorkflow(run.workflow.kind,run.workflow.sources,run.input);}} onPlanDraft={(ids,text)=>{if(run)void savePlanDraft(run.id,ids,text);}} onPlanConfirm={(ids,text)=>{if(run)void confirmPlan(run.id,ids,text);}}/>} records={workIssues(true,true)}/>;
-  const historyAnchorsAt = (index: number) => (historyAnchors.get(index) || []).map(run => <div className="reply-run-anchor" key={run.id}><small>任务记录 · {runStatusLabel(run.status)}{Number.isFinite(Date.parse(run.startedAt)) && <> · <time dateTime={run.startedAt}>{new Date(run.startedAt).toLocaleString()}</time></>}（尚无关联回复）</small>{replyDetails({role:"assistant",text:"",time:run.startedAt,runId:run.id},run,`run:${run.id}:0`)}</div>);
+  const replyDetails = (message: State["conversations"][number]["messages"][number], run: Run | undefined, key: string, streaming = false) => <ReplyDetails key={`${state?.root}:${conversationId}:${key}`} message={message} run={run} streaming={streaming} state={replyPanels[key] || {execution:false,records:false}} onToggle={panel=>setReplyPanels(previous=>{const value=previous[key]||{execution:false,records:false};return {...previous,[key]:{...value,[panel]:!value[panel]}};})} call={call} execution={checkpoint=><RunPlanCard call={call} workspaceRoot={state?.root||""} run={run!} active={run?.id===active?.id} onClearInputs={()=>{if(run?.id===active?.id)void act(()=>call({type:"runInputClearQueued",runId:run!.id}));}} pendingChanges={state?.changes.filter(change=>change.runId===run?.id&&change.status==="pending").length||0} checkpoint={checkpoint} onResume={run?.resumable?()=>void resumeRun(run.id):undefined} onEdit={()=>{if(run?.workflow)chooseWorkflow(run.workflow.kind,run.workflow.sources,run.input,run.workflow.template);}} onPlanDraft={(ids,text)=>{if(run)void savePlanDraft(run.id,ids,text);}} onPlanConfirm={(ids,text)=>{if(run)void confirmPlan(run.id,ids,text);}} onPiReview={action=>{if(run)void call({type:action==="open"?"piPlanReviewOpen":"piPlanReviewCancel",runId:run.id}).then(refresh).catch(reason=>setError(String(reason)));}}/>} records={workIssues(true,true)}/>;
+  const runChanges = (runId: string) => <div className="run-output-group" data-output-run-id={runId}>{state?.changes.filter(change => change.runId === runId).map(change => (
+                    <article className="change" key={change.id} data-change-id={change.id} data-run-id={change.runId}>
+                      <div>
+                        <button className="change-file-link" title={`${change.path}\n点击查看；Ctrl + 左键或 Ctrl + Enter 在资源管理器中定位`} onClick={event => event.ctrlKey ? revealChange(change) : viewChange(change)} onKeyDown={event => { if (event.ctrlKey && event.key === "Enter") { event.preventDefault(); revealChange(change); } }}>{change.path.split(/[\\/]/).pop()}</button>
+                        <small className={`change-state ${change.status}`}>
+                          {change.status === "applied"
+                            ? "已保存版本"
+                            : change.status === "conflict"
+                              ? "文件冲突，草稿已保留"
+                              : "草稿 · 尚未写入项目"}
+                        </small>
+                        {change.originRunId && <small className="muted" title={`原任务 ${change.originRunId}；已续接 ${change.resumptionHistory?.length || 1} 次`}>已从原任务续接 · {change.resumptionHistory?.length || 1} 次</small>}
+                      </div>
+                      <div className="change-actions">
+                      <button
+                        onClick={() => viewChange(change)}
+                      >
+                        查看
+                      </button>
+                      {change.status === "pending" && (
+                        <button
+                          className="primary"
+                          disabled={Boolean(files.find(file => file.mountId === change.mountId && file.path === change.path)?.referenceProtected)}
+                          title={files.find(file => file.mountId === change.mountId && file.path === change.path)?.referenceProtected ? "参考原件只读，请创建处理副本" : undefined}
+                          onClick={() =>
+                            void act(() =>
+                              call({ type: "apply", id: change.id, source: "ui" }),
+                            )
+                          }
+                        >
+                          保存到项目
+                        </button>
+                      )}
+                      </div>
+                    </article>
+  ))}</div>;
+  const historyAnchorsAt = (index: number) => (historyAnchors.get(index) || []).map(run => <div className="reply-run-anchor" key={run.id}><small>任务记录 · {runStatusLabel(run.status)}{Number.isFinite(Date.parse(run.startedAt)) && <> · <time dateTime={run.startedAt}>{new Date(run.startedAt).toLocaleString()}</time></>}（尚无关联回复）</small>{replyDetails({role:"assistant",text:"",time:run.startedAt,runId:run.id},run,`run:${run.id}:0`)}{runChanges(run.id)}</div>);
 
   return (
     <div className={`app ${projectSidebarCollapsed ? "project-sidebar-collapsed" : ""}`} data-theme={theme}>
+      <McpElicitationPanel call={call}/>
       <Sidebar
         view={view}
         conversations={visibleConversations}
@@ -2190,7 +2325,7 @@ export function App() {
         projectEntries={projectEntries}
         importBusy={importBusy}
         resourceProjectId={browserProjectId}
-        onView={(next) => { setSettingsOpen(false); if (["资源", "成果"].includes(next)) { setBrowserProjectId(undefined);setBrowserNavigationKey(value=>value+1);setSelected(undefined);setPreview(undefined);setDocumentView(undefined);setFlowView(undefined); } setView(next); }}
+        onView={(next) => { setSettingsOpen(false); if (["测试用例", "知识库"].includes(next)) setNotice(""); if (["资源", "成果", "测试用例", "知识库"].includes(next)) { setBrowserProjectId(undefined);setBrowserNavigationKey(value=>value+1);setSelected(undefined);setPreview(undefined);setDocumentView(undefined);setFlowView(undefined); } setView(next); }}
         onConversation={(id) => {
           setConversationId(id);
           setView("会话");
@@ -2201,37 +2336,8 @@ export function App() {
         onConversationQuery={setConversationQuery}
         onToggleArchived={() => setShowArchived((value) => !value)}
         onNew={() => { setSettingsOpen(false); void act(newChat); }}
-        onSettings={() => setSettingsOpen(true)}
-        onProjectChange={async (id) => {
-          await act(async () => {
-            const result = await futureRequest(
-              id === "__choose__" ? { type: "project" } : { type: "project", id },
-            );
-            const selectedProject = record(result);
-            const nextProjectId =
-              typeof selectedProject?.currentProjectId === "string"
-                ? selectedProject.currentProjectId
-                : "";
-            if (id === "__choose__" && !nextProjectId) return;
-            setProjectId(id);
-            if (nextProjectId) setProjectId(nextProjectId);
-            setConversationId("");
-            setDraft("");
-            setWorkflowKind(undefined);
-            setWorkflowSources(undefined);
-            setReferenceAttachments([]);
-            setImageAttachment(undefined);
-            setProductRecords(undefined);
-            setDecisionCenter(undefined);
-            setSelected(undefined);
-            setDocumentView(undefined);
-            setPreview(undefined);
-            setFlowView(undefined);
-            setView("会话");
-            await refresh();
-            await loadProjects();
-          });
-        }}
+        onSettings={() => {setRequestedSettingsTab(undefined);setSettingsOpen(true);}}
+        onProjectChange={id=>openProject(id)}
         onProjectView={(kind) => { setSettingsOpen(false); setBrowserProjectId(projectId||activeProject.id);setBrowserNavigationKey(value=>value+1);setView(kind === "resource" ? "资源" : "成果"); }}
         onProjectRename={async (id, name) => { await call({ type: "projectRename", id, name });await loadProjects();setNotice("项目名称已保存，本地文件夹名称保留。"); }}
         onProjectPin={async (id, pinned) => { await act(async () => { await call({ type: "projectPin", id, pinned });await loadProjects(); }); }}
@@ -2251,7 +2357,7 @@ export function App() {
         <header>
           <div className="header-title">
             <span className="breadcrumb">slash / </span>
-            {view === "会话" ? current?.title || "新会话" : view}
+            {view === "会话" ? current?.title || "新会话" : view === "知识库" ? "资料集合" : view}
           </div>
           <div className="header-actions">
             <button className="header-icon-button" aria-label="打开工作区" title="打开工作区" onClick={() => void act(() => call({ type: "workspace" }))}><Icon name="folder"/></button>
@@ -2348,7 +2454,7 @@ export function App() {
                     <div className="starters">
                       {starterActions.map(({ kind, label, hint }) => (
                         <button key={kind} title={hint} onClick={() => chooseWorkflow(kind)}>
-                          <Icon name={kind === "prototype" ? "code" : kind === "prd" ? "file" : kind === "research" ? "search" : "chat"} size={19}/><span><b>{label}</b><small>{({ prototype: "验证页面、操作与交互状态", prd: "把业务规则写清楚", research: "归纳资料、问题与真实依据", meeting: "整理决定、待办与未答问题" })[kind]}</small></span><Icon name="chevronRight" size={15}/>
+                          <Icon name={kind === "prototype" ? "code" : kind === "prd" ? "file" : kind === "research" ? "search" : "chat"} size={19}/><span><b>{label}</b><small>{({ prototype: "验证页面、操作与交互状态", prd: "把业务规则写清楚", research: "归纳资料、问题与真实依据", meeting: "整理决定、待办与未答问题", test_cases: "生成可审阅的人工测试清单" })[kind]}</small></span><Icon name="chevronRight" size={15}/>
                         </button>
                       ))}
                     </div>
@@ -2364,7 +2470,10 @@ export function App() {
                     )}
                   </div>
                 ) : (
-                  current.messages.map((message, index) => (
+                  current.messages.map((message, index) => {
+                    const toolGroup = groupedToolMessages.get(index);
+                    if (toolGroup && toolGroup.start !== index) return null;
+                    return (
                     <React.Fragment key={`${message.time}-${index}`}>
                     {historyAnchorsAt(index)}
                     <article
@@ -2382,11 +2491,11 @@ export function App() {
                       }}
                     >
                       {message.role === "tool" ? (
-                        <details>
+                        <details className={toolGroup ? "tool-message-group" : undefined}>
                           <summary>
-                            工具记录 · {message.text.split(" ")[0]}
+                            {toolGroup ? <>{toolGroup.label} · {toolGroup.indices.length} 项{toolGroup.taskStatus && <span className="tool-task-status">{toolGroup.taskStatus}</span>}</> : <>工具记录 · {message.text.split(" ")[0]}</>}
                           </summary>
-                          <pre>{message.text}</pre>
+                          {toolGroup ? <ol className="tool-message-items">{toolGroup.indices.map(originalIndex => <li key={originalIndex} data-message-index={originalIndex}><details><summary>{current.messages[originalIndex].text.split(" ")[0]}</summary><pre>{current.messages[originalIndex].text}</pre></details></li>)}</ol> : <pre>{message.text}</pre>}
                         </details>
                       ) : (
                         <>
@@ -2402,11 +2511,12 @@ export function App() {
                           {message.attachmentIds?.length ? <div className="message-attachment-ref">图片附件 · {message.attachmentIds.length} 个 · 已保存为工作空间快照</div> : null}
                           <Markdown className="prose">{message.text}</Markdown>
                           {message.role === "assistant" && replyDetails(message,runs.find(run => run.id === message.runId),replyKey(message,index))}
+                          {message.runId && outputMessageIndices.get(message.runId) === index && runChanges(message.runId)}
                         </>
                       )}
                     </article>
                     </React.Fragment>
-                  ))
+                  );})
                 )}
                 {historyAnchorsAt(current?.messages.length || 0)}
                 {active && (
@@ -2420,6 +2530,7 @@ export function App() {
                       <Markdown className="prose">正在读取上下文并处理任务…</Markdown>
                     )}
                     {replyDetails({ role: "assistant", text: stream[active.id] || "", time: active.startedAt, runId: active.id },active,`run:${active.id}:${current?.messages.filter(message=>message.role === "assistant" && message.runId === active.id).length || 0}`,true)}
+                    {runChanges(active.id)}
                   </article>
                 )}
                 {state?.pendingApprovals
@@ -2487,6 +2598,7 @@ export function App() {
                       </div>
                     </article>
                   ))}
+                <PublicationDeliveryRecords conversationId={conversationId} revision={state} call={call} onNotice={setNotice} onError={setError}/>
                 {proposals.map((proposal) => (
                   <article className="approval-card" key={proposal.id}>
                     <div>
@@ -2519,47 +2631,10 @@ export function App() {
                     </div>
                   </article>
                 ))}
-                {state?.changes
-                  .filter((change) =>
-                    runs.some((run) => run.id === change.runId),
-                  )
-                  .map((change) => (
-                    <article className="change" key={change.id}>
-                      <div>
-                        <button className="change-file-link" title={`${change.path}\n点击查看；Ctrl + 左键或 Ctrl + Enter 在资源管理器中定位`} onClick={event => event.ctrlKey ? revealChange(change) : viewChange(change)} onKeyDown={event => { if (event.ctrlKey && event.key === "Enter") { event.preventDefault(); revealChange(change); } }}>{change.path.split(/[\\/]/).pop()}</button>
-                        <small className={`change-state ${change.status}`}>
-                          {change.status === "applied"
-                            ? "已保存版本"
-                            : change.status === "conflict"
-                              ? "文件冲突，草稿已保留"
-                              : "草稿 · 尚未写入项目"}
-                        </small>
-                        {change.originRunId && <small className="muted" title={`原任务 ${change.originRunId}；已续接 ${change.resumptionHistory?.length || 1} 次`}>已从原任务续接 · {change.resumptionHistory?.length || 1} 次</small>}
-                      </div>
-                      <button
-                        onClick={() => viewChange(change)}
-                      >
-                        查看
-                      </button>
-                      {change.status === "pending" && (
-                        <button
-                          className="primary"
-                          disabled={Boolean(files.find(file => file.mountId === change.mountId && file.path === change.path)?.referenceProtected)}
-                          title={files.find(file => file.mountId === change.mountId && file.path === change.path)?.referenceProtected ? "参考原件只读，请创建处理副本" : undefined}
-                          onClick={() =>
-                            void act(() =>
-                              call({ type: "apply", id: change.id, source: "ui" }),
-                            )
-                          }
-                        >
-                          保存到项目
-                        </button>
-                      )}
-                    </article>
-                  ))}
+
               </div>
               <div className="composer-wrap">
-                {(active??runs[0])&&<RunRuntimeStatus run={(active??runs[0])!} active={Boolean(active)} onClear={()=>{if(active)void act(()=>call({type:'runInputClearQueued',runId:active.id}));}}/>}
+                {(active||runs[0])&&<RunInputQueuePanel key={`${composerScope}:${(active||runs[0]).id}`} run={active||runs[0]} active={Boolean(active&&['queued','running','waiting_user'].includes(active.status))} onMutate={async input=>{await call({type:'runInputMutate',...input});await refresh();}} onRestore={text=>{if(composerScope!==composerScopeRef.current)return;setDraft(value=>value.trim()?`${value}\n\n${text}`:text);setNotice('原文已带回输入框，请核对后再发送；不会自动重发。');composerInputRef.current?.focus();}}/>}
                 <div className="composer" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); attachImage(event.dataTransfer.files?.[0]); }}>
                   <ReferencePicker
                     open={referencePickerOpen}
@@ -2567,22 +2642,29 @@ export function App() {
                     mounts={state?.mounts || []}
                     projectEntries={projectEntries}
                     selected={referenceAttachments}
+                    template={prdTemplate}
                     onClose={() => setReferencePickerOpen(false)}
-                    onConfirm={(next) => {
+                    onConfirm={(next, template) => {
                       setReferenceAttachments(next);
-                      if (workflowKind !== "change_summary") setWorkflowSources(undefined);
+                      setPrdTemplate(template);
+                      if (template) setWorkflowKind("prd");
+                      if (template || workflowKind !== "change_summary") setWorkflowSources(undefined);
                       setReferencePickerOpen(false);
                     }}
                   />
                   <textarea
+                    ref={composerInputRef}
+                    aria-controls={slashOpen?"slash-command-list":undefined}
+                    aria-activedescendant={slashOpen&&matchingSlashCommands.length?`slash-option-${Math.min(slashIndex,matchingSlashCommands.length-1)}`:undefined}
                     aria-label="描述你的任务"
                     placeholder={workflowKind ? pmWorkflows[workflowKind].hint : "描述任务，或加入文件、段落与原型元素…"}
                     value={draft}
-                    onChange={(event) => { const value = event.target.value; setDraft(value);if(/^\/(?:prototype|prd|research|review|help)(?:\s|$)/.test(value.trimStart())) { setWorkflowKind(undefined);setWorkflowSources(undefined); }setSlashIndex(0); setSlashOpen(value.trimStart().startsWith("/") && !value.includes(" ")); }}
+                    onChange={(event) => { const value = event.target.value; setDraft(value);if(/^\/(?:prototype|prd|research|review|help)(?:\s|$)|^\/skill:/.test(value.trimStart())) { if(value.trimStart().startsWith("/skill:"))clearSkillWorkflow();else{setWorkflowKind(undefined);setWorkflowSources(undefined);} }setSlashIndex(0);if(!slashOpen&&/^\/[^\s]*$/.test(value.trimStart())){setSlashSkills(undefined);setSlashSkillsError("");} setSlashOpen(/^\/[^\s]*$/.test(value.trimStart())); }}
                     onPaste={(event) => { const image = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/")); if (image) { event.preventDefault(); attachImage(image); } }}
                     onDrop={(event) => { event.preventDefault(); attachImage(event.dataTransfer.files?.[0]); }}
                     onKeyDown={(event) => {
-                      if (slashOpen && matchingSlashCommands.length) {
+                      if (slashOpen && !event.nativeEvent.isComposing && event.key === "Escape") { event.preventDefault(); setSlashOpen(false); return; }
+                      if (slashOpen && matchingSlashCommands.length && !event.nativeEvent.isComposing) {
                         if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                           event.preventDefault();
                           setSlashIndex((value) => (event.key === "ArrowDown" ? (value + 1) % matchingSlashCommands.length : (value - 1 + matchingSlashCommands.length) % matchingSlashCommands.length));
@@ -2591,8 +2673,7 @@ export function App() {
                         if (event.key === "Escape") { event.preventDefault(); setSlashOpen(false); return; }
                         if (event.key === "Tab" || (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing)) {
                           event.preventDefault();
-                          setDraft(`${matchingSlashCommands[slashIndex]?.[0] || matchingSlashCommands[0][0]} `);
-                          setSlashOpen(false);
+                          selectSlashCommand((matchingSlashCommands[slashIndex] || matchingSlashCommands[0]).command);
                           return;
                         }
                       }
@@ -2606,11 +2687,20 @@ export function App() {
                       }
                     }}
                   />
-                  {slashOpen && <div className="slash-command-menu" role="listbox" aria-label="命令建议">
-                    {matchingSlashCommands.map(([command, description], index) => <button key={command} type="button" role="option" aria-selected={index === slashIndex} className={index === slashIndex ? "chosen" : ""} onMouseEnter={() => setSlashIndex(index)} onClick={() => { setDraft(`${command} `); setSlashOpen(false); }}><b>{command}</b><small>{description}</small></button>)}
+                  {slashOpen && <div className="slash-command-menu" ref={slashMenuRef}>
+                    <div role="listbox" id="slash-command-list" aria-label="命令建议">
+                      {matchingSlashCommands.map(({command,description,scope},index)=><button id={`slash-option-${index}`} key={command} type="button" role="option" aria-label={`${command} ${description}`} title={description} aria-selected={index===slashIndex} className={index===slashIndex?"chosen":""} onMouseEnter={()=>setSlashIndex(index)} onMouseDown={event=>event.preventDefault()} onClick={()=>selectSlashCommand(command)}><Icon name={scope?"book":command==="/plan"?"flow":command==="/research"?"search":command==="/prototype"?"code":command==="/review"?"shield":"file"} size={16}/><b>{scope?command.slice("/skill:".length):command}</b><small className="slash-command-description">{description}</small>{scope&&<small className="slash-command-scope">{scope==='global'?'全局':'项目'}</small>}</button>)}
+                    </div>
+                    {!matchingSlashCommands.length&&<p role="status">没有匹配的命令或 skill</p>}
+                    {!slashSkills&&!slashSkillsError&&<p role="status">正在读取可用 skills…</p>}
+                    {slashSkillsError&&<p role="alert">skills 暂不可用：{slashSkillsError}</p>}
+                    {slashSkills&&!slashSkills.skills.length&&<p role="status">当前没有可用 skills，可在设置中添加或启用。</p>}
+                    {slashSkills?.diagnostics.length? <details><summary>技能检查提示（{slashSkills.diagnostics.length}）</summary>{slashSkills.diagnostics.map((issue,index)=><p key={index}>{issue.message}</p>)}</details>:null}
+                    <button type="button" className="slash-manage-skills" onClick={()=>{setSlashOpen(false);setRequestedSettingsTab("skills");setSettingsOpen(true);}}>管理 skills</button>
                   </div>}
-                  {(workflowKind || referenceAttachments.length > 0 || imageAttachment) && <div className="composer-context">
-                    {workflowKind && <span className="composer-task-chip" aria-label="任务上下文" title={pmWorkflows[workflowKind].hint}><Icon name={workflowKind === "prototype" ? "code" : "file"} size={14}/><span>{pmWorkflows[workflowKind].label}{workflowKind === "change_summary" ? ` · ${workflowSources?.[0]?.versionId || "旧版"} → 当前版` : ""}</span><button type="button" aria-label="移除任务上下文" onClick={() => { setWorkflowKind(undefined);setWorkflowSources(undefined);setNotice("已移除任务上下文，输入内容与引用资料保留。"); }}><Icon name="close" size={13}/></button></span>}
+                  {(workflowKind || prdTemplate || referenceAttachments.length > 0 || imageAttachment) && <div className="composer-context">
+                    {workflowKind && <span className="composer-task-chip" aria-label="任务上下文" title={pmWorkflows[workflowKind].hint}><Icon name={workflowKind === "prototype" ? "code" : "file"} size={14}/><span>{pmWorkflows[workflowKind].label}{workflowKind === "change_summary" ? ` · ${workflowSources?.[0]?.versionId || "旧版"} → 当前版` : ""}</span><button type="button" aria-label="移除任务上下文" onClick={() => { setWorkflowKind(undefined);setWorkflowSources(undefined);setPrdTemplate(undefined);setNotice("已移除任务上下文，输入内容与引用资料保留。"); }}><Icon name="close" size={13}/></button></span>}
+                    {prdTemplate && <span className="reference-attachment prd-template-chip" aria-label="已选择的 PRD 模板" title={prdTemplate.path}><FileIcon path={prdTemplate.path} size={14}/><span>PRD 模板 · {prdTemplate.path.split(/[\\/]/).pop()}</span><button type="button" aria-label="移除 PRD 模板" onClick={() => setPrdTemplate(undefined)}><Icon name="close" size={15}/></button></span>}
                     {workflowSources?.some(source => source.contentHash) && workflowKind !== "change_summary" && <button className="workflow-clear" type="button" onClick={() => { setWorkflowSources(undefined); setNotice("发送时会读取所选资料的当前版本。"); }}>改用当前版本</button>}
                     {referenceAttachments.length > 0 && (
                       <div className="reference-attachments" aria-label="已选择的引用资料">
@@ -2628,17 +2718,18 @@ export function App() {
                     )}
                     {imageAttachment && <span className="image-attachment" title={imageAttachment.path}><Icon name="image" size={14}/> {imageAttachment.name}<button type="button" aria-label="移除图片" onClick={() => setImageAttachment(undefined)}><Icon name="close" size={15}/></button></span>}
                   </div>}
+                  {templateCommandConflict && <div className="template-command-conflict" role="status"><span>当前命令与 PRD 模板冲突。</span><button type="button" onClick={() => { setDraft(value => value.replace(/^\s*\/\S+/, "/prd"));setWorkflowKind("prd"); }}>改用 PRD</button><button type="button" onClick={() => { setPrdTemplate(undefined);setWorkflowKind(undefined);setWorkflowSources(undefined); }}>移除模板</button></div>}
                   <div className="composer-bottom">
                     <ComposerPopover label="添加" icon="plus">{close => <><div className="composer-popover-heading">加入资料</div><button className="composer-action" type="button" onClick={() => { close();void openReferencePicker(); }}><Icon name="attach" size={17}/><span>引用资料</span></button><label className="composer-action composer-image-action"><Icon name="image" size={17}/><span>添加图片</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="添加图片" onChange={event => { attachImage(event.target.files?.[0]);event.target.value="";close(); }}/></label><div className="composer-popover-heading composer-popover-divider">快捷动作</div>{starterActions.map(action => <button className="composer-action" type="button" key={action.kind} onClick={() => { close();chooseWorkflow(action.kind); }}><Icon name={action.kind === "prototype" ? "code" : action.kind === "research" ? "search" : action.kind === "meeting" ? "chat" : "file"} size={17}/><span><b>{action.label}</b><small>插入可编辑的提示词</small></span></button>)}</>}</ComposerPopover>
                     <ComposerModelMenu value={modelEntryId} models={state?.models || []} capability={thinkingCapability} loading={thinkingLoading} thinkingLevel={thinkingLevel} onThinkingChange={level => { setThinkingDirty(true);setThinkingLevel(level); }} onRefreshCapability={() => void refreshThinkingCapability()} onChange={id => { if (id !== modelEntryId) { if (thinkingLevel) setNotice("已切换模型，思考强度恢复模型默认。");thinkingRequestId.current+=1;setThinkingCapability(undefined);setThinkingLoading(true);setThinkingLevel(undefined);setThinkingDirty(true);setModelEntryId(id); } }}/>
                     <ComposerModeMenu value={agentMode} onChange={setAgentMode}/>
-                    <ComposerPermissionMenu value={permissionMode} onChange={setPermissionMode}/>
+                    <ComposerPermissionMenu value={active?.permissionMode??current?.permissionMode??permissionMode} busy={permissionUpdating} onChange={value=>void changePermissionMode(value)}/>
                     {active ? (
                       <>
-                      <ComposerPopover label={inputDelivery==='steer'?'本轮补充':'本轮结束后处理'} icon="chat">{close=><><button className="composer-action" type="button" aria-pressed={inputDelivery==='steer'} onClick={()=>{setInputDelivery('steer');close();}}>本轮补充<small>当前工具返回后处理</small></button><button className="composer-action" type="button" aria-pressed={inputDelivery==='follow_up'} onClick={()=>{setInputDelivery('follow_up');close();}}>本轮结束后处理<small>当前工具链结束后处理</small></button></>}</ComposerPopover>
-                      <button aria-label="发送补充" title="沿用本轮模式、权限与模型" className="send" disabled={busy||!draft.trim()||!['queued','running','waiting_user'].includes(active.status)} onClick={()=>void send()}><Icon name="send" size={19}/></button>
+                      <ComposerPopover label={inputDelivery==='steer'?'立即补充':'排队发送'} icon="chat">{close=><><button className="composer-action" type="button" aria-pressed={inputDelivery==='follow_up'} onClick={()=>{setInputDelivery('follow_up');close();}}>排队发送<small>当前工具链结束后处理，可编辑和取消</small></button><button className="composer-action" type="button" aria-pressed={inputDelivery==='steer'} onClick={()=>{setInputDelivery('steer');close();}}>立即补充<small>当前工具结束后处理，不中止任务</small></button></>}</ComposerPopover>
+                      <button aria-label={inputDelivery==='steer'?'立即发出':'加入队列'} title="沿用本轮模式、权限与模型" className="composer-supplement" disabled={busy||!draft.trim()||!['queued','running','waiting_user'].includes(active.status)} onClick={()=>void send()}>{inputDelivery==='steer'?'立即发出':'加入队列'}</button>
                       <button
-                        className="send stop" aria-label="停止任务" title="停止任务"
+                        className="send stop" aria-label="停止任务" title="停止任务" disabled={active.status === "cancelling"}
                         onClick={() =>
                           void act(() =>
                             call({ type: "cancel", id: active.id }),
@@ -2650,7 +2741,7 @@ export function App() {
                     ) : (
                       <button
                         aria-label="发送"
-                        disabled={busy || !draft.trim()}
+                        disabled={busy || (!draft.trim() && !prdTemplate)}
                         className="send"
                         onClick={() => void send()}
                       >
@@ -2660,7 +2751,7 @@ export function App() {
                   </div>
                 </div>
                 <div className="footnote">
-                  Enter 发送 · Shift+Enter 换行
+                  {active ? `Enter ${inputDelivery==='steer'?'立即补充':'加入队列'} · Shift+Enter 换行` : "Enter 发送 · Shift+Enter 换行"}
                 </div>
               </div>
             </section>
@@ -2707,8 +2798,13 @@ export function App() {
         ) : (
           <div className={`content-work ${selected ? "with-preview" : ""}`}>
             <div className="page">
-              {["资源", "成果"].includes(view) && <ProjectResourcesBrowser kind={view === "成果" ? "output" : "resource"} initialProjectId={browserProjectId} navigationKey={browserNavigationKey} call={call} onOpen={file=>act(()=>openFile(file))} onReference={referenceProjectFile} onError={setError} onDirectory={updateBrowserDirectory} onContextMenu={openFolderMenu}/>}
-              {!["资源", "成果"].includes(view) && <div className="page-heading">
+              {["资源", "知识库"].includes(view) && <div className="knowledge-resource-tabs" aria-label="资源视图">{view === "资源" ? <><span className="muted">项目文件</span><button onClick={()=>{setView("知识库");setNotice("");setSelected(undefined);updateBrowserDirectory(undefined);}}>资料集合 →</button></> : <><button onClick={()=>{setView("资源");setNotice("");setSelected(undefined);updateBrowserDirectory(undefined);}}>← 项目文件</button><span className="muted">资料集合</span></>}</div>}
+              {["测试用例", "知识库"].includes(view) && state && (state.root?<>
+                <FeatureProjectScope project={activeProject} projects={projects} root={state.root} disabled={featureProjectSwitching} onChange={id=>void openProject(id,view)}/>
+                {featureProjectSwitching?<p role="status">正在切换项目…</p>:view==="知识库"?<KnowledgeCollections key={state.root} call={call} projectRoot={state.root} onError={setError}/>:<TestCasesPage key={state.root} projectName={activeProject.name} mounts={state.mounts} changes={state.changes} call={call} onError={setError} onOpen={file=>void act(()=>openFile(file))} onDraft={viewChange} onCreate={()=>chooseWorkflow("test_cases")}/>}
+              </>:<div className="page-heading"><div><h1>{view === "知识库" ? "资料集合" : view}</h1><p className="muted">先选择项目，再查看该项目的{view === "知识库" ? "资料集合" : view}。</p></div><button disabled={featureProjectSwitching} onClick={()=>void openProject("__choose__",view)}>选择项目</button></div>)}
+              {["成果", "资源"].includes(view) && <ProjectResourcesBrowser kind={view === "成果" ? "output" : "resource"} initialProjectId={browserProjectId} navigationKey={browserNavigationKey} call={call} onOpen={file=>act(()=>openFile(file))} onReference={referenceProjectFile} onError={setError} onDirectory={updateBrowserDirectory} onContextMenu={openFolderMenu}/>}
+              {!["资源", "成果", "测试用例", "知识库"].includes(view) && <div className="page-heading">
                 <div>
                   <span className="eyebrow">项目 · {activeProject.name}</span>
                   <h1>{view}</h1>{folderView && <div className="workspace-counts"><span>{folderGroups?.length || 0} 个目录</span><span>{filteredFiles.length} 个文件</span></div>}
@@ -2902,6 +2998,7 @@ export function App() {
       </main>
       <SettingsModal
         open={settingsOpen}
+        requestedTab={requestedSettingsTab}
         state={state}
         call={call}
         onClose={() => setSettingsOpen(false)}

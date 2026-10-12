@@ -1,0 +1,20 @@
+flowchart TD
+    A[locate_spreadsheet 原请求] --> B[现有 schema 解析 / 读取网关]
+    B --> C[原来源链 / 权限 / Run 与 cursor 校验]
+    C --> D[原目录或单元格分页 / 完整宿主回执]
+    D --> E[现有无损模型投影]
+    E --> F{current 且有 nextCursor 与原 input?}
+    F -- 否 --> O[保留原投影]
+    F -- 是 --> G[核对 mode / 来源身份 / 共用 scope version]
+    G --> H{完全匹配?}
+    H -- 否 --> O
+    H -- 是 --> I[原请求 + 新 cursor / 同一 schema 生成 nextInput]
+    I --> J{完整模型 JSON 不超过10000字符?}
+    J -- 否 --> O
+    J -- 是 --> K[附加可复制 nextInput / 原页数据不变]
+    K --> L[下一次直接使用完整请求]
+    O --> M[有 cursor 时仍复制原请求 + cursor]
+    L --> B
+    M --> B
+    C -- 来源或权限变化 / 旧 cursor 跨范围 --> R[严格拒绝 / 不生成成功续页字段]
+    K -. 同冻结XLSX真实回放 .-> V[3729→4134字符 / J3继续 / 原件hash不变]

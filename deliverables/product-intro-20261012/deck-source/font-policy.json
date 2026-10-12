@@ -1,0 +1,7 @@
+{
+  "basis": "design",
+  "families": [
+    "Microsoft YaHei"
+  ],
+  "availability": "Verified @napi-rs/canvas GlobalFonts Microsoft YaHei on Windows"
+}

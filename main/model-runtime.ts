@@ -3,9 +3,13 @@ import {ModelRuntime} from '@earendil-works/pi-coding-agent';
 import type {ModelProtocol} from '../shared/types.js';
 import type {ThinkingRuntimeConfig} from './model-thinking.js';
 import {resolveModelLimits} from './model-limits.js';
+import {openAICompletionsApi} from '@earendil-works/pi-ai/api/openai-completions.lazy';
+import {openAIResponsesApi} from '@earendil-works/pi-ai/api/openai-responses.lazy';
+import {anthropicMessagesApi} from '@earendil-works/pi-ai/api/anthropic-messages.lazy';
+import {modelProxyFetch} from './model-proxy.js';
 
 export const OPENAI_COMPATIBLE_RUNTIME_PROVIDER='baishan';
-export type OpenAICompatibleModel={entryId?:string;baseUrl:string;id:string;protocol:ModelProtocol;supportsVision?:boolean;contextWindow?:number;maxTokens?:number;thinkingRuntime?:ThinkingRuntimeConfig};
+export type OpenAICompatibleModel={entryId?:string;baseUrl:string;proxyUrl?:string;id:string;protocol:ModelProtocol;supportsVision?:boolean;contextWindow?:number;maxTokens?:number;thinkingRuntime?:ThinkingRuntimeConfig};
 type ProviderConfigInput=Parameters<ModelRuntime['registerProvider']>[1];
 
 function runtimeBaseUrl(model:OpenAICompatibleModel):string{
@@ -21,12 +25,18 @@ function runtimeBaseUrl(model:OpenAICompatibleModel):string{
 
 export function openAICompatibleProviderConfig(model:OpenAICompatibleModel):ProviderConfigInput{
  const limits=resolveModelLimits(model,'runtime');
- return{baseUrl:runtimeBaseUrl(model),api:model.protocol,models:[{
+ const transport=model.proxyUrl?modelProxyFetch(model.proxyUrl):undefined;
+ const api=transport?{'openai-completions':openAICompletionsApi,'openai-responses':openAIResponsesApi,'anthropic-messages':anthropicMessagesApi}[model.protocol]():undefined;
+ const compat=model.thinkingRuntime?.compat;
+ // Responses may normalize omitted strict and make optional inputs required.
+ // Pi's public flag emits strict:false; an explicit opt-out keeps prior wire.
+ const responsesCompat=compat as Model<'openai-responses'>['compat'];
+ return{baseUrl:runtimeBaseUrl(model),api:model.protocol,...(transport&&api?{streamSimple:((requestModel,context,options)=>api.streamSimple(requestModel,context,{...options,fetch:transport})) as NonNullable<ProviderConfigInput['streamSimple']>}:{}),models:[{
   id:model.id,
   name:model.id,
   reasoning:model.thinkingRuntime?.reasoning??false,
   thinkingLevelMap:model.thinkingRuntime?.thinkingLevelMap,
-  compat:model.thinkingRuntime?.compat,
+  compat:model.protocol==='openai-responses'?{...responsesCompat,supportsStrictMode:responsesCompat?.supportsStrictMode??true}:compat,
   input:model.supportsVision===true?['text','image']:['text'],
   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},
   contextWindow:limits.contextWindow,

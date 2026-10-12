@@ -1,0 +1,18 @@
+flowchart TD
+    S["真实制度与流程<br/>本轮 L176 / L18；效力未确认"] --> G["正式 QE05 单次研究 Run<br/>412658ms；write_draft → runner apply"]
+    G --> A["冻结报告 d926cd23…<br/>6252字符完整；未人工改稿"]
+    A --> I["离线复原实际 wire v3 input<br/>inputHash / promptHash 与回执相同"]
+    S --> I
+    I --> C["自动只读审查：80.659s 正常 stop<br/>0有效 + 2无效 finding"]
+    C --> U["unverified / invalid<br/>原始 finding 未保存，具体语义未知"]
+    I --> P["报告全文已给<br/>制度缺4.1/4.2标题及二阶段正文"]
+    P --> Q["既有段落排序 + 相邻段 + 8段上限<br/>标题归属未保留"]
+    Q --> H["通用文本selector局部修复<br/>同字符/8片段/总prompt预算<br/>标题链 + 下一分节边界；排除代码伪标题"]
+    A --> R["独立核验 + 根复核<br/>阶段映射与批量→后台措辞仍超依据"]
+    R --> V["根正式 recorder：violated 1/1<br/>humanConfirmed=false<br/>manualModificationCount=unknown"]
+    U --> V
+    H --> L["冻结QE05 snapshot离线重放<br/>制度5889→9191；4.1/4.2标题已给<br/>尾L389–396仍缺；partial"]
+    L --> K["原稿/旧回执/violated保持<br/>新input hash；Excel预算占用相应减少<br/>50/50 + 类型检查通过；子代理未build"]
+    K --> F["同稿新选段真实Astra审查<br/>86.584s；1fetch；正常stop<br/>1有效 + 1结构无效"]
+    F --> D["unverified / invalid<br/>照片规则finding有效但旧输入已含<br/>custom原因信息不足；不盲重试"]
+    D --> V

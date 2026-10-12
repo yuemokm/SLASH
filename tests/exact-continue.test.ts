@@ -9,7 +9,9 @@ import type {RuntimeOptions} from '../main/agent.js';
 
 async function fixture(t:test.TestContext,handler:(o:RuntimeOptions,text:string,s:Service)=>Promise<void>){
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-exact-continue-')),store=new Store(path.join(dir,'data'));
- const service=new Service(store,()=> 'offline-key',()=>{},async o=>({messages:[{role:'assistant',stopReason:'stop'}],abort:async()=>{},dispose:()=>{},prompt:async(text:string)=>{await handler(o,text,service);o.delta('完成');}}));
+ // Exact continuation creates a new Run; host repair prompts within one Run
+ // must not re-execute this scripted continuation. Quality failure remains.
+ const service=new Service(store,()=> 'offline-key',()=>{},async o=>{let prompts=0;return{messages:[{role:'assistant',stopReason:'stop',content:[{type:'text',text:'精确继续夹具回复。'}]}],abort:async()=>{},dispose:()=>{},prompt:async(text:string)=>{if(prompts++>0){assert.match(text,/^宿主已对当前草稿执行检查。这是本任务第[12]\/2轮有限修正/);assert.match(text,/<untrusted_host_check_observations>/);o.delta('夹具仅验证继续，质量问题保持未修复。');return;}await handler(o,text,service);o.delta('完成');}};});
  t.after(async()=>{service.dispose();await Promise.allSettled([...(service as any).agentIndex.queues.values()]);store.close();await fs.rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:30});});
  await service.workspace(path.join(dir,'project'));service.state.models=[{id:'offline-model',name:'Fixture',provider:'custom',modelId:'fixture',baseUrl:'https://fixture.invalid/v1',protocol:'openai-completions',hasKey:true},{id:'other-model',name:'Other',provider:'custom',modelId:'other',baseUrl:'https://fixture.invalid/v1',protocol:'openai-completions',hasKey:true}];service.state.defaultModelId='offline-model';service.save();return{service,store};
 }

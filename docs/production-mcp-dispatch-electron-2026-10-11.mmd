@@ -1,0 +1,17 @@
+flowchart TD
+  A[统一构建后 隔离Electron / 记录真实dist hash] --> B[合成Run保存成果 / 官方read完整内容]
+  B --> C[Agent按具体合成要求逐项核对 / 非真人签字]
+  C --> D[官方 externalAction approve / main.executeMcp]
+  D --> E[真实stdio tools/list等待 / Operation executing]
+  E --> F{等待期间版本与授权仍当前?}
+  F -- 文件变更 / 官方撤权 / 官方连接args变化 --> G[紧邻callTool复验拒绝]
+  G --> G1[宿主闭包保留本地拒绝事实 / Pi包装不能丢失]
+  G1 --> H[received 0 / 官方failed / MCP_PRE_DISPATCH_REJECTED / 无自动重试]
+  F -- 是 --> I[真实callTool发送冻结原文]
+  I --> J{服务端回执可确认?}
+  J -- 成功 --> K[received 1 / payload hash相同 / succeeded]
+  J -- 收到后退出 --> L[received 1 / outcome_unknown / 无自动重放]
+  H --> M[关闭隔离实例 / 保存回执与截图]
+  K --> M
+  L --> M
+  R[远端敏感错误或伪造相同代码] --> S[隐藏原始异常 / 不冒充本地guard]

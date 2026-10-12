@@ -6,6 +6,7 @@ import {QUALITY_CHECKER_VERSION,qualityCheckForArtifact,evaluateQualityGate} fro
 import {ProductRecordsRepository,productRecordsWorkspaceIdentity} from './product-records.js';
 import {requirementRelatedToPath,activeBusinessConstraints,readBusinessText,boundedBusinessReader,checkBusinessConstraint,type BusinessProvenanceResolver} from './business-rules.js';
 import {createProcessingProvenanceResolver} from './processing-provenance.js';
+import type {TaskDeliveryView} from '../shared/task-delivery.js';
 
 type GateInput=Omit<DocumentDeliveryInput,'kind'> & {connectionId:string};
 type GateDeps={
@@ -17,6 +18,7 @@ type GateDeps={
  preferences:()=>{qualityGateEnabled?:boolean;forceQualityCheckBeforeDelivery?:boolean};
  businessProvenance?:()=>BusinessProvenanceResolver;
  prototypeAcceptance?:(mountId:string,path:string)=>Promise<{required:boolean;passed:boolean;detail:string}>;
+ taskAcceptance?:(mountId:string,path:string,sourceHash:string)=>Promise<TaskDeliveryView|undefined>;
 };
 
 /** One deterministic gate shared by preflight, approval and every executor. */
@@ -56,7 +58,7 @@ export class DeliveryGate {
    const qualityDisabled=this.deps.preferences().qualityGateEnabled===false||this.deps.preferences().forceQualityCheckBeforeDelivery===false;
    const zeroByte=source.length===0;
    gate=evaluateQualityGate(quality,input.sourceHash,currentHash);
-   if(qualityDisabled&&!zeroByte){
+   if(qualityDisabled&&!zeroByte&&gate.allowed){
     const versionConflict=Boolean(input.sourceHash&&currentHash&&input.sourceHash!==currentHash);
     const code:'VERSION_CONFLICT'|'QUALITY_PASSED'=versionConflict?'VERSION_CONFLICT':'QUALITY_PASSED';
     gate={allowed:!versionConflict,code,reasons:versionConflict?['成果文件已在检查后发生变化，请重新检查当前版本']:[]};
@@ -82,7 +84,8 @@ export class DeliveryGate {
   add('requirements','待确认需求',reqBlocked?'blocked':'passed',reqBlocked?'当前成果关联需求存在未回答问题':relatedRequirements.length?'当前成果关联需求没有未回答问题':'没有找到与当前成果关联的需求问题');
   const candidates=relatedRequirements.flatMap(requirement=>activeBusinessConstraints(requirement.businessConstraints??[]).map(constraint=>({requirement,constraint})));
   if(candidates.length){const provenance=this.deps.businessProvenance?.()??createProcessingProvenanceResolver({files:this.deps.files,store:this.deps.store,root:workspace.root,workspaceId:productRecordsWorkspaceIdentity(workspace.root).workspaceId,changes:()=>this.deps.store.get<Partial<State>>('state',{}).root===workspace.root?this.deps.store.get<Partial<State>>('state',{}).changes??[]:[],assertCurrent:()=>{if(this.deps.workspace().root!==workspace.root)throw Error('VERSION_CONFLICT: 交付来源核对期间项目已变化');if(this.deps.store.get<Partial<State>>('state',{}).permissions?.workspace_read==='deny')throw Error('PERMISSION_DENIED: 资料读取已禁用');}}),read=boundedBusinessReader((mountId,path)=>readBusinessText(this.deps.files,mountId,path)),checks=[];for(const {requirement,constraint} of candidates.slice(0,200))checks.push(await checkBusinessConstraint(requirement,constraint,read,{mountId:input.mountId,path:input.path},provenance));provenance.assertCurrent?.();const pending=checks.filter(item=>item.status!=='current').length;add('business','规则落实核对','warning',`已核对${checks.length}/${candidates.length}条${candidates.length>checks.length?`，其余${candidates.length-checks.length}条尚未核对`:''}。`+(pending?`${pending}条规则的来源或落实需要复核；版本变化、未定位和缺关联不等同业务通过`:'已核对部分的来源与落实版本有效；规则含义和交互行为仍需人工核对'));}
-  if(/\.html?$/i.test(input.path)&&this.deps.prototypeAcceptance){const prototype=await this.deps.prototypeAcceptance(input.mountId,input.path),enabled=this.deps.preferences().qualityGateEnabled!==false&&this.deps.preferences().forceQualityCheckBeforeDelivery!==false;add('prototype-acceptance','原型DOM验收',prototype.required&&enabled&&!prototype.passed?'blocked':prototype.passed?'passed':'warning',prototype.detail);}
+  if(/\.html?$/i.test(input.path)&&this.deps.prototypeAcceptance){const prototype=await this.deps.prototypeAcceptance(input.mountId,input.path);add('prototype-acceptance','原型DOM验收',prototype.required&&!prototype.passed?'blocked':prototype.passed?'passed':'warning',prototype.detail);}
+  if(this.deps.taskAcceptance){try{const task=await this.deps.taskAcceptance(input.mountId,input.path,input.sourceHash);if(task)add('task-acceptance','任务约定与人工核对',task.allowed?(task.status==='accepted_with_limits'?'warning':'passed'):'blocked',task.allowed?(task.status==='accepted_with_limits'?'本版本关键项已核对；具体非关键限制已由用户逐项接受':'本版本任务约定与人工核对已完成'):task.items.filter(item=>item.status!=='passed'&&!(item.status==='unknown'&&item.decision)).map(item=>item.detail).slice(0,5).join('；'));}catch(error){add('task-acceptance','任务约定与人工核对','blocked',error instanceof Error?error.message:'当前任务验收无法核对');}}
   const unknown=this.deps.actions().some(item=>item.kind==='document_delivery'&&item.status==='outcome_unknown'&&item.id!==undefined&&(()=>{const request=item.request as DocumentDeliveryInput;return request.mountId===input.mountId&&request.path===input.path;})());
   add('outcome','历史交付结果',unknown?'blocked':'passed',unknown?'上一轮交付结果待核对，确认远端状态后再重试':'没有发现结果未知的历史交付');
 

@@ -1,0 +1,13 @@
+flowchart TD
+    A[用户批准当前交付提案] --> B[executeMcp 早期交付 guard]
+    B --> C[mcpCall 连接并等待 catalog]
+    C --> D[复用 Service 交付 closure 再验成果与核对记录]
+    D -->|过期或证据缺失| N[failed / not_sent 服务端计数 0]
+    D --> E[重新检查连接及权限]
+    E -->|停用或变化| N
+    E --> F[紧邻发送标记 dispatched / invoked]
+    F --> G[Pi stdio dispatch 或 HTTP callTool]
+    G --> H[可信回执分类]
+    G -->|发出后失联| U[outcome_unknown 计数 1 不重试]
+    H --> S[succeeded / failed 按真实回执]
+    Z[根已合入 定向真实transport通过\n待新版本Electron与渠道验收] -.限定.-> A

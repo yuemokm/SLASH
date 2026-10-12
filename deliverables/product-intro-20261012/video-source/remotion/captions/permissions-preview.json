@@ -1,0 +1,34 @@
+[
+  {
+    "text": "只想先理清思路，就选 Plan。",
+    "startMs": 400,
+    "endMs": 3241,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "要生成或修改内容，再用 Build。",
+    "startMs": 3441,
+    "endMs": 6500,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "完全访问打开后，可以读取项目外的文件。",
+    "startMs": 6700,
+    "endMs": 10846,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "任务没结束，也能补充要求，待发送的内容会先留在队列里。",
+    "startMs": 11046,
+    "endMs": 16713,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  }
+]

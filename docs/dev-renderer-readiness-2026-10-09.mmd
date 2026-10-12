@@ -1,0 +1,15 @@
+flowchart TD
+  BAT[根 BAT] --> Port{指定端口可用}
+  Port -->|否| Fail[报告具体错误并仅关闭本轮进程]
+  Port -->|是| Build[Vite build 和主进程编译]
+  Build --> Vite[Vite strictPort 启动]
+  Vite --> Connect[最多30秒等待HTTP连接]
+  Connect -->|连接失败| Connect
+  Connect -->|连接成功| HTML["最多30秒等待完整首页<br/>每次750毫秒仅限制连接"]
+  HTML -->|非200或非Slash首页| HTML
+  HTML -->|完整200 HTML与入口| Electron[启动Electron]
+  Electron --> Loading[原加载占位和失败重试]
+  Loading --> UI[完整工作台和真实IPC验收]
+  Connect -->|超时或进程退出| Fail
+  HTML -->|超时或进程退出| Fail
+  BAT -.取消：中断等待并禁止继续启动.-> Fail

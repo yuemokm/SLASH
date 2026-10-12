@@ -1,8 +1,9 @@
 import {spawn} from 'node:child_process';
-import {existsSync} from 'node:fs';
+import {appendFileSync,copyFileSync,existsSync,statSync,writeFileSync} from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {waitForRenderer} from './renderer-readiness.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const port=parsePort(process.env.PM_SLASH_DEV_PORT);
@@ -12,11 +13,35 @@ const nodeCommand=process.execPath;
 const viteCli=path.join(root,'node_modules','vite','bin','vite.js');
 const tscCli=path.join(root,'node_modules','typescript','bin','tsc');
 const electronCli=path.join(root,'node_modules','electron','cli.js');
+const diagnosticPath=path.join(root,'dev-startup.log');
+let diagnosticWarning=false;
+
+// Synchronous, bounded stage records survive a native launcher termination.
+// Never include environment values, CLI arguments or application contents.
+function diagnose(message,visible=false){
+ const line=`[dev] ${message}`;
+ if(visible)console.log(line);
+ try{
+  if(existsSync(diagnosticPath)&&statSync(diagnosticPath).size>262144){
+   copyFileSync(diagnosticPath,path.join(root,'dev-startup.previous.log'));
+   writeFileSync(diagnosticPath,'');
+  }
+  appendFileSync(diagnosticPath,`${new Date().toISOString()} launcher=${process.pid} ${line}\n`);
+ }catch(error){
+  if(!diagnosticWarning){diagnosticWarning=true;console.error(`[dev] could not write startup diagnostics: ${error.code??'unknown error'}`);}
+ }
+}
+
+function exitDescription(code,signal){
+ const hex=Number.isInteger(code)&&Math.abs(code)>255?` (0x${(code>>>0).toString(16).toUpperCase().padStart(8,'0')})`:'';
+ return `code ${code??'none'}${hex}, signal ${signal??'none'}`;
+}
 
 let buildProcess;
 let rendererProcess;
 let electronProcess;
 let stopping=false;
+const startupController=new AbortController();
 
 function parsePort(value){
  const parsed=Number(value||5173);
@@ -24,9 +49,13 @@ function parsePort(value){
  return parsed;
 }
 
-function start(command,args,options={}){
+function start(command,args,label,options={}){
+ startupController.signal.throwIfAborted();
+ diagnose(`starting ${label}`,true);
  const child=spawn(command,args,{cwd:root,stdio:'inherit',windowsHide:false,shell:false,...options});
- child.once('error',error=>{if(!stopping)console.error(`[dev] ${command} failed: ${error.message}`);});
+ diagnose(`${label} spawned pid=${child.pid??'none'}`);
+ child.once('error',error=>{diagnose(`${label} failed to start: ${error.code??'unknown error'}`,!stopping);});
+ child.once('exit',(code,signal)=>{diagnose(`${label} exited: ${exitDescription(code,signal)}; stopping=${stopping}`,!stopping&&code!==0);});
  return child;
 }
 
@@ -41,17 +70,17 @@ function waitForExit(child,label){
 }
 
 async function compileMain(){
- console.log('[dev] compiling Electron main/preload…');
- buildProcess=start(nodeCommand,[viteCli,'build']);
- let result=await waitForExit(buildProcess,'vite build');
- buildProcess=undefined;
- if(result.code!==0)throw new Error(`vite build exited with code ${result.code??'unknown'}`);
- buildProcess=start(nodeCommand,[tscCli,'-p','tsconfig.node.json']);
- result=await waitForExit(buildProcess,'tsc');
+ diagnose('compiling Electron main/preload…',true);
+ // Development loads the Vite URL; compiling its production renderer first
+ // repeats frontend work and writes assets the development window never reads.
+ const started=performance.now();
+ buildProcess=start(nodeCommand,[tscCli,'-p','tsconfig.node.json'],'TypeScript compiler');
+ const result=await waitForExit(buildProcess,'tsc');
  buildProcess=undefined;
  if(result.code!==0)throw new Error(`tsc exited with code ${result.code??'unknown'}`);
  const entry=path.join(root,'dist','main','main.js');
  if(!existsSync(entry))throw new Error(`build completed but Electron entry is missing: ${entry}`);
+ diagnose(`main/preload ready in ${Math.round(performance.now()-started)}ms`,true);
 }
 
 function delay(milliseconds){return new Promise(resolve=>setTimeout(resolve,milliseconds));}
@@ -68,19 +97,6 @@ async function assertPortAvailable(){
  }finally{
   if(server.listening)await new Promise(resolve=>server.close(resolve));
  }
-}
-
-async function waitForRenderer(child){
- const deadline=Date.now()+30_000;
- while(Date.now()<deadline){
-  if(child.exitCode!==null)throw new Error(`renderer exited before readiness (code ${child.exitCode??'unknown'})`);
-  try{
-   const response=await fetch(devServerUrl,{signal:AbortSignal.timeout(750)});
-   if(response.ok)return;
-  }catch{}
-  await delay(100);
- }
- throw new Error(`renderer did not become ready at ${devServerUrl}`);
 }
 
 async function stopProcess(child){
@@ -101,6 +117,8 @@ async function stopProcess(child){
 async function shutdown(code=0){
  if(stopping)return;
  stopping=true;
+ diagnose(`shutdown requested: code ${code}`);
+ startupController.abort();
  await Promise.all([stopProcess(electronProcess),stopProcess(rendererProcess),stopProcess(buildProcess)]);
  process.exitCode=code;
 }
@@ -109,16 +127,20 @@ process.once('SIGINT',()=>{void shutdown(0);});
 process.once('SIGTERM',()=>{void shutdown(0);});
 
 try{
+ diagnose(`launcher started: Node ${process.version}; platform ${process.platform}/${process.arch}; stdin=${process.stdin.isTTY?'TTY':'pipe'} stdout=${process.stdout.isTTY?'TTY':'pipe'}; diagnostics=${diagnosticPath}`,true);
  await assertPortAvailable();
  await compileMain();
- rendererProcess=start(nodeCommand,[viteCli,'--host',host,'--port',String(port),'--strictPort'],{env:{...process.env,PM_SLASH_DEV_SERVER_PORT:String(port)}});
- await waitForRenderer(rendererProcess);
- console.log(`[dev] renderer ready at ${devServerUrl}`);
- electronProcess=start(nodeCommand,[electronCli,'.'],{env:{...process.env,PM_SLASH_DEV_SERVER_URL:devServerUrl,PM_SLASH_DEV_SERVER_PORT:String(port)}});
+ startupController.signal.throwIfAborted();
+ const rendererStarted=performance.now();
+ rendererProcess=start(nodeCommand,[viteCli,'--host',host,'--port',String(port),'--strictPort'],'Vite renderer',{env:{...process.env,PM_SLASH_DEV_SERVER_PORT:String(port)}});
+ await waitForRenderer(rendererProcess,devServerUrl,{signal:startupController.signal});
+ startupController.signal.throwIfAborted();
+ diagnose(`renderer HTML ready at ${devServerUrl} in ${Math.round(performance.now()-rendererStarted)}ms`,true);
+ electronProcess=start(nodeCommand,[electronCli,'.'],'Electron desktop',{env:{...process.env,PM_SLASH_DEV_SERVER_URL:devServerUrl,PM_SLASH_DEV_SERVER_PORT:String(port)}});
  const result=await waitForExit(electronProcess,'Electron');
  electronProcess=undefined;
  await shutdown(result.code??0);
 }catch(error){
- console.error(`[dev] ${error instanceof Error?error.message:String(error)}`);
+ if(!stopping)diagnose(error instanceof Error?error.message:String(error),true);
  await shutdown(1);
 }

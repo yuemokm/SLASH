@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant Check as Bounded step (3000ms)
+    participant Observer as Input navigation observer
+    participant Browser as Electron native input
+    participant Old as Old document
+    participant New as New main document
+    Check->>Observer: register before native input
+    Check->>Browser: trusted input dispatch
+    Check->>Old: paint promise
+    alt main document navigation
+        Browser-->>Observer: did-start-navigation main, not same document
+        Observer-->>Check: navigation wins paint race
+        New-->>Observer: did-frame-finish-load main
+        Observer-->>Check: loaded
+        Check->>New: paint current document
+    else same-document or ordinary action
+        Old-->>Check: paint resolved
+    end
+    alt load failure
+        Browser-->>Observer: main load/provisional failure
+        Observer-->>Check: failed (cannot pass)
+    else cancel or step timeout
+        Check->>Browser: destroy window, preserve Stop reason
+        Browser-->>Observer: destroyed
+        Observer->>Observer: settle outstanding wait and dispose
+    end
+    Check->>Observer: finally dispose (idempotent)

@@ -1,0 +1,19 @@
+flowchart TD
+  BAT[根 BAT / npm run dev] --> Build[只编译主进程与 preload]
+  Build --> Vite[Vite 开发服务]
+  Build --> Icon[开发图标读取应用 public 目录]
+  Production[npm run build] --> ProductionBuild[生产界面构建与主进程编译]
+  Vite --> Entry[optimizeDeps.entries: 根 index.html]
+  Entry --> Scan[扫描应用源码依赖]
+  Scan --> Prepare[依赖预优化 / 源码转换]
+  Vite --> HTML[完整首页 HTTP 就绪]
+  Vite --> Watch[监听正常产品源码并保留 HMR]
+  TestFiles[.test-data 测试生成文件] --> Ignore[watcher 忽略，不触发窗口重载]
+  HTML --> Electron[启动 Electron / 主模块导入]
+  Electron --> Window[创建工作台窗口]
+  Window --> Prepare
+  Prepare --> UI[界面与 state IPC 就绪]
+  UI --> Dynamic[SettingsModal 动态导入核对]
+  History[历史 release / 许可证 / 视频资料] --> Preserve[保留文件，退出预扫描入口集合]
+  Saved[已有生产 renderer] --> Keep[保留文件；开发窗口不依赖]
+  Note[两轮扫描减少；整体时长仍波动] -.-> UI

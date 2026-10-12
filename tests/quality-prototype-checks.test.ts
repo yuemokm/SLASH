@@ -8,6 +8,45 @@ import {qualityPrototypeBindingsSchema,qualityPrototypeCases,qualityCodeProtecti
 
 const binding=()=>({schemaVersion:1,artifactHash:'a'.repeat(64),reviewed:true,entrySteps:[],code:{selector:'#actual-code',mode:'readonly_input',representation:'allocated_demo',generatedNote:{selector:'#actual-code-note',text:'系统自动生成'},allocationNote:{selector:'#actual-demo-note',text:'模拟编码'}},name:{selector:'#actual-name',hint:{selector:'#actual-limit',text:'最多50字符'},boundary:'native_maxlength'},submit:'#actual-submit',fillSteps:[{action:'fill',selector:'#actual-address',value:'隔离验收地址'}],scenarios:{success:[{action:'select',selector:'#actual-scenario',value:'success'}],duplicate:[{action:'select',selector:'#actual-scenario',value:'duplicate'}],failure:[{action:'select',selector:'#actual-scenario',value:'failure'}]},feedback:{success:{selector:'#actual-success',text:'创建成功'},duplicate:{selector:'#actual-duplicate',text:'疑似重复'},failure:{selector:'#actual-failure',text:'模拟服务失败'}},names:{success:'隔离正常门店',duplicate:'隔离重复门店',failure:'隔离失败门店'},preservedFields:[]});
 
+test('显式v2新基线不要求页面allocation说明，v1旧明确说明缺失仍拒绝且保留原断言',()=>{
+ const legacy=binding(),{allocationNote,...code}=legacy.code;
+ const next={...legacy,schemaVersion:2,code};
+ assert.equal(qualityPrototypeBindingsSchema.safeParse(next).success,true);
+ assert.equal(qualityPrototypeBindingsSchema.safeParse({...legacy,code}).success,false);
+ const oldCases=qualityPrototypeCases(legacy),newCases=qualityPrototypeCases(next);
+ assert(oldCases[0].steps.some(s=>s.action==='assert'&&s.assertion==='text'&&s.selector===allocationNote.selector&&s.expected===allocationNote.text));
+ assert.equal(newCases[0].steps.some(s=>'selector'in s&&s.selector===allocationNote.selector),false);
+ assert.deepEqual(newCases[0].steps,oldCases[0].steps.filter(s=>!('selector'in s&&s.selector===allocationNote.selector)));
+ for(let i=1;i<oldCases.length;i++)assert.deepEqual(newCases[i].steps,oldCases[i].steps,'business assertions remain identical');
+ assert.equal(oldCases[0].title,'来源规则：编码展示且无法手填，分配/模拟状态明确');
+ assert.equal(oldCases[2].title,'测试模拟提交：success');
+ assert.equal(newCases.length,8);assert(newCases.reduce((n,c)=>n+c.steps.length,0)<=100);
+});
+
+test('v2保留旧note仅为metadata不会偷偷断言UI，版本1不自动升级或放宽旧note约束',()=>{
+ const original=binding(),next={...original,schemaVersion:2},before=structuredClone(next);
+ const parsed=qualityPrototypeBindingsSchema.parse(next);assert.deepEqual(parsed.code.allocationNote,original.code.allocationNote);
+ assert.equal(qualityPrototypeCases(next)[0].steps.some(s=>'selector'in s&&s.selector===original.code.allocationNote.selector),false);
+ assert.deepEqual(next,before);
+ const invalidLegacy=binding();invalidLegacy.code.allocationNote.text='任意说明';assert.equal(qualityPrototypeBindingsSchema.safeParse(invalidLegacy).success,false);
+ assert.equal(qualityPrototypeBindingsSchema.safeParse({...invalidLegacy,schemaVersion:2}).success,true);
+});
+
+test('v2正常失败反馈仍执行只读格式、50/51、失败保留及三视口，不能用元说明外移削弱业务检查',()=>{
+ const original=binding(),{allocationNote:_,...code}=original.code;
+ const next={...original,schemaVersion:2,code,feedback:{...original.feedback,failure:{selector:'#actual-failure',text:'提交失败'}}};
+ const cases=qualityPrototypeCases(next),readonly=cases[0],failure=cases.find(c=>c.id==='benchmark:submit-failure')!;
+ assert(readonly.steps.some(s=>s.action==='assert'&&s.assertion==='readonly'&&s.expected===true));
+ assert(readonly.steps.some(s=>s.action==='assert'&&s.assertion==='value'&&s.expected==='JHWD'));
+ for(const value of ['甲'.repeat(50),'甲'.repeat(51)])assert(cases[1].steps.some(s=>s.action==='fill'&&s.value===value));
+ assert(failure.steps.some(s=>s.action==='assert'&&s.assertion==='text'&&s.expected==='提交失败'));
+ for(const selector of ['#actual-name','#actual-address','#actual-scenario'])assert(failure.steps.some(s=>s.action==='assert'&&s.assertion==='value'&&s.selector===selector));
+ assert.equal(cases.filter(c=>c.viewport).length,3);
+ assert.equal(qualityPrototypeBindingsSchema.safeParse({...next,name:{...next.name,hint:{selector:'#actual-limit',text:'49'}}}).success,false);
+ assert.equal(qualityPrototypeBindingsSchema.safeParse({...next,feedback:{...next.feedback,failure:{selector:'#actual-failure',text:'提交按钮'}}}).success,false);
+ assert.equal(qualityCodeProtectionStatus('display_text',{count:1,tag:'div',contentEditable:true}),'failed');
+});
+
 test('独立浏览器基准固定来源规则及50/51输入；保留全部显式填入值，并沿用原预算（不执行browser）',()=>{
  const original=binding(),before=structuredClone(original),cases=qualityPrototypeCases(original);assert.deepEqual(original,before);assert.equal(cases.length,8);assert.ok(cases.reduce((n,c)=>n+c.steps.length,0)<=100);assert.ok(cases.every(c=>c.steps.length<=20));
  const code=cases.find(c=>c.id==='benchmark:code-readonly')!;assert.ok(code.steps.some(s=>s.action==='assert'&&s.assertion==='readonly'&&s.selector==='#actual-code'&&s.expected===true));

@@ -1,0 +1,14 @@
+flowchart TD
+  A[现有read_draft 校验权限 正式基线与显式恢复链] --> B{当前是否pending}
+  B -- 是 --> P[返回changeId contentHash 与实际Change.runId作为parentRunId]
+  B -- 否 --> F[正式文件回执 省略changeId与parentRunId]
+  P --> R[原型入口和显式依赖分别复制最新回执]
+  R --> V[原验收owner 身份 hash和权限校验保持严格]
+  P --> E[现有edit_draft 精确ID hash 原预算与资源锁]
+  F --> E
+  E --> C{匹配 版本 授权及取消检查通过}
+  C -- 否 --> N[不提交 不转移owner]
+  C -- 是 --> W[原卡提交或创建pending 合法续作成功才转移owner]
+  W --> O[编辑回执返回提交后真实parentRunId 新hash与diff]
+  O --> R
+  H[originRunId和originalRunId仅是历史 不能替代当前owner] -. 保留历史 .-> W

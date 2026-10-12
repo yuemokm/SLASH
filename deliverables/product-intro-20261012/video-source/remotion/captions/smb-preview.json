@@ -1,0 +1,26 @@
+[
+  {
+    "text": "几个人一起改原型，最麻烦的是每人一份，最后还得合版。",
+    "startMs": 400,
+    "endMs": 5850,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "共享文件夹让大家用同一份项目。",
+    "startMs": 6050,
+    "endMs": 9543,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "碰到修改冲突，还是要核对，不能直接覆盖。",
+    "startMs": 9743,
+    "endMs": 13889,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  }
+]

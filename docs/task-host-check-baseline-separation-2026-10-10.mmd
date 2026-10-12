@@ -1,0 +1,26 @@
+flowchart TD
+  A[真实成果草稿登记] --> B[固定宿主页面及控件检查3项]
+  C[修改前冻结用户确认9项] --> D[Task合同完整不可弱化基线]
+  B --> E{标准完整匹配且有冻结证明?}
+  E -->|否| F[原runCases合并required范围]
+  F --> G[原每批10项预算及冲突检查]
+  E -->|是| H[内部proof核对当前确认目标 id revision hash cases]
+  D --> H
+  H --> I[共用原快照来源权限取消版本检查]
+  I --> J[独立执行宿主3项]
+  J --> K[host_task_check按reportId保存]
+  K --> L[不作为正式latest且不放行gate]
+  D --> M[Task原regression独立执行完整9项]
+  M --> N[完整冻结回归报告及原交付门禁]
+  K --> O[Task分别聚合当前证据]
+  N --> O
+  P[生产真实runner及同模块版本常量] --> Q[Service透传expectedRunnerVersion]
+  Q --> R{旧证据runner版本一致?}
+  R -->|否| S[标陈旧提示重验 保留原记录 不自动执行]
+  S --> T[Task刷新及交付阻断 不继承陈旧已验证基线]
+  R -->|是| U[继续原规格来源依赖授权版本核验]
+  J --> V[正式零云 Service 加 v6 实际浏览器验收]
+  M --> V
+  V --> W[宿主3项4步及冻结9项88步分别通过并持久化]
+  W --> X[18项流程保护通过 版本冲突拒绝 重开不重放 原输入不变]
+  X --> Y[automaticStatus passed 与 current 总status unverified 未做模型视觉审查]

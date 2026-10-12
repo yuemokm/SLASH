@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import {buildContentReviewInput,contentReviewTextHash as hash,reviewContent,verifyContentReviewReceipt,refreshContentReviewReceipt} from '../main/content-review.js';
-import {REVIEW_PROTOCOL_PROMPT} from '../main/content-review-protocol.js';
 import type {ContentReviewInput} from '../shared/content-review.js';
 
 // Frozen synthetic input from the pre-expansion allocator: no user material,
@@ -11,7 +10,7 @@ const old=JSON.parse(await fs.readFile(new URL('./fixtures/content-review-short-
 const reviewer={provider:'offline-fixture',modelId:'none',protocol:'domain-callback'};
 const doc=(id:string,text:string)=>({id,text,sha256:hash(text)});
 const contexts=(input:ContentReviewInput)=>[...input.requestContexts,...input.artifactContexts,...input.sourceContexts];
-function bodyBudget(input:ContentReviewInput){const count=input.snapshot.requests.length+input.snapshot.artifacts.length+input.snapshot.sources.length;return Math.floor((input.promptCharacterLimit-2500-REVIEW_PROTOCOL_PROMPT.length-count*400-JSON.stringify(input.snapshot.assumptions).length)/2);}
+function bodyBudget(input:ContentReviewInput){const count=input.snapshot.requests.length+input.snapshot.artifacts.length+input.snapshot.sources.length;return Math.floor((input.promptCharacterLimit-2500-input.prompt.slice(input.prompt.indexOf('只返回符合'),input.prompt.lastIndexOf('\n')).length-count*400-JSON.stringify(input.snapshot.assumptions).length)/2);}
 function validate(input:ContentReviewInput){
  assert(input.prompt.length<=input.promptCharacterLimit);
  assert(contexts(input).reduce((sum,part)=>sum+part.includedCharacters,0)<=bodyBudget(input));
@@ -26,19 +25,19 @@ function validate(input:ContentReviewInput){
  }
 }
 function packet(input:ContentReviewInput,artifactQuote='段落0：规则待核。',sourceQuote='来源明确句。',artifactRef='A1'){
- return {findings:[{category:'contradiction',severity:'blocking',confidence:'high',explanation:'仅验证真实文本绑定，不判定业务正确。',artifacts:[{artifactRef,quote:artifactQuote}],sources:[{sourceRef:'S1',quote:sourceQuote}],requests:[]}],coverage:{artifactRefs:input.referenceTable.filter(item=>item.kind==='artifact').map(item=>item.alias),sourceRefs:input.referenceTable.filter(item=>item.kind==='source').map(item=>item.alias),requestRefs:input.referenceTable.filter(item=>item.kind==='request').map(item=>item.alias),directions:['fact_inference','scope_expansion','contradiction','cross_artifact_consistency','field_semantics','request_coverage'],limitations:[]}};
+ return {findings:[{category:'contradiction',severity:'blocking',confidence:'high',scope:'uncertain',repairDisposition:'record_only',explanation:'仅验证真实文本绑定，不判定业务正确。',artifacts:[{artifactRef,quote:artifactQuote}],sources:[{sourceRef:'S1',quote:sourceQuote}],requests:[]}],coverage:{artifactRefs:input.referenceTable.filter(item=>item.kind==='artifact').map(item=>item.alias),sourceRefs:input.referenceTable.filter(item=>item.kind==='source').map(item=>item.alias),requestRefs:input.referenceTable.filter(item=>item.kind==='request').map(item=>item.alias),directions:['fact_inference','scope_expansion','contradiction','cross_artifact_consistency','field_semantics','request_coverage'],limitations:[]}};
 }
 const run=(input:ContentReviewInput,raw:unknown)=>reviewContent({input,reviewer,review:async()=>({raw,stopReason:'stop'})});
 
-test('frozen small synthetic old input still verifies; unused original body budget fills the short artifact',async()=>{
+test('frozen old input hash stays valid but obsolete protocol cannot execute; v4 allocator expands within unchanged budget and preserves partial coverage',async()=>{
  assert.equal(old.inputHash,'1920f850ab19a618c3ee71383039ef6ecd7b05e08efcef451f792ce4104553a0');validate(old);assert.equal(old.artifactContexts[0].excerpts.length,8);assert.equal(old.artifactContexts[0].coverage,'partial');
- const next=buildContentReviewInput(old.snapshot,{promptCharacters:old.promptCharacterLimit});validate(next);assert.equal(bodyBudget(next),bodyBudget(old));assert.equal(next.artifactContexts[0].coverage,'full');assert.equal(next.artifactContexts[0].includedCharacters,852);assert.notEqual(next.inputHash,old.inputHash);assert.deepEqual(next.snapshot,old.snapshot);assert.deepEqual(next.referenceTable,old.referenceTable);
+ const next=buildContentReviewInput(old.snapshot,{promptCharacters:old.promptCharacterLimit});validate(next);assert(bodyBudget(next)<bodyBudget(old));assert.equal(next.artifactContexts[0].coverage,'partial');assert.equal(next.artifactContexts[0].includedCharacters,703);assert(next.artifactContexts[0].includedCharacters>old.artifactContexts[0].includedCharacters);assert.notEqual(next.inputHash,old.inputHash);assert.deepEqual(next.snapshot,old.snapshot);assert.deepEqual(next.referenceTable,old.referenceTable);
  for(const previous of contexts(old)){const expanded=contexts(next).find(item=>item.id===previous.id)!;for(const excerpt of previous.excerpts)assert(expanded.excerpts.some(item=>item.start<=excerpt.start&&item.end>=excerpt.end),'all selected old ranges remain present');}
- const receipt=await run(old,packet(old));assert.equal(receipt.status,'issues_found');assert(verifyContentReviewReceipt(receipt));assert.equal(refreshContentReviewReceipt(receipt,old),receipt);assert.equal(refreshContentReviewReceipt(receipt,next).versionState,'stale');
+ await assert.rejects(run(old,packet(old)),/CONTENT_REVIEW_SCHEMA_CHANGED/);const receipt=await run(next,packet(next));assert.equal(receipt.status,'issues_found');assert(verifyContentReviewReceipt(receipt));assert.equal(refreshContentReviewReceipt(receipt,next),receipt);const changed=buildContentReviewInput({...next.snapshot,requests:[{id:'request',text:'另一个已授权要求。'}]});assert.equal(refreshContentReviewReceipt(receipt,changed).versionState,'stale');
 });
 test('expanded real excerpt binds its new alias; old omitted range, fabricated quotes and wrong-kind refs remain invalid',async()=>{
- const next=buildContentReviewInput(old.snapshot,{promptCharacters:old.promptCharacterLimit}),newQuote='段落11：规则待核。';assert(!old.artifactContexts[0].excerpts.some(part=>part.text.includes(newQuote)));
- assert.equal((await run(old,packet(old,newQuote))).status,'unverified');const result=await run(next,packet(next,newQuote));assert.equal(result.status,'issues_found');assert.equal(result.findings[0].artifactBindings[0].id,'artifact');assert.equal(result.findings[0].sourceBindings[0].id,'source');assert.equal(result.humanConfirmed,false);
+ const next=buildContentReviewInput(old.snapshot,{promptCharacters:old.promptCharacterLimit}),newQuote='段落8：规则待核。';assert(!old.artifactContexts[0].excerpts.some(part=>part.text.includes(newQuote)));
+ await assert.rejects(run(old,packet(old,newQuote)),/CONTENT_REVIEW_SCHEMA_CHANGED/);const result=await run(next,packet(next,newQuote));assert.equal(result.status,'issues_found');assert.equal(result.findings[0].artifactBindings[0].id,'artifact');assert.equal(result.findings[0].sourceBindings[0].id,'source');assert.equal(result.humanConfirmed,false);
  const binding=result.findings[0].artifactBindings[0];assert.equal(next.snapshot.artifacts[0].text.slice(binding.start,binding.end),newQuote);
  for(const raw of [packet(next,'虚构成果原句'),packet(next,'段落0：规则待核。','虚构来源原句'),packet(next,'段落0：规则待核。','来源明确句。','S1')]){const invalid=await run(next,raw);assert.equal(invalid.status,'unverified');assert.equal(invalid.findings.length,0);assert.equal(invalid.invalidFindings.length,1);}
 });

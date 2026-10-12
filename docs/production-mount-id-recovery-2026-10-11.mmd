@@ -1,0 +1,21 @@
+flowchart TD
+    RootCheck[根局部集成 check0 29项自包含通过 full与build待统一] -.-> A
+    A[write_draft 精确 mountId/path] --> B[原模式 预算 取消 Capability gate]
+    B -->|拒绝| P[原 permission/cancel/fatal 语义]
+    B --> C{HTML 目标}
+    C -->|是| D[beforeArtifactWrite 读取既有目标]
+    C -->|否| E[Files.draft]
+    D --> E
+    D --> F[Files.resolve 精确查目录ID]
+    E --> F
+    F -->|不存在| U[宿主 UnknownMountIdError]
+    F -->|停用 只读 越界 物理保护| P
+    F -->|存在且合法| S[保留原草稿/审批/版本流程]
+    U --> I[原Run manifest与当前启用可写唯一ID交集]
+    I --> R[复用Files.resolve检查物理只读/参考保护]
+    R --> G[await后重核授权 权限 Run绑定]
+    G -->|变化或无可靠绑定| Z[空名单]
+    G -->|一致| L[仅精确ID与名称 不含路径]
+    Z --> O[correctable/correct_input 自动失败Operation]
+    L --> O
+    O --> H[Agent可逐字复用已授权ID 不自动选目录 不改权限]

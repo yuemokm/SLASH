@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import type {ConnectionHealthSnapshot} from '../shared/types.js';
+import {McpSafeError,safeMcpMessage} from './mcp-errors.js';
 
 export type ConnectionInspection = Readonly<{
   kind:'cli'|'mcp';
@@ -21,7 +22,8 @@ export function summarizeConnectionHealth(connectionId:string, inspection:Connec
 }
 
 export function summarizeConnectionFailure(connectionId:string,error:unknown,checkedAt=new Date().toISOString()):ConnectionHealthSnapshot {
-  const diagnostic=error instanceof Error?error.message:String(error);
+  const raw=error instanceof Error?error.message:String(error);
+  const diagnostic=error instanceof McpSafeError||/oauth|token|bearer|code=|https?:\/\//i.test(raw)?safeMcpMessage(error):raw;
   return{connectionId,checkedAt,status:'failed',summary:'连接能力检查失败，请修复配置或认证后重试',capabilities:[],diagnostic:diagnostic.slice(0,2000)};
 }
 

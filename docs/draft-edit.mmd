@@ -7,7 +7,7 @@ flowchart TD
   A --> P[Pi 原生估算 切分 摘要 与有界恢复]
   P --> B[read_draft / workspace_read]
   B --> C[授权可写文本目标 / 最新当前 run pending]
-  C --> D[分页文本 + changeId + contentHash + baseHash]
+  C --> D[分页文本 + hash与baseHash pending给changeId及真实parentRunId 正式文件省略两者]
   D --> E[edit_draft / artifact_write + workspace_read]
   E --> Q[调用与接收边界只投影 mountId/path 不把编辑参数传入成果目标]
   Q --> R[修改前冻结已required或previous_verified旧基线]
@@ -18,6 +18,7 @@ flowchart TD
   I --> J{取消 授权 原件版本 最终草稿 CAS}
   J -->|失败| K[无新草稿 / 旧稿保持]
   J -->|通过| L[同 ID 更新 pending / 保留原始 before]
-  L --> M[既有变更卡 / 用户应用]
+  L --> W[回执返回提交后真实parentRunId 新hash与diff]
+  W --> M[既有变更卡 / 用户应用]
   M --> N[既有锁 版本备份 两次 hash 校验 Files.apply]
   N --> O[正式文件或冲突保留]

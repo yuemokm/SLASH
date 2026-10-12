@@ -1,0 +1,17 @@
+flowchart TB
+  subgraph Desktop["桌面技术栈"]
+    View["React 19 · TypeScript<br/>Vite 8 · Markdown / GFM"]
+    Electron["Electron 44<br/>contextIsolation · sandbox<br/>Node integration 关闭"]
+    App["Node.js / TypeScript 应用层<br/>Zod 契约 · Service / 领域模块"]
+    Pi["Pi SDK 0.86.1<br/>AgentSession · SessionManager<br/>DefaultResourceLoader · 原生压缩"]
+    Packages["已接入 Pi 生态适配<br/>web-access · mcp-adapter · subagents<br/>lens · Plannotator · memory<br/>Langfuse 默认关闭"]
+    Storage["node:sqlite + 文件系统<br/>版本快照 / 会话数据<br/>safeStorage 加密凭据"]
+    Tools["工具实现<br/>MCP SDK · HTTP / stdio · OAuth<br/>PowerShell / CLI · Windows SMB<br/>docx / mammoth / ExcelJS / PDF<br/>Playwright 交互检查"]
+    View --> Electron --> App
+    App --> Pi
+    Pi --> Packages
+    App --> Storage
+    App --> Tools
+  end
+  Verify["验证工具链<br/>TypeScript · node:test / tsx<br/>Electron / Playwright"]
+  Verify -.-> Desktop

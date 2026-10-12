@@ -1,0 +1,15 @@
+flowchart LR
+  Chat[Slash 会话] --> Pi[Pi 原生上下文与压缩]
+  Pi --> Gateway[现有工具权限网关]
+  Gateway --> Memory[隔离的项目候选记忆]
+  Gateway --> Confirmed[已有确认知识流程]
+  Sources[用户选择的授权资料] --> Local[版本化本机知识库]
+  Embedding[专用向量配置] --> Local
+  Local --> Search[本机检索与来源核对]
+  Local --> Bundle[明确导出的发布资料包]
+  Bundle --> Publish[受控发布程序]
+  Publish --> Cloud[Supabase 已发布版本与集合权限]
+  Web[Vercel 独立问答页面] --> API[身份校验与只读问答 API]
+  API --> Cloud
+  API --> Models[服务端问答与向量模型]
+  API --> Citations[当前授权来源与版本引用]

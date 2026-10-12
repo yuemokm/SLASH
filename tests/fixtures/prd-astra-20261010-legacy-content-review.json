@@ -1,0 +1,247 @@
+{
+  "schemaVersion": 1,
+  "id": "d3518476-97ed-4f28-8b32-508acaafbfa9",
+  "version": "content-review-v1",
+  "inputHash": "97e4edccae5efdce7aa0298c2d0e1e685e2e102630c66074b5724ba4aad20f6d",
+  "promptHash": "0cffa6a76d57985596d7f525aa003785cbab2c7031b1c39a9194e4ea75e46bff",
+  "resultHash": "a946dcec2bd29886fd54280da1fe2e73d9c55f13fabb331fe0427778ac955e68",
+  "reviewer": {
+    "provider": "wangshu",
+    "modelId": "gpt-6-astra",
+    "protocol": "openai-responses",
+    "configurationId": "cbfc4c25-c0f2-460e-99fa-4cd62e7a0553"
+  },
+  "startedAt": "2026-10-09T16:59:34.109Z",
+  "finishedAt": "2026-10-09T17:02:33.817Z",
+  "durationMs": 179599,
+  "usage": {
+    "input": 20396,
+    "output": 7962,
+    "cacheRead": 2,
+    "cacheWrite": 0,
+    "reasoning": 7074,
+    "totalTokens": 28360,
+    "cost": {
+      "input": 0,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite": 0,
+      "total": 0
+    }
+  },
+  "stopReason": "stop",
+  "status": "issues_found",
+  "versionState": "current",
+  "completion": "completed",
+  "humanConfirmed": false,
+  "findings": [
+    {
+      "id": "finding-1",
+      "category": "field_semantics",
+      "severity": "advisory",
+      "confidence": "high",
+      "explanation": "紧邻说明将字段名称格D5/D6称为合并单元格，混淆字段对象与规则证据位置。来源标注的合并区域是K5:K7，K列为字段规则；F/P两维度取值虽一致，来源定位说明仍不准确。",
+      "suggestion": "仅修正紧邻说明：K5:K7为字段规则合并区域，D5/D6分别为经度、纬度字段名称；保留现有F/P口径。",
+      "artifacts": [
+        {
+          "artifactId": "output:28d8c948bfaf9a77363a4a89",
+          "quote": "D5（经度）与 D6（纬度）为合并单元格（K5:K7），前端字段规则描述「定位按钮触发当前设备定位，获取经纬度」。"
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "83d4a4b9ba1ce67ab320138d282486ad",
+          "quote": "合并区域: K5:K7"
+        },
+        {
+          "sourceId": "83d4a4b9ba1ce67ab320138d282486ad",
+          "quote": "K1: \"文本: 字段规则\""
+        }
+      ],
+      "requests": [],
+      "binding": "verified_quotes",
+      "validation": "bound",
+      "repairEligible": true,
+      "repairMode": "align_explicit_evidence",
+      "repairConstraint": "只对齐本finding已绑定的正面原句或真实用户要求；未提供部分保持未验证，不扩展规则、阶段或权限。",
+      "artifactBindings": [
+        {
+          "id": "output:28d8c948bfaf9a77363a4a89",
+          "quote": "D5（经度）与 D6（纬度）为合并单元格（K5:K7），前端字段规则描述「定位按钮触发当前设备定位，获取经纬度」。",
+          "sha256": "83e3e9c085cb3fd80a1332744635ad458e78c9393eec89a2a6cb9d9288b39f36",
+          "locator": "QE12/PRD.md",
+          "start": 2292,
+          "end": 2349,
+          "startLine": 75,
+          "endLine": 75
+        }
+      ],
+      "sourceBindings": [
+        {
+          "id": "83d4a4b9ba1ce67ab320138d282486ad",
+          "quote": "合并区域: K5:K7",
+          "sha256": "9e4c1f54b6925220edbe551cd560d57f663b9661092a30067573ea7a7af0820c",
+          "locator": "处理副本\\05 网点主数据_处理副本_c98b7f34_提取文本_c9a9a94c.txt",
+          "start": 40807,
+          "end": 40818,
+          "startLine": 2601,
+          "endLine": 2601
+        },
+        {
+          "id": "83d4a4b9ba1ce67ab320138d282486ad",
+          "quote": "K1: \"文本: 字段规则\"",
+          "sha256": "9e4c1f54b6925220edbe551cd560d57f663b9661092a30067573ea7a7af0820c",
+          "locator": "处理副本\\05 网点主数据_处理副本_c98b7f34_提取文本_c9a9a94c.txt",
+          "start": 41009,
+          "end": 41023,
+          "startLine": 2615,
+          "endLine": 2615
+        }
+      ],
+      "requestBindings": [],
+      "notice": "引文绑定只证明摘录来自冻结输入，不能证明模型解释正确；独立模型审查不等于用户确认。没有发现问题也不自动判定业务通过。"
+    },
+    {
+      "id": "finding-2",
+      "category": "contradiction",
+      "severity": "advisory",
+      "confidence": "high",
+      "explanation": "网点编码的展示被写为“否”，但来源N2（前端展示）与O2（新增页面展示）均为“是”；P2=否仅支持不可变更。这是目标两行之外的明确口径冲突，不应将本次局部核验等同全稿一致。",
+      "suggestion": "遵守本次范围，不直接扩修编码行；单独记录展示口径冲突待确认，将修订结论限定于目标两行。",
+      "artifacts": [
+        {
+          "artifactId": "output:28d8c948bfaf9a77363a4a89",
+          "quote": "| 网点编码 | 文本（编码 {JHWD}+10位顺序码） | 是（系统自动计算） | 是 | 否 | 否 | 机会门店唯一标识，一个机会门店对应一家实体门店，坚决禁止重复建档 | 03-D2 |"
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "83d4a4b9ba1ce67ab320138d282486ad",
+          "quote": "N2: \"文本: 是\"\nO2: \"文本: 是\"\nP2: \"文本: 否\""
+        }
+      ],
+      "requests": [
+        {
+          "requestId": "request:af67c8fa-8e32-4f55-822c-9b57476d0f23",
+          "quote": "只局部改这两行及必要的紧邻来源说明。保持其他字段列义和值，不要统一改表头迁就错误值，不要全稿重写。"
+        }
+      ],
+      "binding": "verified_quotes",
+      "validation": "bound",
+      "repairEligible": true,
+      "repairMode": "align_explicit_evidence",
+      "repairConstraint": "只对齐本finding已绑定的正面原句或真实用户要求；未提供部分保持未验证，不扩展规则、阶段或权限。",
+      "artifactBindings": [
+        {
+          "id": "output:28d8c948bfaf9a77363a4a89",
+          "quote": "| 网点编码 | 文本（编码 {JHWD}+10位顺序码） | 是（系统自动计算） | 是 | 否 | 否 | 机会门店唯一标识，一个机会门店对应一家实体门店，坚决禁止重复建档 | 03-D2 |",
+          "sha256": "83e3e9c085cb3fd80a1332744635ad458e78c9393eec89a2a6cb9d9288b39f36",
+          "locator": "QE12/PRD.md",
+          "start": 1750,
+          "end": 1848,
+          "startLine": 69,
+          "endLine": 69
+        }
+      ],
+      "sourceBindings": [
+        {
+          "id": "83d4a4b9ba1ce67ab320138d282486ad",
+          "quote": "N2: \"文本: 是\"\nO2: \"文本: 是\"\nP2: \"文本: 否\"",
+          "sha256": "9e4c1f54b6925220edbe551cd560d57f663b9661092a30067573ea7a7af0820c",
+          "locator": "处理副本\\05 网点主数据_处理副本_c98b7f34_提取文本_c9a9a94c.txt",
+          "start": 41382,
+          "end": 41417,
+          "startLine": 2636,
+          "endLine": 2638
+        }
+      ],
+      "requestBindings": [
+        {
+          "id": "request:af67c8fa-8e32-4f55-822c-9b57476d0f23",
+          "quote": "只局部改这两行及必要的紧邻来源说明。保持其他字段列义和值，不要统一改表头迁就错误值，不要全稿重写。",
+          "sha256": "3bf5bd543ad08d08907268dbbec8a378653492c8ed49992fa4da3ea6dc636092",
+          "start": 190,
+          "end": 239,
+          "startLine": 3,
+          "endLine": 3
+        }
+      ],
+      "notice": "引文绑定只证明摘录来自冻结输入，不能证明模型解释正确；独立模型审查不等于用户确认。没有发现问题也不自动判定业务通过。"
+    }
+  ],
+  "invalidFindings": [],
+  "coverageLimits": [
+    "来源 83d4a4b9ba1ce67ab320138d282486ad 只提供了部分上下文（18817/63164字符），未覆盖内容不得宣称已经审查。",
+    "审查模型未声明覆盖方向：cross_artifact_consistency",
+    "审查模型说明：partial：S1仅提供部分选段；重点核对目标两行、紧邻说明与编码展示，其余字段及验收未穷尽。制度/流程原文缺失，生命周期、上线批次与角色结论未完成核验。",
+    "审查模型说明：partial：未提供修订前版本、读写记录、pending状态或AMBIGUOUS工具记录，无法确认真实改动范围、只读保护及未apply。",
+    "审查模型说明：partial：未提供HTML及约束对照内容，跨成果一致性和原型实际行为未检查；本次要求不含重做原型或浏览器回归。"
+  ],
+  "diagnostics": [],
+  "requests": [
+    {
+      "id": "request:af67c8fa-8e32-4f55-822c-9b57476d0f23",
+      "sha256": "3bf5bd543ad08d08907268dbbec8a378653492c8ed49992fa4da3ea6dc636092"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "output:28d8c948bfaf9a77363a4a89",
+      "sha256": "83e3e9c085cb3fd80a1332744635ad458e78c9393eec89a2a6cb9d9288b39f36"
+    }
+  ],
+  "sources": [
+    {
+      "id": "83d4a4b9ba1ce67ab320138d282486ad",
+      "sha256": "9e4c1f54b6925220edbe551cd560d57f663b9661092a30067573ea7a7af0820c",
+      "originHash": "9e4c1f54b6925220edbe551cd560d57f663b9661092a30067573ea7a7af0820c"
+    }
+  ],
+  "notice": "引文绑定只证明摘录来自冻结输入，不能证明模型解释正确；独立模型审查不等于用户确认。没有发现问题也不自动判定业务通过。",
+  "responseDiagnostics": {
+    "blockCounts": {
+      "text": 3,
+      "thinking": 14,
+      "image": 0,
+      "toolCall": 0,
+      "unknown": 0
+    },
+    "textCharacters": 2018,
+    "thinkingCharacters": 0,
+    "textEmpty": false,
+    "reasoningTokenSource": "pi_normalized_actual_unknown",
+    "hostPiEstimatedInputTokens": 8610,
+    "hostPiBaseClampedOutputTokens": 12000
+  },
+  "requestedOutputTokens": 12000,
+  "thinkingLevel": "off",
+  "budgetNotice": "maxTokens is the configured requested response cap. Native Pi context clamping and provider thinking policy may affect the effective response allowance. Provider usage is recorded separately; host/Pi estimates are not upstream token measurements.",
+  "configuredMaxRetries": 1,
+  "actualRetries": "unknown",
+  "rawResponseHash": "ef22157d596c3f2201fcf2a0c76831be79063e57950ca94bdf7f33af703284cf",
+  "rawResponseCharacters": 2020,
+  "rawResultHash": "a24b748d95fda8e3174f30c0bf2984739764dfb8913d191ca6290e00e11ab9e3",
+  "coverage": {
+    "artifactIds": [
+      "output:28d8c948bfaf9a77363a4a89"
+    ],
+    "sourceIds": [
+      "83d4a4b9ba1ce67ab320138d282486ad"
+    ],
+    "requestIds": [
+      "request:af67c8fa-8e32-4f55-822c-9b57476d0f23"
+    ],
+    "directions": [
+      "fact_inference",
+      "scope_expansion",
+      "contradiction",
+      "field_semantics",
+      "request_coverage"
+    ],
+    "limitations": [
+      "partial：S1仅提供部分选段；重点核对目标两行、紧邻说明与编码展示，其余字段及验收未穷尽。制度/流程原文缺失，生命周期、上线批次与角色结论未完成核验。",
+      "partial：未提供修订前版本、读写记录、pending状态或AMBIGUOUS工具记录，无法确认真实改动范围、只读保护及未apply。",
+      "partial：未提供HTML及约束对照内容，跨成果一致性和原型实际行为未检查；本次要求不含重做原型或浏览器回归。"
+    ]
+  }
+}

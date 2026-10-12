@@ -1,5 +1,5 @@
 flowchart TD
-  Settings[设置：全局技能] --> Manage[宿主技能管理服务]
+  Settings[设置：skills] --> Manage[宿主技能管理服务]
   Chat[会话安装请求] --> Gate[Build 与现有权限网关]
   Gate --> Manage
   Local[本地技能目录] --> Copy[只读复制原始资料]
@@ -13,6 +13,9 @@ flowchart TD
   Registry --> Snapshot[每次任务冻结有效技能范围与版本]
   Project[项目技能：同名优先] --> Discover[复用 Pi loadSkills 发现]
   Snapshot --> Discover
+  Discover --> Slash[会话 / 菜单：技能名称和说明]
+  Slash --> Explicit[/skill:名称：原授权正文加载]
+  Explicit --> Recheck
   Discover --> Context[描述进入 Pi 上下文]
   Context --> Load[按任务加载正文与 references]
   Load --> Recheck[授权、版本与只读范围复核]

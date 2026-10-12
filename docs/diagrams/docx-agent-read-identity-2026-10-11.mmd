@@ -1,0 +1,13 @@
+flowchart TD
+ A[授权Agent DOCX读取 2MB限制] --> B[宿主原字节快照]
+ B --> C[既有Office安全提取 v6紧凑布局]
+ C --> D[等待后复核文件和授权]
+ D --> E[同一快照分页正文与宿主回执]
+ E --> F[原bytes contentHash 加parserVersion和全文textHash]
+ F --> G[来源manifest与恢复核对]
+ G -->|身份相同| H[继续原有来源核对 Office仍partial]
+ G -->|旧回执缺身份 或版本变化| I[要求重读 不回填历史]
+ J[历史before字符串] --> K[保留原文和hash 不重新解析]
+ L[UI readDocument 20MB同快照安全提取] --> M[独立readingText展示 原Agent text/hash保持]
+ N[明确选择的PRD模板 原件与登记副本] --> O[仅当前版本原字节hash和结构解析身份]
+ O --> P[授权与路径前后复核 不进入业务sourceReads]

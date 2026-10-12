@@ -1,0 +1,42 @@
+[
+  {
+    "text": "这里用一个简单需求试一下。",
+    "startMs": 400,
+    "endMs": 3459,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "先选资料，说明要写什么，再看它给出的内容。",
+    "startMs": 3659,
+    "endMs": 8022,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "生成后，还能对照原资料，核对关键规则。",
+    "startMs": 8222,
+    "endMs": 12150,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "没写清的地方，留待确认。",
+    "startMs": 12350,
+    "endMs": 14974,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "有需要修改的内容，继续在会话里补充。",
+    "startMs": 15174,
+    "endMs": 19102,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  }
+]

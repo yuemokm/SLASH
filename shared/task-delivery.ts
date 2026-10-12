@@ -1,0 +1,12 @@
+import {z} from 'zod';
+const id=z.string().trim().min(1).max(300),hash=z.string().regex(/^[a-f0-9]{64}$/i);
+const citation=z.object({kind:z.enum(['output','source','request','screenshot']),id,sha256:hash,quote:z.string().min(1).max(6000),locator:z.string().max(4000)}).strict();
+export const taskDeliveryEvidenceSchema=z.object({requestIds:z.array(id).max(100).default([]),outputIds:z.array(id).max(100).default([]),sourceKeys:z.array(id).max(100).default([]),locators:z.array(z.string().trim().min(1).max(2000)).min(1).max(100),citations:z.array(citation).max(20).default([])}).strict();
+export const taskDeliveryReviewSchema=z.object({runId:id,reportId:id,expectedBindingHash:hash,decisions:z.array(z.object({itemId:id,action:z.enum(['confirm','dismiss','accept_limit']),note:z.string().trim().min(1).max(10000),evidence:taskDeliveryEvidenceSchema}).strict()).min(1).max(400)}).strict();
+export const taskDeliveryRequestSchemas=[z.object({type:z.literal('taskDeliveryGet'),runId:id,reportId:id.optional()}).strict(),taskDeliveryReviewSchema.extend({type:z.literal('taskDeliveryReview')}).strict()] as const;
+export type TaskDeliveryReviewInput=z.input<typeof taskDeliveryReviewSchema>;
+export type TaskDeliveryEvidence=z.infer<typeof taskDeliveryEvidenceSchema>;
+export type TaskDeliveryItem={id:string;label:string;detail:string;kind:'business'|'source'|'assumption'|'human_criterion'|'content_review'|'visual_review'|'content_finding'|'visual_finding'|'automatic'|'regression'|'version';critical:boolean;status:'passed'|'blocked'|'needs_review'|'unknown';allowedActions:Array<'confirm'|'dismiss'|'accept_limit'>;requiredEvidence:{requestIds:string[];outputIds:string[];sourceKeys:string[]};originalEvidence?:TaskDeliveryEvidence['citations'];decision?:TaskDeliveryDecision};
+export type TaskDeliveryDecision={id:string;itemId:string;action:'confirm'|'dismiss'|'accept_limit';note:string;evidence:TaskDeliveryEvidence;actor:'user';recordedAt:string};
+export type TaskDeliveryRecord={schemaVersion:1;id:string;workspaceId:string;runId:string;reportId:string;contractHash:string;bindingHash:string;actor:'user';decisions:TaskDeliveryDecision[];recordedAt:string};
+export type TaskDeliveryView={schemaVersion:1;runId:string;workspaceId:string;reportId:string;contractHash:string;bindingHash:string;status:'verified'|'accepted_with_limits'|'needs_review'|'blocked'|'not_applicable';allowed:boolean;items:TaskDeliveryItem[];recordIds:string[];limitations:Array<{id:string;detail:string;accepted:boolean}>;notice:string};

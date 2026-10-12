@@ -11,7 +11,9 @@ import {requestSchema} from '../shared/types.js';
 
 async function fixture(t:test.TestContext,execute:(o:RuntimeOptions,service:Service)=>Promise<void>){
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-edit-service-')),store=new Store(path.join(dir,'data'));
- const service=new Service(store,()=> 'local-offline-fixture',()=>{},async o=>({messages:[{role:'assistant',stopReason:'stop'}],abort:async()=>{},dispose:()=>{},prompt:async()=>{await execute(o,service);o.delta('完成');}}));
+ // Gateway tests execute their scripted operation once per Run. Incomplete
+ // HTML still fails quality checks; this fixture does not implement repairs.
+ const service=new Service(store,()=> 'local-offline-fixture',()=>{},async o=>{let prompts=0;return{messages:[{role:'assistant',stopReason:'stop',content:[{type:'text',text:'宿主网关夹具回复。'}]}],abort:async()=>{},dispose:()=>{},prompt:async(text:string)=>{if(prompts++>0){assert.match(text,/^宿主已对当前草稿执行检查。这是本任务第[12]\/2轮有限修正/);assert.match(text,/<untrusted_host_check_observations>/);o.delta('夹具仅验证网关，质量问题保持未修复。');return;}await execute(o,service);o.delta('完成');}};});
  t.after(async()=>{service.dispose();store.close();await fs.rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:30});});
  await service.workspace(path.join(dir,'project'));service.setPermission('workspace_read','allow');service.setPermission('artifact_write','allow');
  const output=service.state.mounts.find(m=>m.name==='成果')!;await fs.writeFile(path.join(output.path,'index.html'),'<input readonly>\n');
@@ -22,11 +24,11 @@ test('Service gateway reads and incrementally edits write_draft latest content, 
  let changeId='';const f=await fixture(t,async(o,s)=>{
   const target={mountId:s.state.mounts.find(m=>m.name==='成果')!.id,path:'index.html'};
   const initial=await o.files.draft(target.mountId,target.path,'<input readonly>\n<div>A</div>\n',o.runId);await o.log('write_draft',target,async()=>o.draft(initial));
-  const first=await o.log('read_draft',target,()=>o.readDraft!(target));assert.equal(first.changeId,initial.id);
-  const edited=await o.log('edit_draft',target,()=>o.editDraft!({...target,changeId:first.changeId,expectedContentHash:first.contentHash,oldText:'<input readonly>',newText:'<input>'}));changeId=edited.changeId;assert.equal(changeId,initial.id);
+  const first=await o.log('read_draft',target,()=>o.readDraft!(target));assert.equal(first.changeId,initial.id);assert.equal(first.parentRunId,o.runId);
+  const edited=await o.log('edit_draft',target,()=>o.editDraft!({...target,changeId:first.changeId,expectedContentHash:first.contentHash,oldText:'<input readonly>',newText:'<input>'}));changeId=edited.changeId;assert.equal(changeId,initial.id);assert.equal(edited.parentRunId,o.runId);
   const latest=await o.readDraft!(target);assert.match(latest.content,/<input>/);assert.match(latest.content,/<div>A<\/div>/);
  });
- const run=await wait(f.service,await f.service.send(f.service.conversation(),'离线验证增量草稿','build','standard'));assert.equal(run.status,'succeeded',run.error);assert.equal(f.service.state.changes.length,1);
+ const run=await wait(f.service,await f.service.send(f.service.conversation(),'离线验证增量草稿','build','standard'));assert.equal(run.status,'succeeded',run.error);assert.equal(f.service.state.changes.length,1,'宿主有限修正不能使网关夹具重放原操作');assert.equal((await f.service.getTaskAcceptance(run.id))!.latestReport!.status,'failed','夹具没有假装修复不完整HTML');
  assert.equal(await fs.readFile(path.join(f.output.path,'index.html'),'utf8'),'<input readonly>\n');
  const audit=f.store.db.prepare("SELECT result FROM operations WHERE tool='edit_draft_diff'").get() as {result:string};assert.match(JSON.parse(audit.result).diff,/<input>/);
  await f.service.apply(changeId);assert.equal(await fs.readFile(path.join(f.output.path,'index.html'),'utf8'),'<input>\n<div>A</div>\n');assert.equal(f.service.state.changes[0].status,'applied');
@@ -59,9 +61,9 @@ test('运行中pending读取→实际apply→正式文件读取→旧ID拒绝→
  const f=await fixture(t,async(o,s)=>{
   const output=s.state.mounts.find(m=>m.name==='成果')!,target={mountId:output.id,path:'index.html'};
   const first=await o.files.draft(target.mountId,target.path,'<main>first</main>',o.runId);o.draft(first);
-  const pending=await o.log('read_draft',target,()=>o.readDraft!(target));assert.equal(pending.source,'pending');assert.equal(pending.changeId,first.id);assert.match(pending.notice,/待应用草稿/);
+  const pending=await o.log('read_draft',target,()=>o.readDraft!(target));assert.equal(pending.source,'pending');assert.equal(pending.changeId,first.id);assert.equal(pending.parentRunId,o.runId);assert.match(pending.notice,/待应用草稿/);
   assert.equal(s.state.runs.find(r=>r.id===o.runId)?.status,'running');await s.apply(first.id,'ui');
-  const applied=await o.log('read_draft',target,()=>o.readDraft!(target));assert.equal(applied.source,'applied');assert.equal(Object.hasOwn(applied,'changeId'),false);assert.equal(applied.contentHash,hash('<main>first</main>'));assert.equal(applied.baseHash,applied.contentHash);assert.match(applied.notice,/正式文件/);assert.match(applied.notice,/省略 changeId/);assert.doesNotMatch(applied.notice,/草稿尚未应用/);
+  const applied=await o.log('read_draft',target,()=>o.readDraft!(target));assert.equal(applied.source,'applied');assert.equal(Object.hasOwn(applied,'changeId'),false);assert.equal(Object.hasOwn(applied,'parentRunId'),false);assert.equal(applied.contentHash,hash('<main>first</main>'));assert.equal(applied.baseHash,applied.contentHash);assert.match(applied.notice,/正式文件/);assert.match(applied.notice,/省略 changeId/);assert.doesNotMatch(applied.notice,/草稿尚未应用/);
   await assert.rejects(o.log('edit_draft',target,()=>o.editDraft!({...target,changeId:first.id,expectedContentHash:applied.contentHash,oldText:'first',newText:'second'})),/DRAFT_ID_STALE: .*重新 read_draft/);assert.equal(s.state.changes.length,1);
   await fs.writeFile(path.join(output.path,target.path),'<main>external</main>');await assert.rejects(o.editDraft!({...target,expectedContentHash:applied.contentHash,oldText:'first',newText:'second'}),/VERSION_CONFLICT/);assert.equal(s.state.changes.length,1);
   const current=await o.readDraft!(target),edit=await o.editDraft!({...target,expectedContentHash:current.contentHash,oldText:'external',newText:'second'});assert.notEqual(edit.changeId,first.id);assert.equal(edit.baseHash,current.contentHash);assert.equal(s.state.changes.find(c=>c.id===first.id)?.status,'applied');assert.equal(s.state.changes.find(c=>c.id===edit.changeId)?.status,'pending');assert.equal(await fs.readFile(path.join(output.path,target.path),'utf8'),'<main>external</main>');

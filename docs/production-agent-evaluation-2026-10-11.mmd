@@ -1,0 +1,48 @@
+flowchart TD
+  A[既有16例与冻结预期] --> B[三轮索引固定48槽]
+  B --> C[运行前官方state与实际runtime hash]
+  C --> D[start独占落盘]
+  D --> E[既有runner执行实际Run]
+  E --> F[成功或失败均保存step实际诊断]
+  F --> G[独立业务质量核对]
+  G --> H[Run结束且profile关闭]
+  H --> I[collector独占profile读取保存内容和版本]
+  I --> J[完全关闭后启动同profile新实例]
+  J --> K[再次读取内容和版本]
+  K --> L[官方copy导出与TaskDelivery门禁]
+  L --> M[保存生命周期hash与IPC证据]
+  M --> N[离线复核来源 成果 证据 输入 身份]
+  N --> O{至少44且关键9全部通过}
+  O -->|是| P[记录发布门槛通过]
+  O -->|否| Q[保留失败和未知槽及回归清单]
+  N --> R[耗时 首稿 人工修正 真实费用独立计量]
+  S[07产品主数据既有授权样本] --> T[暴露记录与品牌独立预期冻结]
+  T --> U[独立泛化结果单列 不替换48槽]
+  subgraph Candidate[已审首阶段补丁 已根合入 未做48次生产实测]
+    V[首轮官方read与versions封存完整文件集] --> W[独立核对同hash全部原初要求]
+    W --> X[版本出现时间与核对完成时间分列]
+    X --> Y[性能固定48槽 至少44项不超过10分钟]
+    Z[缺多轮初始预期或当时封存证据] --> AA[首稿unknown仍留分母]
+    AB[第二补丁 新manifest逐case冻结初始profile] --> AC[既有runner首轮保存后封存 以后改稿不覆盖]
+    AC --> V
+    AD[独立首阶段review逐项判断 内容角色绑定实际hash] --> W
+    AE[完整原型recipe 官方报告与截图 成功态真实编码] --> W
+  end
+
+  subgraph Preparation[隔离来源钩子 尚待根合入]
+    PA[新manifest冻结原始资料及helper hash] --> PB[XLSX官方copy extract apply]
+    PA --> PC[其他既有TXT只读挂载]
+    PB --> PD[case独占wx封存真实路径hash及user-processing归属]
+    PC --> PD
+    PD --> PE[start receipt后send任务]
+    PE --> PF[仅真实Run成果计首稿与输出 真实sourceReads另记]
+  end
+
+  subgraph Wire[新manifest observed-wire 接线候选]
+    WA[完整主Agent请求安全事件1到N] --> WB[实际SQLite回读整窗严格相等]
+    WB --> WC[真实压缩start request end窗口关联]
+    WC --> WD[主会话参数固定 跨step一致 次数不进身份]
+    WC --> WE[压缩实际参数与覆盖单列]
+    WD --> WF[provider内部unknown独立披露 原reasoning全量精确绑定]
+    WB --> WG[缺窗 损坏 未知用途 参数或配置错配仍unknown]
+  end

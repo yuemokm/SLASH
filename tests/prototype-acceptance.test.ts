@@ -28,6 +28,35 @@ test('可选CSS视口及布局断言有边界、44px默认且旧用例不增加�
 });
 async function fixture(t:test.TestContext,runner:PrototypeRunner=pass){const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-prototype-domain-')),store=new Store(path.join(dir,'profile')),root=path.join(dir,'project'),resources=path.join(dir,'sources');await fs.mkdir(root);await fs.mkdir(resources);await fs.writeFile(path.join(root,'index.html'),html);await fs.writeFile(path.join(root,'app.js'),'// initial');await fs.writeFile(path.join(resources,'rules.md'),'# 编码规则\n编码允许变更=否\n');const mounts=[{id:'out',name:'成果',path:root,enabled:true,write:true},{id:'source',name:'来源',path:resources,enabled:true,write:false},{id:'alias',name:'同目录别名',path:root,enabled:true,write:true}];let readable=true,writable=true,currentRoot=root;const files=new Files(()=>mounts),authorization=()=>JSON.stringify({readable,mounts});const deps={store,files,root:()=>currentRoot,authorization,assertRead:(expected:string)=>{if(!readable||expected!==currentRoot)throw Error('PERMISSION_DENIED');},assertWrite:()=>{if(!writable)throw Error('PERMISSION_DENIED: artifact_write');},runner};const domain=new PrototypeAcceptanceDomain(deps);t.after(async()=>{domain.dispose();await new Promise(r=>setTimeout(r,20));try{store.close();}catch{}await fs.rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:20});});const target={mountId:'out',path:'index.html'};const save=(extra:Record<string,unknown>={})=>domain.save({...target,title:'机会门店断言',cases,...extra},{mode:'build'});return{dir,store,root,resources,mounts,domain,deps,target,save,setRead:(v:boolean)=>readable=v,setWrite:(v:boolean)=>writable=v,setRoot:(v:string)=>currentRoot=v};}
 async function waitFinished(domain:PrototypeAcceptanceDomain,target:{mountId:string;path:string}){for(let i=0;i<100;i++){const view=await domain.get(target);if(!view.activeRun)return view;await new Promise(r=>setTimeout(r,10));}throw Error('RUN_NOT_FINISHED');}
+
+test('阶段诊断经正式domain保存读取；旧报告无诊断仍兼容且规格hash不变',async t=>{
+ const diagnostics={phaseTimings:[{phase:'initialization' as const,elapsedMs:12},{phase:'viewport' as const,elapsedMs:4},{phase:'step' as const,elapsedMs:1,stepIndex:0},{phase:'screenshot' as const,elapsedMs:8}]};
+ const f=await fixture(t,async input=>{const output=await pass(input);output.cases[0].diagnostics=diagnostics;return output;});
+ const before=await f.save(),result=await f.domain.run({...f.target,mode:'build'},{mode:'build'});
+ assert.deepEqual(result.latestReport!.evidence.cases[0].diagnostics,diagnostics);assert.equal(result.spec!.specHash,before.spec!.specHash);
+ assert.deepEqual((await f.domain.get(f.target)).latestReport!.evidence.cases[0].diagnostics,diagnostics);
+ const legacy=await fixture(t);const legacySpec=await legacy.save(),legacyResult=await legacy.domain.run({...legacy.target,mode:'build'},{mode:'build'});assert.equal(legacyResult.latestReport!.evidence.status,'passed');assert.equal(legacyResult.latestReport!.evidence.cases[0].diagnostics,undefined);
+ const reread=new PrototypeAcceptanceDomain(legacy.deps);t.after(()=>reread.dispose());assert.equal((await reread.get(legacy.target)).latestReport!.evidence.status,'passed');assert.equal((await legacy.save()).spec!.specHash,legacySpec.spec!.specHash);
+ assert.throws(()=>prototypeAcceptanceCaseSchema.parse({...cases[0],diagnostics}));assert.throws(()=>prototypeAcceptanceDefinitionSchema.parse({...f.target,title:'x',cases,diagnostics}));
+});
+
+test('正式domain拒绝诊断载荷、超过真实步骤预算和越界stepIndex，不影响无诊断历史读取',async t=>{
+ for(const diagnostics of [
+  {phaseTimings:[],stopReason:'private payload'},
+  {phaseTimings:Array.from({length:5},()=>({phase:'initialization',elapsedMs:1}))},
+  {phaseTimings:[{phase:'step',elapsedMs:1,stepIndex:1}]},
+  {phaseTimings:[],runtimeErrors:[{category:'generic_runtime',errorType:'Error',phase:'step',stepIndex:1,locations:[]}]},
+  {phaseTimings:[],runtimeErrors:[{category:'generic_runtime',errorType:'Error',locations:[{path:'private.js',line:1,column:1}]}]},
+  {phaseTimings:[],runtimeErrors:[{category:'generic_runtime',errorType:'Error',locations:[],message:'SECRET'}]},
+ ]){
+  const f=await fixture(t,async input=>{const output=await pass(input);output.cases[0].diagnostics=diagnostics as never;return output;});await f.save();const result=await f.domain.run({...f.target,mode:'build'},{mode:'build'});assert.equal(result.latestReport!.evidence.status,'unknown');assert.equal(result.latestReport!.evidence.cases[0].diagnostics,undefined);
+ }
+});
+test('安全运行异常与首次操作定位经domain回执和get传到Agent，unknown不变且不保存原始错误',async t=>{
+ const diagnostics={phaseTimings:[{phase:'step' as const,stepIndex:0,elapsedMs:1}],stopReason:'PROTOTYPE_RUNTIME_EXCEPTION' as const,stoppedPhase:'step' as const,runtimeErrors:[{category:'dom_node_operation_unsupported' as const,errorType:'HierarchyRequestError' as const,domMethod:'appendChild' as const,phase:'step' as const,stepIndex:0,locations:[{path:'index.html',line:2,column:7}]}]};
+ const f=await fixture(t,async input=>({status:'unknown',notice:'具体运行异常',runnerVersion:'electron-snapshot-cdp-v5',screenshots:[],cases:input.cases.map(c=>({caseId:c.id,status:'unknown',reason:'PROTOTYPE_RUNTIME_EXCEPTION',steps:c.steps.map((_,stepIndex)=>({stepIndex,status:'unknown',reason:'PROTOTYPE_RUNTIME_EXCEPTION'})),diagnostics}))}));await f.save();const run=await f.domain.run({...f.target,mode:'build'},{mode:'build'}),read=await f.domain.get(f.target);
+ assert.equal(run.latestReport!.evidence.status,'unknown');assert.deepEqual(read.latestReport!.evidence.cases[0].diagnostics,diagnostics);assert.equal(read.latestReport!.evidence.runnerVersion,'electron-snapshot-cdp-v5');assert.doesNotMatch(JSON.stringify(read.latestReport!.evidence.cases),/message|stack|description|https:\/\//);
+});
 test('视口属于必检规格hash，实测视口与几何数值保留在报告和历史读取',async t=>{
  const runner:PrototypeRunner=async input=>({...await pass(input),cases:input.cases.map(c=>({caseId:c.id,status:'passed',viewport:c.viewport,steps:c.steps.map((_,stepIndex)=>({stepIndex,status:'passed',observed:true,measurements:{width:44,height:48,minPixels:44}}))}))});
  const f=await fixture(t,runner),mobile=[{id:'mobile',title:'触控',viewport:{width:390,height:844},steps:[{action:'assert',assertion:'min-target-size',selector:'#code'}]}];

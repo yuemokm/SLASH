@@ -12,8 +12,8 @@ test('质量检查按成果 kind 对 Markdown 发现阻断与警告',()=>{
 test('质量检查按 prototype 调 HTML 并区分阻断与 warning',()=>{
  const report=qualityCheckForArtifact({kind:'prototype',relativePath:'index.html'},'<html><head></head><body><script src="https://cdn.example.test/app.js"></script></body></html>');
  assert.equal(report.kind,'html');
- assert.equal(report.valid,true);
- assert.ok(report.issues.some(issue=>issue.code==='EXTERNAL_ASSET'&&issue.severity==='warning'));
+ assert.equal(report.valid,false);
+ assert.ok(report.issues.some(issue=>issue.code==='EXTERNAL_ASSET'&&issue.severity==='blocking'));
 });
 
 test('质量检查按 flow 调 drawio 检查并支持扩展名推断',()=>{
@@ -69,13 +69,36 @@ test('真实空内容、重复稳定章节标识、无效 XML 与版本冲突继
 
 const htmlPage=(body:string,script='')=>`<!doctype html><html><head><title>原型</title></head><body><main>${body}</main>${script}</body></html>`;
 
-test('普通外链是导航，外部脚本和样式才提示离线资源依赖',()=>{
+test('SFA同类Vue CDN、资源src/srcset与CSS外网加载均成为明确阻断',()=>{
+ const resources=[
+  '<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>',
+  '<script src="//cdn.example.test/app.js"></script>',
+  '<link rel="alternate STYLESHEET" href="http://cdn.example.test/app.css">',
+  '<img src="https&#58;//example.test/a.png">',
+  '<picture><source srcset="local.png 1x, https://example.test/a.png 2x"></picture>',
+  '<video poster="https://example.test/a.png"><source src="https://example.test/a.mp4"></video>',
+  '<div style="background:url(https://example.test/a.png)"></div>',
+  '<style>@import "https://example.test/fonts.css";body{background:url(//example.test/a.png)}</style>',
+  '<style>@import url("https://example.test/fonts.css");</style>',
+ ];
+ for(const resource of resources){const report=checkHtml(htmlPage('页面',resource));assert.equal(report.valid,false,resource);assert.ok(report.issues.some(issue=>issue.code==='EXTERNAL_ASSET'&&issue.severity==='blocking'),resource);assert.equal(evaluateQualityGate(report).allowed,false);}
+});
+
+test('离线资源检查不将导航、本地/data资源、脚本字符串与注释误判为加载依赖',()=>{
+ const html=htmlPage('<a href="https://example.test/help">帮助</a><img src="data:image/png;base64,AAAA" srcset="local.png 1x, assets/a.png 2x"><div style="background:url(assets/a.png)"></div>',
+  '<!-- <script src="https://example.test/comment.js"></script><style>@import "https://example.test/comment.css";</style> -->'+
+  '<script src="app.js"></script><script>const sample = \'<img src="https://example.test/text.png">\'; const css = \'<style>@import "https://example.test/text.css";</style>\';</script>'+
+  '<style>/* url(https://example.test/comment.png) */.x::after{content:"url(https://example.test/text.png)"}body{background:url(data:image/png;base64,AAAA)}</style>');
+ const report=checkHtml(html);assert.equal(report.valid,true,JSON.stringify(report.issues));assert.equal(report.details?.interactions?.externalResources,0);
+});
+
+test('普通外链是导航，外部脚本和样式阻断默认离线交付',()=>{
  const navigation=checkHtml(htmlPage('<a href="https://example.test/help">帮助文档</a>'));
  assert.equal(navigation.valid,true);
  assert.equal(navigation.details?.interactions?.externalResources,0);
  assert.ok(!navigation.issues.some(issue=>issue.code==='EXTERNAL_ASSET'));
  const dependency=checkHtml(htmlPage('<a href="https://example.test/help">帮助</a>','<script src="https://cdn.example.test/app.js"></script>'));
- assert.ok(dependency.issues.some(issue=>issue.code==='EXTERNAL_ASSET'&&issue.severity==='warning'));
+ assert.ok(dependency.issues.some(issue=>issue.code==='EXTERNAL_ASSET'&&issue.severity==='blocking'));
  assert.match(dependency.summary,/静态检查/);
  assert.match(dependency.summary,/需试用/);
  assert.doesNotMatch(dependency.summary,/交互.*通过|质量检查通过/);

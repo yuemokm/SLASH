@@ -1,0 +1,19 @@
+flowchart TD
+  A[当前任务补充文字] --> B[持久 RunInputQueue queued]
+  B --> C{用户操作}
+  C -->|编辑或取消| D[核 id 与 revision 且未 submitted]
+  D --> B
+  C -->|立即发出| E[指定项 steer]
+  B --> F[Pi 正常 stop 无工具调用的 awaited turn_end]
+  F --> G[每次一个 follow_up]
+  E --> H[prepare 前后核对当前 revision]
+  G --> H
+  H -->|旧版本已变| B
+  H --> I[持久 submittedAt 与 wireHash]
+  I --> J[Pi 公开 steer 或 followUp]
+  J -->|真实 native user message 匹配| K[delivered 原文一次加入会话]
+  J -->|提交拒绝无法证实未发送| L[unknown 保留原文 禁自动重发]
+  L --> M[用户手动带回输入框]
+  B -->|结束或重启| N[未发送或未知记录保留 不自动重放]
+  I --> O[不可编辑取消]
+  O -->|编辑中恰逢送达| P[保留未保存编辑到输入框]

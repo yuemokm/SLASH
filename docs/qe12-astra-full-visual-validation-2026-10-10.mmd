@@ -1,0 +1,43 @@
+flowchart TD
+  A[冻结QE12原稿19192字 / 原15例150步 / 七项视觉目标] --> B[Astra Responses / 7897代理 / 视觉能力已确认]
+  B --> C[一次正式send / 同Run A到B / 600秒测试上限]
+  C --> D[两次edit成功 / 同一pending / 40个ID和业务JS保留]
+  D --> E[中途模型调用DOM验收 / 中间稿227a585]
+  E --> F[第二次编辑 / 最终ee5bf320 / 旧报告stale]
+  C --> G[600秒一次官方cancel / Run cancelled]
+  G --> H[未进入生成结束后图审循环 / visual receipt零 / repairRounds零]
+  F --> I[最终独立零云QA / 原15例150步全过]
+  I --> J[另六实际状态22步全过 / 不等于视觉通过]
+  J --> K[主代理逐张看图并核SHA256 / 不作用户批准]
+  K --> L[V1 V3 V5 passed / V6 partial / V2 V4 V7 failed]
+  L --> M[partial_not_deliverable / 不apply / 不export]
+  H --> M
+  M --> N[保留pending原件历史 / 完整视觉修稿与同版本交付仍未完成]
+  N --> O[Responses明确strict false / 实际草稿owner回执]
+  O --> P[复用ee5bf320续作 / 523.519秒自然完成 / 最终73649562]
+  P --> Q[任务查询一次成功 / 编辑4成功2匹配失败后恢复]
+  P --> R[内容审查102.291秒 / 编码风险record only / 不自动修]
+  P --> S[真实图审47.334秒 / 3图 / 6图未覆盖 / 零发现仍未验证]
+  P --> T[同稿原21例172步通过 / 新说明两例在可见性断言失败]
+  T --> U[定位程序缺陷 / closed details误判 / host3加required9超限]
+  P --> V[根看六图 / V1 V5 V7通过 / V2 V6部分 / V3 V4失败]
+  R --> W[未apply或export / 保留原件与失败证据 / 后续修复另验]
+  S --> W
+  U --> W
+  V --> W
+  W --> X[closed details v6真实修复 / host3与required9分批保留]
+  X --> Y[复用736495有限修V3 V4 / 一次send264.665秒自然succeeded]
+  Y --> Z[最终bae4d668 / 原40ID和JS控件保持 / pending未apply]
+  Z --> AA[正式host3例4步与required9例88步分别通过]
+  Z --> AB[新稿编译版零云QA / 原15例150步加6状态22步加notes2例30步 / 23例202步全过]
+  Z --> AC[内容37.232秒completed / 零发现仍partial unverified / 无已读来源]
+  Z --> AD[图审30.199秒completed / 三图六图未覆盖 / 手机换行候选needs human]
+  AB --> AE[根实际看八图并核hash / 七项限定视觉passed / 非用户确认]
+  AD --> AE
+  AE --> AF[手机placeholder换行完整可读非阻断 / 正式needs human保留 / repairRounds零]
+  AA --> AG[正常关闭保护unchanged / 旧helper启动中止无apply export]
+  AF --> AG
+  AC --> AG
+  AG --> AH[v2异步child入口 / 隔离pending apply历史复验9项及同hash导出通过 / 云零]
+  AH --> AI[1962多数保护hash断言非业务tests / 真实profile原件不变 / 正式needs human保留]
+  AI --> AJ[用户新整体实用与设计感目标未达 / 七项限定pass不代替可用以上评价]

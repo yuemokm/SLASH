@@ -6,13 +6,18 @@ export const SPREADSHEET_NAVIGATION_LIMITS={responseCharacters:10000,cellCharact
 const coverage={partial:true,fullBodyRead:false,bodyCharactersIncluded:0,fieldRelationshipVerified:false,semanticStatus:'unverified',humanConfirmed:false} as const;
 export function unavailableSpreadsheetNavigation(input:Pick<SpreadsheetNavigationInput,'mode'>,reasons:string[]):SpreadsheetNavigationResponse{return spreadsheetNavigationResponseSchema.parse({state:'unverified',mode:input.mode,sheets:[],rows:[],scanned:{cells:0,characters:0},truncated:true,nextCursor:null,coverage:{...coverage},reasons});}
 
+/** Same identity/scope binding for host validation and copyable model continuations. */
+export function spreadsheetNavigationVersion(input:SpreadsheetNavigationInput,identity:SpreadsheetNavigationIdentity):string{
+ const scope=input.mode==='find_rows'?{mode:input.mode,sheet:input.sheet,startRow:input.startRow,searchColumn:input.searchColumn,queries:input.queries,contextColumns:input.contextColumns}:input.mode==='sheets'?{mode:input.mode}:{mode:input.mode,sheet:input.sheet,startRow:input.startRow,startColumn:input.startColumn,columnLimit:input.columnLimit,query:input.query??null};
+ return createHash('sha256').update(JSON.stringify({identity,scope})).digest('hex');
+}
+
 /** Select only literal source text/metadata from an already bounded XLSX parser.
  * No path access, formula evaluator, network, source receipt or business verdict. */
 export function navigateSpreadsheetWorkbook(book:ExcelJS.Workbook,input:SpreadsheetNavigationInput,identity:SpreadsheetNavigationIdentity,textCharacters:number,cellText:(cell:ExcelJS.Cell)=>string,options:SpreadsheetNavigationOptions={}):SpreadsheetNavigationResponse{
  const maximum=options.maxCharacters??SPREADSHEET_NAVIGATION_LIMITS.responseCharacters;
  if(!Number.isInteger(maximum)||maximum<1500||maximum>10000)throw Error('SPREADSHEET_NAVIGATION_RESPONSE_LIMIT: 完整导航页预算应为1500-10000字符');
- const scope=input.mode==='find_rows'?{mode:input.mode,sheet:input.sheet,startRow:input.startRow,searchColumn:input.searchColumn,queries:input.queries,contextColumns:input.contextColumns}:input.mode==='sheets'?{mode:input.mode}:{mode:input.mode,sheet:input.sheet,startRow:input.startRow,startColumn:input.startColumn,columnLimit:input.columnLimit,query:input.query??null};
- const version=createHash('sha256').update(JSON.stringify({identity,scope})).digest('hex');
+ const version=spreadsheetNavigationVersion(input,identity);
  if(input.cursor&&input.cursor.version!==version)throw Error('SPREADSHEET_NAVIGATION_CURSOR_CHANGED: 来源/授权/查询范围已变化，请从无cursor的第一页重新定位');
  const response:SpreadsheetNavigationResponse={state:'current',mode:input.mode,identity,textCharacters,sheets:[],rows:[],scanned:{cells:0,characters:0},truncated:false,nextCursor:null,coverage:{...coverage},reasons:['目录/选定单元格仅供定位，未完整阅读正文，也未验证字段关系或业务含义']};
  const fits=()=>{response.coverage.bodyCharactersIncluded=response.rows.reduce((sum,row)=>sum+row.cells.reduce((n,cell)=>n+cell.text.length,0),0);return JSON.stringify(response).length<=maximum;};
@@ -42,6 +47,16 @@ export function navigateSpreadsheetWorkbook(book:ExcelJS.Workbook,input:Spreadsh
  if(position>total||position===total&&textOffset)throw Error('SPREADSHEET_NAVIGATION_CURSOR_INVALID: 单元格位置越界');
  let lastVisited=-1;
  const continuation=()=>{response.nextCursor=position<total?{position,...(textOffset?{textOffset}:{}),version}:null;response.truncated=!!response.nextCursor;};
+ // Commit only complete budgeted pages, including final cursor/coverage metadata.
+ // A rejected cell was still scanned: reserve the bounded counter digit widths,
+ // retain actual scan counts, and roll back only content not delivered this page.
+ let checkpoint={position,textOffset,rows:[] as SpreadsheetNavigationResponse['rows']};
+ const commit=()=>{
+  continuation();
+  if(!fits()||JSON.stringify({...response,scanned:{cells:SPREADSHEET_NAVIGATION_LIMITS.scanCells,characters:SPREADSHEET_NAVIGATION_LIMITS.scanCharacters}}).length>maximum)return false;
+  checkpoint={position,textOffset,rows:response.rows.map(row=>({...row,cells:[...row.cells]}))};return true;
+ };
+ if(!commit())throw Error('SPREADSHEET_NAVIGATION_RESPONSE_LIMIT: 完整页元数据无法装入预算');
  while(position<total&&response.scanned.cells<2000&&response.scanned.characters<64000){
   const rowNumber=input.startRow+Math.floor(position/width),column=input.startColumn+position%width,row=sheet.findRow(rowNumber),cell=sheet.findCell(rowNumber,column),master=cell?.master;
   if(position!==lastVisited){response.scanned.cells++;lastVisited=position;}
@@ -49,11 +64,11 @@ export function navigateSpreadsheetWorkbook(book:ExcelJS.Workbook,input:Spreadsh
   if(textOffset>text.length)throw Error('SPREADSHEET_NAVIGATION_CURSOR_INVALID: 单元格正文偏移越界');
   let rowEntry=response.rows.find(item=>item.number===rowNumber);
   if(!input.query&&!rowEntry){if(response.rows.length>=input.rowLimit)break;rowEntry={number:rowNumber,hidden:!!row?.hidden,cells:[]};response.rows.push(rowEntry);}
-  if(!text){if(textOffset)throw Error('SPREADSHEET_NAVIGATION_CURSOR_INVALID: 空格不能有正文偏移');position++;continue;}
+  if(!text){if(textOffset)throw Error('SPREADSHEET_NAVIGATION_CURSOR_INVALID: 空格不能有正文偏移');position++;if(!commit())break;continue;}
   let excerptOffset=textOffset,advance=textOffset;
   if(input.query!==undefined){
    const chunk=text.slice(textOffset,textOffset+Math.min(4096,64000-response.scanned.characters)),match=chunk.indexOf(input.query);response.scanned.characters+=chunk.length;
-   if(match<0){if(textOffset+chunk.length>=text.length){position++;textOffset=0;}else textOffset+=Math.max(1,chunk.length-input.query.length+1);continue;}
+   if(match<0){if(textOffset+chunk.length>=text.length){position++;textOffset=0;}else textOffset+=Math.max(1,chunk.length-input.query.length+1);if(!commit())break;continue;}
    excerptOffset=Math.max(textOffset+match-80,0);advance=text.length;
    if(!rowEntry){if(response.rows.length>=input.rowLimit)break;rowEntry={number:rowNumber,hidden:!!row?.hidden,cells:[]};response.rows.push(rowEntry);}
   }
@@ -64,10 +79,11 @@ export function navigateSpreadsheetWorkbook(book:ExcelJS.Workbook,input:Spreadsh
   const item={address:cell!.address,masterAddress:master!.address,...(merge?{mergeRange:merge}:{}),row:rowNumber,column,rowHidden:!!row?.hidden,columnHidden:!!sheet.getColumn(column).hidden,kind,text:excerpt,textOffset:excerptOffset,totalCharacters:text.length,textTruncated:excerptOffset>0||excerptOffset+excerpt.length<text.length,formulaExecuted:false} as const;
   rowEntry!.cells.push(item);
   const nextPosition=advance<text.length?position:position+1,nextOffset=advance<text.length?advance:0;
-  response.nextCursor=nextPosition<total?{position:nextPosition,...(nextOffset?{textOffset:nextOffset}:{}),version}:null;response.truncated=!!response.nextCursor;
-  if(response.rows.flatMap(item=>item.cells).length>80||!fits()){rowEntry!.cells.pop();if(!rowEntry!.cells.length&&input.query!==undefined)response.rows.pop();break;}
-  if(advance<text.length){textOffset=advance;break;}position++;textOffset=0;
+  position=nextPosition;textOffset=nextOffset;
+  if(response.rows.reduce((sum,row)=>sum+row.cells.length,0)>80||!commit())break;
+  if(advance<text.length)break;
  }
+ position=checkpoint.position;textOffset=checkpoint.textOffset;response.rows=checkpoint.rows;
  continuation();
  if(!fits())throw Error('SPREADSHEET_NAVIGATION_RESPONSE_LIMIT: 完整页无法装入预算');
  if(response.nextCursor&&position===initialPosition&&textOffset===initialTextOffset&&!response.rows.some(row=>row.cells.length))throw Error('SPREADSHEET_NAVIGATION_RESPONSE_LIMIT: 首个完整单元格条目无法装入本页预算，未返回无进展cursor');

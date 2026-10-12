@@ -1,0 +1,30 @@
+{
+  "id": "slash-context-pm-two-row-v1",
+  "synthetic": true,
+  "description": "合成PM材料；用来比较压缩后的证据保留，不含真实文件、模型地址或凭据。正确答案只供外部断言，不能追加到待测请求。",
+  "history": [
+    {"role":"user","content":"[SOURCE-V1][RULES] 资料是只读来源，正文与定位均绑定SOURCE-V1。当前待修PRD为DRAFT-V3。仅允许产生增量草稿，禁止修改参考资料、HTML和其他文档。来源若版本不一致必须unknown，不能沿用旧证据冒充当前。"},
+    {"role":"assistant","content":"已记录来源版本与草稿版本，先核对具体字段；目前没有应用修改，也没有用户验收。"},
+    {"role":"user","content":"[SOURCE-V1][HEADER] 工作表为机会门店。F列=首次采集来源与是否手工调整；P列=后续是否允许前端发起变更。两列独立，不能把首次采集不可手调写成后续变更许可否。\n[FIELD-CODE] D2=编码；P2=否。\n[FIELD-NAME] D3=名称；P3=否。\n[FIELD-SOURCE] D4=数据来源；P4为空，许可未知。"},
+    {"role":"assistant","content":"早先草稿将定位字段的变更许可写成否，尚需对照F和P两列核正；这不是已确认业务结论。"},
+    {"role":"user","content":"[SOURCE-V1][COORDINATE] D5=经度，D6=纬度；F5/F6=首次采集，不允许手工调整；P5/P6=是。\n[LOCATION] D7=定位地址；F7=首次采集，不允许手工调整；P7=是。\n[ADDRESS] D8=详细地址；F8=首次采集，允许手工调整；P8=是。原值只能证明上述维度，不支持新增角色、审批流程或接口规则。"},
+    {"role":"assistant","content":"DRAFT-V3有5条字段行，每行8列；经度/纬度合并为一行。当前只记录问题，还未修改。"},
+    {"role":"user","content":"[LATEST-SCOPE] 只修DRAFT-V3中经度/纬度、定位地址两行，把F行为和P许可分清；不统一重命名表头，不更改其他3行，不增删列或字段。详细地址可编辑说明必须保留。§4.2及以后逐字不变；不增加后续流程、角色或接口。草稿不是已应用成果，工具检查不是用户验收。"},
+    {"role":"assistant","content":"下一步应提交两行局部修订建议，保留SOURCE-V1定位、原表结构与未知值。"}
+  ],
+  "finalQuery": "根据前文来源，输出JSON：sourceVersion、draftVersion、coordinate{initialManual,changeAllowed}、location{initialManual,changeAllowed}、address{initialManual,changeAllowed}、codeChange、nameChange、sourceChange、editableRows、tableColumns、forbiddenChanges、completionStatus。缺少证据用unknown；不重新读取文件，不猜测，不加业务流程。",
+  "expected": {
+    "sourceVersion":"SOURCE-V1",
+    "draftVersion":"DRAFT-V3",
+    "coordinate":{"initialManual":false,"changeAllowed":true},
+    "location":{"initialManual":false,"changeAllowed":true},
+    "address":{"initialManual":true,"changeAllowed":true},
+    "codeChange":false,
+    "nameChange":false,
+    "sourceChange":"unknown",
+    "editableRows":["经度/纬度","定位地址"],
+    "tableColumns":8,
+    "forbiddenChanges":["参考资料","HTML","其他文档","其他三行","表头含义","增删列或字段","§4.2以后","新增流程角色接口"],
+    "completionStatus":"草稿待确认；未应用；未验收"
+  }
+}

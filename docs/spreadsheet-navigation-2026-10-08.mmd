@@ -15,6 +15,9 @@ flowchart TD
     T --> E
     E --> C[current位置导航\n全文未读 / 语义未确认]
     C --> P[模型返回边界：相同默认元数据只说明一次\n原文/例外/来源/游标无损，较小页保持原格式]
+    P --> I{原请求与身份/范围版本匹配\n附加后仍不超过10000字符?}
+    I -- 是且非末页 --> NI[可复制nextInput：原范围加新cursor\n下一次仍经过原授权/版本校验]
+    I -- 否 --> OC[保留原回执与cursor契约\n不删原页数据 / 缺字段不代表末页]
     P --> F[既有read_spreadsheet_field_evidence\n严格字段/列头/值关系核验]
     C -. 不生成字段证据 .-> U[fullBodyRead=false\nfieldRelationshipVerified=false]
     W[当前工作流首包] --> V

@@ -9,9 +9,10 @@ export const pmWorkflows: Record<PmWorkflowKind, { label: string; intent: string
   research: { label: "整理资料", intent: "整理选定资料中的用户、场景、问题、需求和矛盾。保留每项结论的来源，区分单份资料事实与跨资料归纳，列出仍需确认的问题。", hint: "选择资料或说明调研目标；保留出处与场景差异" },
   meeting: { label: "会议后整理", intent: "读取选定会议纪要、转写或笔记，整理已确认事项、未答问题和行动项。保留发言或原文依据，不猜测负责人、截止日期或未确认决定。", hint: "至少选择一份会议材料；核对决定和待办" },
   prototype_to_prd: { label: "基于原型补 PRD", intent: "读取选定的实际 HTML 原型及相关业务资料，按页面与交互补充 PRD。已体现的行为注明原型依据，未体现的后台规则、权限和异常标为待确认。", hint: "已选原型；可继续添加业务资料，界面之外的规则仍需确认" },
+  test_cases: { label: "创建测试用例", intent: "根据引用的 PRD、原型和业务规则创建供人工审阅的测试用例。请涵盖本次范围的正常、异常、边界、权限和状态，写清前置条件、操作与预期，保留真实来源版本，未知规则列待确认。保存为可预览、可导出 Excel / Markdown 的用例成果。生成不代表实际执行通过。", hint: "至少引用一份 PRD、原型或规则；生成后均为未执行" },
   change_summary: { label: "生成变更说明", intent: "对比绑定的旧版本与当前版本，根据实际文件差异生成变更说明。区分已改内容、可能影响与待核对项，列出需复核的需求、原型行为和交付材料。", hint: "已绑定同一成果的两个实际版本；可编辑说明目标与受众" },
 };
-export const starterActions = (["prototype", "prd", "research", "meeting"] as const).map(kind => ({ kind, ...pmWorkflows[kind] }));
+export const starterActions = (["prototype", "prd", "research", "meeting", "test_cases"] as const).map(kind => ({ kind, ...pmWorkflows[kind] }));
 
 export function WorkflowReceipt({ run }: { run: Run }) {
   const workflow = run.workflow;

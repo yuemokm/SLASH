@@ -2,7 +2,7 @@ flowchart TD
   A[宿主真实多轮请求 当前成果 实际已读来源 假设] --> B[有界正文校验身份及hash 冻结snapshot]
   B --> C[真实选段 offset 行号 partial与实际预算]
   C --> M[按类别及真实ID生成canonical A S R短引用表 纳入inputHash]
-  M --> P[实际wire v2 Zod完整schema 硬限3项及短引句 纳入预算及hash]
+  M --> P[实际wire v3 Zod完整schema scope及repairDisposition 硬限3项及短引句 纳入预算及hash]
   P --> Q{wireVersion及schemaHash当前 从snapshot重算短引用表一致}
   Q -- 否 --> O[旧或缺失协议拒绝 不发模型请求]
   Q -- 是 --> D[独立当前配置Pi审查 无工具 原生传输最多重试一次]
@@ -20,5 +20,7 @@ flowchart TD
   G --> H[独立回执 模型身份 输入结果hash 覆盖限制 无人工确认]
   H --> I{版本本地刷新}
   I -- 变化 --> S[stale unverified 保留历史 禁用候选]
-  I -- 未变化 --> J[有限候选修正或用户核对]
+  I -- 未变化 --> Z{in_scope candidate high 已绑定request 正常完成且回执有效}
+  Z -- 否或历史缺字段 --> N[保留意见仅记录或人工核对 不自动修]
+  Z -- 是 --> J[原授权内有限候选修正 非独立语义授权裁定]
   J --> K[范围推断只可降为假设待确认 不自创业务事实]

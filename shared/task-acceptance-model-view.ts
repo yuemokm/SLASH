@@ -4,7 +4,7 @@ export const TASK_MODEL_VIEW_LIMIT=12000;
 const id=z.string().min(1).max(200),hash=z.string().regex(/^[a-f0-9]{64}$/);
 export const taskModelViewSections=['summary','requests','outputs','criteria','baseline','sources','reads','prd','report','history'] as const;
 export const taskModelViewRequestSchema=z.object({
- runId:id.optional(),section:z.enum(taskModelViewSections).default('summary'),
+ runId:id.optional().describe('省略查看当前Run；查看同会话其他Run时只传宿主真实runId，不能猜测或使用占位值'),section:z.enum(taskModelViewSections).default('summary'),
  sourceId:id.optional().describe('文件版本sourceId；用于sources或reads，不能当readId/evidenceId'),
  readId:id.optional().describe('某次宿主读取回执readId；仅用于reads，不赋予跨Run证据权限'),
  reportId:id.optional().describe('具体历史检查reportId；仅用于report'),

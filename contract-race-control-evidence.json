@@ -1,0 +1,366 @@
+{
+  "scenario": "unchanged control during same actual last guard catalog pause",
+  "sealedSourceUnmodified": true,
+  "browser": "fixture-only",
+  "realModelRequests": 0,
+  "finalGuardInspections": 2,
+  "binding": {
+    "locator": {
+      "mountId": "08c645e0-1ea4-466c-aa67-452775079b80",
+      "path": "index.html",
+      "changeId": "9ccbbb7b-658f-4423-910e-226947881df3",
+      "adapterId": "fixture_static_file_list_v1"
+    },
+    "runId": "6bf2d161-991a-4533-91b7-a1b759f3f654",
+    "outputId": "output:9b3529f36d7eb9624b96b0a9",
+    "reportId": "e1ca3a14-192b-4764-8d00-a34dff90a9a1",
+    "contractHash": "3a4094eee52fbed4b4b8968ef1c4b1836b36b0bf71d76d77d554110fabbba600",
+    "versionHash": "f9ebda583b1a51d6541c31f2e8aa0c15eb35a023d19dbc14bf13368925f66826",
+    "taskBindingHash": "7eb64960a93320c24a43da92e45afa4a9ba25bdeebb397fab2475472c6ba9a78",
+    "argsHash": "95e24d149b8d25956d85045c58c2581c43fe382ae2fe0640175346ab4651f396",
+    "connectionHash": "bb3456e50b4eff82bc430e074d6ee25787ed8881b38e621546474f4a73bc4e72",
+    "toolSchemaHash": "71e2bbcba203193775c7a5025fedc41a824c71a8cae0a5b21eed5233bf861511",
+    "adapterVersion": "fixture-v1",
+    "manifest": {
+      "version": "prototype-static-delivery-v1",
+      "deliveryKind": "prototype_static_project",
+      "boundary": "entry_parent_web_assets",
+      "buildProof": "native_static_snapshot",
+      "entryPath": "index.html",
+      "entryHash": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d",
+      "files": [
+        {
+          "path": "app.js",
+          "bytes": 28,
+          "sha256": "5e1968f8aeb68613622bf3e1d23d271ac86b103f27221f9fac36aba343bfeb35"
+        },
+        {
+          "path": "index.html",
+          "bytes": 850,
+          "sha256": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d"
+        },
+        {
+          "path": "other.html",
+          "bytes": 62,
+          "sha256": "8cc6c8269e21519462e2763b8191e906c39a74a5cb6d465cb7a8afa731dcd5ae"
+        },
+        {
+          "path": "pixel.png",
+          "bytes": 68,
+          "sha256": "a96d32119eacac102a6735ac06ed89bec9cf04b7aceef9af403698127b976835"
+        },
+        {
+          "path": "style.css",
+          "bytes": 63,
+          "sha256": "f8126fa15b8bc33e226a7a65421515f8e9832d92db2853a9f4575f9b8682b843"
+        }
+      ],
+      "manifestHash": "2d8a3f27e1ce46e2ba14e5654aed885514bd195dedae6615e38188bb23b0ff58"
+    }
+  },
+  "contractBefore": {
+    "schemaVersion": 1,
+    "id": "084b13cb-92ff-4539-ab81-4c00f987711a",
+    "workspaceId": "workspace:58ceae06dfc1d9a73afdb25ec2a1d7f91e285bd73f38558967b61f41fb7fdf1d",
+    "runId": "6bf2d161-991a-4533-91b7-a1b759f3f654",
+    "revision": 3,
+    "contractHash": "3a4094eee52fbed4b4b8968ef1c4b1836b36b0bf71d76d77d554110fabbba600",
+    "scope": "deliverable",
+    "requests": [
+      {
+        "id": "request:6bf2d161-991a-4533-91b7-a1b759f3f654",
+        "text": "整理任务页面并提出完整原型交付提案。",
+        "source": "initial",
+        "textHash": "e5307d8d30cf497dc73b069b153fd5f8ea467862a6baf012d3e4f08141a59595",
+        "recordedAt": "2026-10-11T15:13:52.039Z"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output:9b3529f36d7eb9624b96b0a9",
+        "kind": "html",
+        "target": {
+          "source": "draft",
+          "mountId": "08c645e0-1ea4-466c-aa67-452775079b80",
+          "path": "index.html",
+          "changeId": "9ccbbb7b-658f-4423-910e-226947881df3",
+          "contentHash": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d",
+          "baseHash": null
+        }
+      }
+    ],
+    "criteria": [
+      {
+        "id": "host:render:output:9b3529f36d7eb9624b96b0a9",
+        "text": "HTML页面实际加载、运行并留下截图",
+        "requestIds": [
+          "request:6bf2d161-991a-4533-91b7-a1b759f3f654"
+        ],
+        "outputIds": [
+          "output:9b3529f36d7eb9624b96b0a9"
+        ],
+        "origin": "model_proposal",
+        "required": true,
+        "checker": {
+          "kind": "prototype_cases",
+          "cases": [
+            {
+              "id": "host:render",
+              "title": "页面加载与运行",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "steps": [
+                {
+                  "action": "assert",
+                  "assertion": "visible",
+                  "selector": "body",
+                  "expected": true
+                },
+                {
+                  "action": "assert",
+                  "assertion": "no-horizontal-overflow",
+                  "selector": "html"
+                }
+              ]
+            },
+            {
+              "id": "host:control-usability:1440",
+              "title": "宿主有限控件可用性 1440×900",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "expectedDescription": "当前渲染且启用的原生表单控件/文字提交按钮：字号≥12px；桌面尺寸≥24px，移动字段≥32px、文字提交按钮≥44px，尺寸允许1 CSS px舍入差；无hidden/clip裁切/首屏完全遮挡。范围上限80候选/2000元素，空范围为未知；不代表整页视觉验收。",
+              "steps": [
+                {
+                  "action": "assert",
+                  "assertion": "control-usability"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "criterionAmendments": [],
+    "baseline": [],
+    "baselineAmendments": [],
+    "prd": {
+      "sources": [],
+      "assumptions": [],
+      "coverage": []
+    },
+    "createdAt": "2026-10-11T15:13:52.039Z",
+    "updatedAt": "2026-10-11T15:13:52.912Z"
+  },
+  "contractAfter": {
+    "schemaVersion": 1,
+    "id": "084b13cb-92ff-4539-ab81-4c00f987711a",
+    "workspaceId": "workspace:58ceae06dfc1d9a73afdb25ec2a1d7f91e285bd73f38558967b61f41fb7fdf1d",
+    "runId": "6bf2d161-991a-4533-91b7-a1b759f3f654",
+    "revision": 3,
+    "contractHash": "3a4094eee52fbed4b4b8968ef1c4b1836b36b0bf71d76d77d554110fabbba600",
+    "scope": "deliverable",
+    "requests": [
+      {
+        "id": "request:6bf2d161-991a-4533-91b7-a1b759f3f654",
+        "text": "整理任务页面并提出完整原型交付提案。",
+        "source": "initial",
+        "textHash": "e5307d8d30cf497dc73b069b153fd5f8ea467862a6baf012d3e4f08141a59595",
+        "recordedAt": "2026-10-11T15:13:52.039Z"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output:9b3529f36d7eb9624b96b0a9",
+        "kind": "html",
+        "target": {
+          "source": "draft",
+          "mountId": "08c645e0-1ea4-466c-aa67-452775079b80",
+          "path": "index.html",
+          "changeId": "9ccbbb7b-658f-4423-910e-226947881df3",
+          "contentHash": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d",
+          "baseHash": null
+        }
+      }
+    ],
+    "criteria": [
+      {
+        "id": "host:render:output:9b3529f36d7eb9624b96b0a9",
+        "text": "HTML页面实际加载、运行并留下截图",
+        "requestIds": [
+          "request:6bf2d161-991a-4533-91b7-a1b759f3f654"
+        ],
+        "outputIds": [
+          "output:9b3529f36d7eb9624b96b0a9"
+        ],
+        "origin": "model_proposal",
+        "required": true,
+        "checker": {
+          "kind": "prototype_cases",
+          "cases": [
+            {
+              "id": "host:render",
+              "title": "页面加载与运行",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "steps": [
+                {
+                  "action": "assert",
+                  "assertion": "visible",
+                  "selector": "body",
+                  "expected": true
+                },
+                {
+                  "action": "assert",
+                  "assertion": "no-horizontal-overflow",
+                  "selector": "html"
+                }
+              ]
+            },
+            {
+              "id": "host:control-usability:1440",
+              "title": "宿主有限控件可用性 1440×900",
+              "viewport": {
+                "width": 1440,
+                "height": 900
+              },
+              "expectedDescription": "当前渲染且启用的原生表单控件/文字提交按钮：字号≥12px；桌面尺寸≥24px，移动字段≥32px、文字提交按钮≥44px，尺寸允许1 CSS px舍入差；无hidden/clip裁切/首屏完全遮挡。范围上限80候选/2000元素，空范围为未知；不代表整页视觉验收。",
+              "steps": [
+                {
+                  "action": "assert",
+                  "assertion": "control-usability"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "criterionAmendments": [],
+    "baseline": [],
+    "baselineAmendments": [],
+    "prd": {
+      "sources": [],
+      "assumptions": [],
+      "coverage": []
+    },
+    "createdAt": "2026-10-11T15:13:52.039Z",
+    "updatedAt": "2026-10-11T15:13:52.912Z"
+  },
+  "beforeFiles": [
+    {
+      "path": "app.js",
+      "bytes": 28,
+      "sha256": "5e1968f8aeb68613622bf3e1d23d271ac86b103f27221f9fac36aba343bfeb35"
+    },
+    {
+      "path": "index.html",
+      "bytes": 850,
+      "sha256": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d"
+    },
+    {
+      "path": "other.html",
+      "bytes": 62,
+      "sha256": "8cc6c8269e21519462e2763b8191e906c39a74a5cb6d465cb7a8afa731dcd5ae"
+    },
+    {
+      "path": "pixel.png",
+      "bytes": 68,
+      "sha256": "a96d32119eacac102a6735ac06ed89bec9cf04b7aceef9af403698127b976835"
+    },
+    {
+      "path": "style.css",
+      "bytes": 63,
+      "sha256": "f8126fa15b8bc33e226a7a65421515f8e9832d92db2853a9f4575f9b8682b843"
+    }
+  ],
+  "afterFiles": [
+    {
+      "path": "app.js",
+      "bytes": 28,
+      "sha256": "5e1968f8aeb68613622bf3e1d23d271ac86b103f27221f9fac36aba343bfeb35"
+    },
+    {
+      "path": "index.html",
+      "bytes": 850,
+      "sha256": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d"
+    },
+    {
+      "path": "other.html",
+      "bytes": 62,
+      "sha256": "8cc6c8269e21519462e2763b8191e906c39a74a5cb6d465cb7a8afa731dcd5ae"
+    },
+    {
+      "path": "pixel.png",
+      "bytes": 68,
+      "sha256": "a96d32119eacac102a6735ac06ed89bec9cf04b7aceef9af403698127b976835"
+    },
+    {
+      "path": "style.css",
+      "bytes": 63,
+      "sha256": "f8126fa15b8bc33e226a7a65421515f8e9832d92db2853a9f4575f9b8682b843"
+    }
+  ],
+  "fullManifestUnchanged": true,
+  "receivedCalls": [
+    {
+      "_meta": {
+        "pi-mcp-adapter/toolCallId": "2217c9f2-de95-44a4-b8e9-0338e0436e92"
+      },
+      "name": "fixture.publishFiles",
+      "arguments": {
+        "entryPath": "index.html",
+        "files": [
+          {
+            "path": "app.js",
+            "encoding": "utf8",
+            "content": "// actual local static asset"
+          },
+          {
+            "path": "index.html",
+            "encoding": "utf8",
+            "content": "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>任务整理</title><link rel=\"stylesheet\" href=\"style.css\"></head><body><main><h1>本次任务</h1><p>先选择相关资料，核对版本，然后查看成果并逐项检查用户要求。保留原件与已有处理记录。查看差异后再保存修改，整理好文件再正式交付。</p><p>可使用下方按钮确认资料整理完成，查看本次操作反馈。后续修改时重新检查资料及成果版本，确保相关规则仍然一致。</p><img src=\"pixel.png\" alt=\"状态图标\"><button type=\"button\" onclick=\"document.getElementById('status').textContent='已确认'\">确认整理</button><p id=\"status\" aria-live=\"polite\">等待确认</p></main><script src=\"app.js\"></script></body></html>"
+          },
+          {
+            "path": "other.html",
+            "encoding": "utf8",
+            "content": "<!doctype html><html><body>另一个独立页面</body></html>"
+          },
+          {
+            "path": "pixel.png",
+            "encoding": "base64",
+            "content": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6X8AAAAASUVORK5CYII="
+          },
+          {
+            "path": "style.css",
+            "encoding": "utf8",
+            "content": "body{font:16px system-ui}button{min-width:48px;min-height:48px}"
+          }
+        ]
+      }
+    }
+  ],
+  "receivedCount": 1,
+  "result": {
+    "kind": "value",
+    "receipt": {
+      "content": [
+        {
+          "type": "text",
+          "text": "local fixture receipt"
+        }
+      ],
+      "structuredContent": {
+        "success": true,
+        "status": "completed"
+      }
+    }
+  },
+  "freshAssertAllowedError": "",
+  "noAutomaticRetry": true
+}

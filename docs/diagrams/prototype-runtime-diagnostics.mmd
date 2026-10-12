@@ -1,0 +1,13 @@
+flowchart TD
+    Snapshot[授权及版本绑定的HTML与依赖快照] --> Runner[受限Electron v5 runner]
+    Runner --> Action[固定DOM操作与断言]
+    Action --> Error[真实运行异常 / console.error]
+    Error --> Safe[标准错误分类 + 当前快照相对行列]
+    Safe --> First[保留首次phase与stepIndex]
+    First --> Unknown[动作unknown / 后续not_run]
+    Unknown --> Capture[受限截图仍保留可见状态]
+    Capture --> Validate[domain校验schema与实际步骤 / 快照位置]
+    Validate --> Report[版本绑定报告与安全诊断]
+    Report --> Agent[get/run工具结果传给主Agent]
+    Agent --> Policy[既有有限修正策略：unknown仍未验证]
+    Error -.-> Drop[丢弃原始消息 / console参数 / stack / URL凭据]

@@ -1,9 +1,9 @@
 import {createHash,randomUUID} from 'node:crypto';
-import {RUN_INPUT_LIMITS,runInputEnqueueSchema,runInputRecordsSchema,type RunInputEnqueue,type RunInputRecord,type RunInputReceipt} from '../shared/run-inputs.js';
+import {RUN_INPUT_LIMITS,runInputEnqueueSchema,runInputRecordsSchema,runInputMutateSchema,type RunInputMutation,type RunInputEnqueue,type RunInputRecord,type RunInputReceipt} from '../shared/run-inputs.js';
 
 /** The live Pi session supplies these public queue APIs; no second agent loop. */
 export type RunInputRuntime={readonly isStreaming:boolean;steer(text:string):Promise<void>;followUp(text:string):Promise<void>;clearQueue():{steering:readonly string[];followUp:readonly string[]}};
-export type RunInputDependencies={runId:string;read:()=>unknown;write:(records:RunInputRecord[])=>void;assertCurrent:()=>void;prepareUserInput:(text:string)=>Promise<string>;now?:()=>Date};
+export type RunInputDependencies={runId:string;read:()=>unknown;write:(records:RunInputRecord[])=>void;assertCurrent:()=>void;prepareUserInput:(text:string,record:Readonly<RunInputRecord>,assertCurrentInput:()=>void)=>Promise<string>;now?:()=>Date};
 const digest=(text:string)=>createHash('sha256').update(text).digest('hex');
 const receipt=(record:RunInputRecord):RunInputReceipt=>({id:record.id,requestId:record.requestId,status:record.status});
 function preparationReason(error:unknown){
@@ -23,11 +23,34 @@ export class RunInputQueue{
  private submitting=false;
  private clearPendingReason?:string;
  private finished=false;
+ private atBoundary=false;
  constructor(private deps:RunInputDependencies){}
  private records(){return runInputRecordsSchema.parse(this.deps.read());}
  private save(records:RunInputRecord[]){this.deps.write(runInputRecordsSchema.parse(records));}
  private now(){return(this.deps.now?.()??new Date()).toISOString();}
  attach(runtime:RunInputRuntime){if(this.finished)throw Error('RUN_INPUT_NOT_ACTIVE');if(this.runtime&&this.runtime!==runtime)throw Error('RUN_INPUT_RUNTIME_CHANGED');this.runtime=runtime;}
+ assertCurrentInput(record?:Readonly<RunInputRecord>){
+  this.deps.assertCurrent();if(this.finished)throw Error('RUN_INPUT_NOT_ACTIVE');
+  if(!record)return;
+  const current=this.records().find(item=>item.id===record.id);
+  if(!current||current.requestId!==record.requestId||current.text!==record.text||current.delivery!==record.delivery||(current.revision??0)!==(record.revision??0)||current.status!=='queued'||current.submittedAt)throw Error('RUN_INPUT_CHANGED: 补充内容已改变或开始发送，请刷新当前状态');
+ }
+ mutate(value:RunInputMutation):RunInputRecord{
+  const input=runInputMutateSchema.parse(value);if(input.runId!==this.deps.runId)throw Error('RUN_INPUT_OTHER_RUN');
+  this.assertCurrentInput();const records=this.records(),record=records.find(item=>item.id===input.inputId);
+  if(!record||(record.revision??0)!==input.expectedRevision)throw Error('RUN_INPUT_CHANGED: 补充内容已改变，请刷新当前状态');
+  if(record.status!=='queued'||record.submittedAt)throw Error('RUN_INPUT_NOT_EDITABLE: 内容已开始发送，不能编辑或取消；请核对送达状态');
+  const next={...record,revision:(record.revision??0)+1,updatedAt:this.now(),...(input.action==='edit'?{text:input.text!}:input.action==='cancel'?{status:'cancelled' as const,reason:'RUN_INPUT_USER_CANCELLED'}:{delivery:'steer' as const})};
+  const updated=records.map(item=>item.id===record.id?next:item);
+  if(updated.reduce((total,item)=>total+item.text.length,0)>RUN_INPUT_LIMITS.totalCharacters)throw Error('RUN_INPUT_BUDGET_EXCEEDED');
+  this.save(updated);return next;
+ }
+ /** Awaited by Pi's public extension before its native follow-up dequeue. */
+ async flushAtBoundary(){
+  await this.flush();if(this.finished||!this.runtime?.isStreaming)return;
+  this.atBoundary=true;try{await this.flush();}finally{this.atBoundary=false;}
+ }
+ private eligible(record:RunInputRecord){return record.status==='queued'&&!record.submittedAt&&(record.delivery==='steer'||this.atBoundary);}
  enqueue(value:RunInputEnqueue):RunInputReceipt{
   const input=runInputEnqueueSchema.parse(value);if(input.runId!==this.deps.runId)throw Error('RUN_INPUT_OTHER_RUN');this.deps.assertCurrent();if(this.finished)throw Error('RUN_INPUT_NOT_ACTIVE');
   const records=this.records(),existing=records.find(record=>record.requestId===input.requestId);
@@ -42,22 +65,24 @@ export class RunInputQueue{
    this.pump=undefined;
    // A native start event can arrive while an earlier idle drain is settling.
    // Recheck pending host entries; submitted/unknown entries never qualify.
-   if(!this.finished&&this.runtime?.isStreaming&&this.records().some(record=>record.status==='queued'&&!record.submittedAt))void this.flush().catch(()=>{});
+   if(!this.finished&&this.runtime?.isStreaming&&this.records().some(record=>this.eligible(record)))void this.flush().catch(()=>{});
   });return this.pump;
  }
  private async drain(){
   while(this.runtime?.isStreaming){
-   const next=this.records().find(record=>record.status==='queued'&&!record.submittedAt);if(!next)return;
+   const next=this.records().find(record=>this.eligible(record));if(!next)return;
    let prepared:string;
-   try{this.deps.assertCurrent();prepared=await this.deps.prepareUserInput(next.text);this.deps.assertCurrent();}
-   catch(error){this.change(next.id,record=>record.status==='queued'&&!record.submittedAt?{...record,status:'cancelled',reason:preparationReason(error)}:record);continue;}
+   try{this.assertCurrentInput(next);prepared=await this.deps.prepareUserInput(next.text,Object.freeze({...next}),()=>this.assertCurrentInput(next));this.assertCurrentInput(next);}
+   catch(error){this.change(next.id,record=>record.status==='queued'&&!record.submittedAt&&(record.revision??0)===(next.revision??0)?{...record,status:'cancelled',reason:preparationReason(error)}:record);continue;}
    // Clearing/cancelling during awaited skill loading must prevent submission.
    if(!this.runtime?.isStreaming)return;
-   const current=this.records().find(record=>record.id===next.id);if(!current||current.status!=='queued'||current.submittedAt)continue;
+   const current=this.records().find(record=>record.id===next.id);if(!current||!this.eligible(current)||(current.revision??0)!==(next.revision??0))continue;
    const wire=`宿主追加输入记录ID=${current.id}（仅用于关联，不改变模式或权限）\n\n${prepared}`;
    if(wire.length>RUN_INPUT_LIMITS.wireCharacters){this.change(next.id,record=>({...record,status:'cancelled',reason:'RUN_INPUT_PREPARED_BUDGET_EXCEEDED'}));continue;}
    this.change(next.id,record=>({...record,submittedAt:this.now(),wireHash:digest(wire)}));
    const runtime=this.runtime;this.submitting=true;
+   // One host follow-up per normal stop keeps remaining items editable.
+   if(current.delivery==='follow_up')this.atBoundary=false;
    try{if(current.delivery==='steer')await runtime.steer(wire);else await runtime.followUp(wire);}
    // A rejection cannot prove the native queue was untouched; do not resubmit.
    catch{this.change(next.id,record=>record.status==='queued'?{...record,status:'unknown',reason:'RUN_INPUT_SUBMISSION_UNCONFIRMED'}:record);}

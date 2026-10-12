@@ -1,0 +1,47 @@
+{
+  "reviewCase": ".test-data/prd-focused-review-8c7c868a-3bc6-4243-bc7a-de8cf944cb57",
+  "completion": "completed",
+  "status": "issues_found",
+  "validBindingsChecked": 6,
+  "criticalCellsCovered": 14,
+  "findings": [
+    {
+      "id": "finding-1",
+      "judgement": "accurate-existing-adjacent-description-error",
+      "scope": "allowed-adjacent-source-description",
+      "sourceCells": [
+        "merged K5:K7",
+        "K1 field rule header",
+        "D5 longitude",
+        "D6 latitude"
+      ],
+      "action": "one-description-sentence-only-in-new-copy"
+    },
+    {
+      "id": "finding-2",
+      "judgement": "accurate-existing-grid-display-conflict",
+      "scope": "outside-two-target-rows",
+      "sourceCells": [
+        "03-N2=yes",
+        "03-O2=yes",
+        "03-P2=no"
+      ],
+      "action": "preserved-awaiting-confirmation"
+    }
+  ],
+  "modelCrossSheetFalsePositive": false,
+  "inputSelectionDefectFound": false,
+  "limitedScopeOnly": true,
+  "noModelRerun": true,
+  "noOriginalOrPendingWrite": true,
+  "deliveryMethod": "subagent minimal source-based wording correction; not Slash automatic draft-edit acceptance",
+  "beforeSha256": "83e3e9c085cb3fd80a1332744635ad458e78c9393eec89a2a6cb9d9288b39f36",
+  "afterSha256": "40fd2e97fd511af2e4a4d397d6bbbc30fb4a43a51a56eac9a7ece20239f7cb86",
+  "changedLines": [
+    {
+      "line": 75,
+      "before": "> D5（经度）与 D6（纬度）为合并单元格（K5:K7），前端字段规则描述「定位按钮触发当前设备定位，获取经纬度」。字段证据工具对该合并值格返回 AMBIGUOUS，具体坐标经度/纬度分别取值见提取文本行，已用提取文本确认。",
+      "after": "> K5:K7 为字段规则合并区域，D5（经度）与 D6（纬度）分别为字段名称格，规则描述「定位按钮触发当前设备定位，获取经纬度」。字段证据工具对该合并值格返回 AMBIGUOUS，具体坐标经度/纬度分别取值见提取文本行，已用提取文本确认。"
+    }
+  ]
+}

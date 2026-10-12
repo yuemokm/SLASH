@@ -22,6 +22,8 @@ const reasonLabels: Record<string, string> = {
   PROTOTYPE_FOCUS_UNAVAILABLE: "无法操作当前控件",
   PROTOTYPE_SELECT_NATIVE_UNAVAILABLE: "无法确认选择结果",
   PROTOTYPE_PREVIOUS_STEP_STOPPED: "前一步未完成，本步未执行",
+  PROTOTYPE_USABILITY_NOT_APPLICABLE: "没有适用的可见控件，保持未知",
+  PROTOTYPE_USABILITY_LIMIT: "控件检查范围不完整，保持未知",
 };
 function readableReason(reason: string): string { return reasonLabels[reason] || (/[\u3400-\u9fff]/.test(reason) ? reason : "执行信息待核对"); }
 const assertionLabels = { visible: "可见", readonly: "只读", checked: "已选中", enabled: "可操作", text: "文字", value: "字段值", count: "匹配数量", url: "页面地址" };
@@ -32,11 +34,17 @@ function describeStep(step: PrototypeAcceptanceStep): string {
   if (step.action === "press") return `在 ${step.selector} 按 ${step.key}`;
   if (step.assertion === "no-horizontal-overflow") return `核对 ${step.selector || "整个页面"} 无横向溢出（允许 1px 舍入差）`;
   if (step.assertion === "min-target-size") return `核对 ${step.selector} 可见且宽、高至少 ${step.minPixels}px`;
+  if (step.assertion === "control-usability") return `核对 ${step.selector || "整个页面"} 内可见且启用的输入控件和文字提交按钮：字号、尺寸、裁切及首屏完全遮挡`;
   const locator = "selector" in step ? `${step.selector} · ` : "";
   return `核对 ${locator}${assertionLabels[step.assertion]}${"match" in step && step.match === "contains" ? "包含" : "为"} ${String(step.expected)}`;
 }
 const readableTime = (value: string) => Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : value;
 const measurementsText = (measurements: import("../shared/prototype-acceptance").PrototypeStepResult["measurements"]) => !measurements ? "" : measurements.width !== undefined ? ` · 目标 ${measurements.width.toFixed(1)} × ${measurements.height!.toFixed(1)}px，要求 ≥ ${measurements.minPixels}px` : ` · 内容宽 ${measurements.scrollWidth}px / 可用宽 ${measurements.availableWidth}px`;
+
+export function PrototypeUsabilityDetails({observation}:{observation:import("../shared/prototype-acceptance").PrototypeUsabilityObservation}) {
+  const issueLabels={CONTROL_FONT_TOO_SMALL:"控件字号过小",CONTROL_TARGET_TOO_SMALL:"控件尺寸过小",CONTROL_CLIPPED:"控件被裁切",BUTTON_TEXT_CLIPPED:"按钮文字被裁切",CONTROL_FULLY_OBSCURED:"控件在视口内被完全遮挡"} as const;
+  return <div className="prototype-acceptance-note"><p>控件检查：已检查 {observation.checked} / {observation.candidateCount} 项 · 跳过 {observation.skipped} 项 · {!observation.checked?"没有适用控件，保持未知":observation.complete?"适用范围检查完成":"范围不完整，保持未知"}。仅核对可见且启用的原生输入控件和文字提交按钮；不代表整页视觉、可访问性或业务已确认。</p>{observation.issues.length>0&&<ul>{observation.issues.map((issue,index)=><li key={index}>{issueLabels[issue.code]} · {issue.selector} · {issue.viewport.width} × {issue.viewport.height} CSS px · 控件 {issue.measurements.width.toFixed(1)} × {issue.measurements.height.toFixed(1)}px{issue.measurements.fontSize!==undefined?` · 字号 ${issue.measurements.fontSize.toFixed(1)}px`:""}{issue.measurements.minPixels!==undefined?` · 要求至少 ${issue.measurements.minPixels}px`:""}{issue.measurements.visibleWidth!==undefined?` · 可见 ${issue.measurements.visibleWidth.toFixed(1)} × ${(issue.measurements.visibleHeight??0).toFixed(1)}px`:""}{issue.measurements.scrollWidth!==undefined?` · 内容宽 ${issue.measurements.scrollWidth}px / 可用宽 ${issue.measurements.availableWidth}px`:""}</li>)}</ul>}</div>;
+}
 
 /** Only host-returned reports and controlled screenshot IDs provide execution evidence. */
 export function PrototypeAcceptance({ file, artifactId, version, mode, call, onContinue }: {
@@ -148,7 +156,7 @@ export function PrototypeAcceptance({ file, artifactId, version, mode, call, onC
     finally { if (alive.current && sequence === imageSequence.current) setImageBusy(undefined); }
   };
   return <details className="prototype-acceptance" open={open} onToggle={event => { const next = event.currentTarget.open; setOpen(next); if (next) void load(); }} aria-label="原型验收">
-    <summary><strong>原型验收</strong><small>{running ? view?.activeRun?.status === "cancelling" ? "正在取消…" : "正在执行…" : !view ? "查看用例与执行记录" : !spec ? "尚未准备用例" : view?.needsConfirmation ? "验收范围已变 · 需确认" : versionChanged ? "版本已变 · 当前版未执行" : scopeChanged ? "验收范围已变 · 当前范围未执行" : report?.versionState === "unavailable" ? "当前版本不可核对" : `通过 ${totals.passed} · 失败 ${totals.failed} · 未知 ${totals.unknown} · 未执行 ${totals.not_run}`}</small></summary>
+    <summary><strong>原型界面执行验收</strong><small>{running ? view?.activeRun?.status === "cancelling" ? "正在取消…" : "正在执行…" : !view ? "查看用例与执行记录" : !spec ? "尚未准备用例" : view?.needsConfirmation ? "验收范围已变 · 需确认" : versionChanged ? "版本已变 · 当前版未执行" : scopeChanged ? "验收范围已变 · 当前范围未执行" : report?.versionState === "unavailable" ? "当前版本不可核对" : `通过 ${totals.passed} · 失败 ${totals.failed} · 未知 ${totals.unknown} · 未执行 ${totals.not_run}`}</small></summary>
     <div className="prototype-acceptance-body">
       {error && <p className="prototype-acceptance-error" role="alert">{error}</p>}
       {loading && !view ? <p className="prototype-acceptance-note">正在读取验收记录…</p> : !spec ? <><p className="prototype-acceptance-note">让会话根据当前原型准备具体步骤与预期，再执行并保留证据。</p><div className="prototype-acceptance-actions"><button onClick={prepare}>在会话中准备验收</button><button disabled={loading} onClick={() => void load()}>刷新记录</button></div></> : <>
@@ -172,7 +180,7 @@ export function PrototypeAcceptance({ file, artifactId, version, mode, call, onC
             {item.expectedDescription && <p><span className="prototype-acceptance-case-label">预期：</span>{item.expectedDescription}</p>}
             {(result?.viewport || item.viewport) && <p className="prototype-acceptance-note">{result?.viewport ? "实际视口" : "指定视口"}：{(result?.viewport || item.viewport)!.width} × {(result?.viewport || item.viewport)!.height} CSS px</p>}
             <ol>{item.steps.map((step, index) => <li key={index}>{describeStep(step)}</li>)}</ol>
-            {result && <><p className="prototype-acceptance-case-label">{currentResults ? "实际断言" : "旧版执行记录"}：{result.reason ? readableReason(result.reason) : labels[result.status]}</p><ul className="prototype-acceptance-assertions">{result.steps.map(step => <li key={step.stepIndex}>步骤 {step.stepIndex + 1} · {labels[step.status]}{step.observed !== undefined ? ` · 实际：${String(step.observed)}` : ""}{measurementsText(step.measurements)}{step.reason ? ` · ${readableReason(step.reason)}` : ""}</li>)}</ul></>}
+            {result && <><p className="prototype-acceptance-case-label">{currentResults ? "实际断言" : "旧版执行记录"}：{result.reason ? readableReason(result.reason) : labels[result.status]}</p><ul className="prototype-acceptance-assertions">{result.steps.map(step => <li key={step.stepIndex}>步骤 {step.stepIndex + 1} · {labels[step.status]}{step.observed !== undefined ? ` · 实际：${String(step.observed)}` : ""}{measurementsText(step.measurements)}{step.reason ? ` · ${readableReason(step.reason)}` : ""}{currentResults&&step.usability&&<PrototypeUsabilityDetails observation={step.usability}/>}</li>)}</ul></>}
             <div className="prototype-acceptance-actions">{(result?.status === "failed" || result?.status === "unknown") && <button onClick={() => fix(item)}>带证据回会话修正</button>}{!scopeChanged && report?.evidence.screenshots.filter(value => value.caseId === item.id).map(screenshot => <button key={screenshot.id} disabled={Boolean(imageBusy)} onClick={() => void showScreenshot(screenshot.id)}>{images[`${report.reportId}:${screenshot.id}`] ? "收起截图" : imageBusy === `${report.reportId}:${screenshot.id}` ? "读取截图…" : "查看截图"}</button>)}</div>
             {!scopeChanged && report?.evidence.screenshots.filter(value => value.caseId === item.id).map(screenshot => images[`${report.reportId}:${screenshot.id}`] && <figure className="prototype-acceptance-screenshot" key={screenshot.id}><img src={images[`${report.reportId}:${screenshot.id}`]} alt={`${item.title}实际执行截图`} /><figcaption>{item.title} · {screenshot.stepIndex === undefined ? "用例执行后" : `步骤 ${screenshot.stepIndex + 1}`} · {readableTime(report.evidence.finishedAt)}</figcaption></figure>)}
           </details>;

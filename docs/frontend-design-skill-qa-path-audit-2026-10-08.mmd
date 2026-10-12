@@ -1,0 +1,15 @@
+flowchart TD
+    A[授权发现技能元数据] --> B[load_skill完整正文与hash回执]
+    B --> C[Pi主会话获得制作方法]
+    P[默认或自定义presentation] --> C
+    W[prototype workflow原型建议] --> C
+    C --> D{是否保存新草稿}
+    D -- 本次未保存即中断 --> U[无新稿 / 不能认定视觉或DOM验收通过]
+    D -- 已保存 --> E[host render / 1440x900 body可见与无横溢]
+    E --> F[DOM具体断言 / 真实截图留存]
+    F --> G{确认支持视觉且实际read截图}
+    G -- unknown或未读 --> H[视觉未验证 / DOM通过不等于设计通过]
+    G -- 是 --> I[主Agent可视觉判断 / 当前无强制反馈闭环]
+    F --> J[静态文本DOM明确失败 / 最多两轮有限修正]
+    I -. 尚未实施的缺口 .-> K[绑定当前hash和视口的视觉反馈 / 修正后重看]
+    X[独立文本内容审查 / 无图无tools] --> J

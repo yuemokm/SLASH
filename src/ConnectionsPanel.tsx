@@ -1,10 +1,13 @@
+import {NetlifyPublishingControls} from './NetlifyPublishingControls';
 import { connectionDiscoveriesSchema } from "../shared/types";
 import { Icon } from "./Icon";
 import React, { useEffect, useRef, useState } from "react";
 import type { Connection, ConnectionDiscovery, Request } from "../shared/types";
+import {McpAuthControls,McpPresetPicker} from './McpConnectionControls';
+import {officialMcpPreset,mcpConnectionFields,type McpConnectionOptions} from '../shared/mcp-connections';
 
 type Call = (request: Request) => Promise<unknown>;
-type Draft = {
+type Draft = McpConnectionOptions & {
   id?: string;
   name: string;
   kind: "mcp" | "cli";
@@ -13,6 +16,7 @@ type Draft = {
   command: string;
   url: string;
   argsText: string;
+  mcpNetworkAllowedOriginsText?: string;
   enabled: boolean;
   source?: "manual" | "discovered";
   discoveryId?: string;
@@ -156,7 +160,8 @@ export function ConnectionsPanel({
       setFeedback({ kind: "error", text: "请填写服务商名称" });
       return;
     }
-    if (draft.kind === "mcp") {
+    if (draft.kind === "mcp" && !draft.mcpPublisher) {
+      if(draft.mcpPreset==='supabase')try{const selected=new URL(url);officialMcpPreset('supabase',{projectRef:selected.searchParams.get('project_ref')??undefined,readOnly:selected.searchParams.get('read_only')!=='false'});}catch(error){setFeedback({kind:'error',text:error instanceof Error?error.message:'项目范围无效'});return;}
       if (draft.transport === "http" && !url) {
         setFeedback({ kind: "error", text: "请填写 MCP 服务地址" });
         return;
@@ -185,9 +190,13 @@ export function ConnectionsPanel({
       }
       if (!Array.isArray(args) || args.some((item) => typeof item !== "string"))
         throw Error("高级参数必须是字符串数组");
+      if(draft.mcpPublisher){const checked=mcpConnectionFields.mcpPublisher.safeParse(draft.mcpPublisher);if(!checked.success)throw Error('请输入有效的 Netlify Site ID');}
       const existing = draft.id
         ? connections.find((item) => item.id === draft.id)
         : undefined;
+      const parsedOrigins=mcpConnectionFields.mcpNetworkAllowedOrigins.safeParse(draft.kind==='mcp'&&draft.transport==='http'&&!draft.mcpPreset?(draft.mcpNetworkAllowedOriginsText??'').split(/\r?\n/).map(value=>value.trim()).filter(Boolean):undefined);
+      if(!parsedOrigins.success)throw Error('公司内网登录地址最多 16 个，请每行填写一个完整 HTTPS 地址，不含路径、账号或参数。');
+      const origins=parsedOrigins.data;
       await call({
         type: "connection",
         connection: {
@@ -196,9 +205,10 @@ export function ConnectionsPanel({
           name,
           kind: draft.kind,
           provider: draft.provider || undefined,
-          command: draft.kind === "mcp" && draft.transport === "http" ? "" : command,
-          args,
-          url: draft.kind === "mcp" && draft.transport === "http" ? url : undefined,
+          command: draft.mcpPublisher ? "" : draft.kind === "mcp" && draft.transport === "http" ? "" : command,
+          args:draft.mcpPublisher?[]:args,
+          url: !draft.mcpPublisher&&draft.kind === "mcp" && draft.transport === "http" ? url : undefined,
+          ...({mcpPublisher:draft.mcpPublisher,mcpAuth:draft.kind==='mcp'&&draft.transport==='http'?draft.mcpAuth:undefined,mcpPreset:draft.kind==='mcp'&&draft.transport==='http'?draft.mcpPreset:undefined,mcpNetworkAllowedOrigins:origins?.length?origins:undefined} as McpConnectionOptions),
           enabled: draft.enabled,
           source: draft.source,
           discoveryId: draft.discoveryId,
@@ -224,6 +234,10 @@ export function ConnectionsPanel({
       provider: item.provider || "",
       command: item.command,
       url: item.url || "",
+      mcpPublisher:item.mcpPublisher,
+      mcpAuth:(item as Connection&McpConnectionOptions).mcpAuth,
+      mcpPreset:(item as Connection&McpConnectionOptions).mcpPreset,
+      mcpNetworkAllowedOriginsText:item.mcpNetworkAllowedOrigins?.join('\n')??'',
       argsText: JSON.stringify(item.args, null, 2),
       enabled: item.enabled,
       source: item.source,
@@ -327,10 +341,10 @@ export function ConnectionsPanel({
                 </span>
               </div>
               <small>
-                {item.url || item.command || "还没有配置地址"}
+                {item.mcpPublisher?`Netlify 站点 ${item.mcpPublisher.siteId}`:item.url || item.command || "还没有配置地址"}
                 {item.executableVersion ? ` · ${item.executableVersion}` : ""}
               </small>
-              <span className={`connection-health ${item.healthStatus || "unknown"}`}>
+              {!item.mcpPublisher && <span className={`connection-health ${item.healthStatus || "unknown"}`}>
                 {item.healthStatus === "healthy"
                   ? "能力可用"
                   : item.healthStatus === "degraded"
@@ -338,8 +352,8 @@ export function ConnectionsPanel({
                     : item.healthStatus === "failed"
                       ? "检查失败"
                       : "未检查"}
-              </span>
-              {item.lastCheckedAt && (
+              </span>}
+              {!item.mcpPublisher && item.lastCheckedAt && (
                 <small className="connection-checked">
                   最近检查：{new Date(item.lastCheckedAt).toLocaleString()}
                   {item.healthSummary ? ` · ${item.healthSummary}` : ""}
@@ -348,16 +362,15 @@ export function ConnectionsPanel({
               {item.diagnostic && (
                 <small className="diagnostic">{item.diagnostic}</small>
               )}
+              {item.mcpPublisher&&<NetlifyPublishingControls id={item.id} siteId={item.mcpPublisher.siteId} enabled={item.enabled} call={call} onNotice={notify} onError={onError}/>}
+              {item.kind==='mcp'&&item.url&&item.mcpAuth==='oauth'&&<McpAuthControls id={item.id} enabled={item.enabled} call={call} onNotice={notify} onError={onError}/>}
             </div>
             <div className="connection-actions">
-              <button
+              {!item.mcpPublisher && <button
                 disabled={busy === `test-${item.id}`}
                 onClick={() =>
                   void run(`test-${item.id}`, async () => {
-                    const result = await call({
-                      type: "testConnection",
-                      id: item.id,
-                    });
+                    const result = await call(item.mcpPublisher?{type:'mcpPublisherVerify',id:item.id,siteId:item.mcpPublisher.siteId}:{type:'testConnection',id:item.id});
                     setResults((value) => ({
                       ...value,
                       [item.id]: JSON.stringify(result),
@@ -368,7 +381,7 @@ export function ConnectionsPanel({
                 }
               >
                 测试
-              </button>
+              </button>}
               <button onClick={() => edit(item)}>编辑</button>
               <button
                 className="quiet danger-text"
@@ -514,18 +527,21 @@ export function ConnectionsPanel({
                 连接类型
                 <select
                   autoFocus
-                  value={draft.kind}
+                  value={draft.mcpPublisher?"netlify":draft.kind}
                   onChange={(event) =>
                     setDraft((value) => ({
                       ...value!,
-                      kind: event.target.value as "cli" | "mcp",
+                      kind:event.target.value==='netlify'?'mcp':event.target.value as "cli" | "mcp",
+                      mcpPublisher:event.target.value==='netlify'?{provider:'netlify',siteId:''}:undefined,
+                      argsText:'[]',provider:event.target.value==='netlify'?'netlify':'',
                       transport: "stdio",
                       url: "",
                       command: "",
+                      mcpAuth:undefined,mcpPreset:undefined,mcpNetworkAllowedOriginsText:'',
                     }))
                   }
                 >
-                  <option value="mcp">MCP 服务</option>
+                  <option value="mcp">MCP 服务</option><option value="netlify">Netlify 静态原型发布</option>
                   <option value="cli">官方 CLI</option>
                 </select>
               </label>
@@ -544,7 +560,7 @@ export function ConnectionsPanel({
                 />
               </label>
             </div>
-            {draft.kind === "cli" ? (
+            {draft.mcpPublisher ? (<label>Netlify Site ID<input required aria-label="Netlify Site ID" value={draft.mcpPublisher.siteId} onChange={event=>setDraft(value=>({...value!,mcpPublisher:{provider:'netlify',siteId:event.target.value.trim()}}))} placeholder="Netlify 站点设置中的 Site ID"/><small>仅发布到此站点的草稿地址。保存连接后填写 API 凭据并核对站点访问；不会登录或发布。</small></label>) : draft.kind === "cli" ? (
               <>
                 <label>
                   服务商
@@ -593,6 +609,7 @@ export function ConnectionsPanel({
               </>
             ) : (
               <>
+                <McpPresetPicker value={draft.mcpPreset} url={draft.url} onChange={value=>setDraft(current=>({...current!,...value,transport:'http',command:'',argsText:'[]',mcpNetworkAllowedOriginsText:''}))}/>
                 <label>
                   连接方式
                   <select
@@ -603,6 +620,7 @@ export function ConnectionsPanel({
                         transport: event.target.value as "http" | "stdio",
                         url: "",
                         command: "",
+                        mcpAuth:undefined,mcpPreset:undefined,mcpNetworkAllowedOriginsText:'',
                       }))
                     }
                   >
@@ -611,21 +629,23 @@ export function ConnectionsPanel({
                   </select>
                 </label>
                 {draft.transport === "http" ? (
-                  <label>
+                  <><label>
                     服务地址
                     <input
                       required
                       type="url"
                       value={draft.url}
+                      readOnly={!!draft.mcpPreset}
                       onChange={(event) =>
                         setDraft((value) => ({
                           ...value!,
                           url: event.target.value,
+                          mcpNetworkAllowedOriginsText:'',
                         }))
                       }
                       placeholder="https://…"
                     />
-                  </label>
+                  </label><label>登录方式<select value={draft.mcpAuth??'none'} disabled={!!draft.mcpPreset} onChange={event=>setDraft(current=>({...current!,mcpAuth:event.target.value as 'none'|'oauth'}))}><option value="none">匿名（无需登录）</option><option value="oauth">浏览器 OAuth 登录</option></select><small>保存后点击“网页登录”。测试不会自动打开浏览器。</small></label></>
                 ) : (
                   <label>
                     程序位置
@@ -662,8 +682,9 @@ export function ConnectionsPanel({
                 )}
               </>
             )}
-            <details className="advanced">
+            {!draft.mcpPublisher&&<details className="advanced">
               <summary>高级设置</summary>
+              {draft.kind==='mcp'&&draft.transport==='http'&&!draft.mcpPreset&&<label>允许的公司内网登录地址（可选）<textarea value={draft.mcpNetworkAllowedOriginsText??''} rows={3} onChange={event=>setDraft(value=>({...value!,mcpNetworkAllowedOriginsText:event.target.value}))} placeholder="https://login.company.example"/><small>每行一个 HTTPS 地址，仅允许此连接访问这些公司内网登录服务，最多 16 个。不包含路径；不支持本机和链路本地地址。更换服务地址会清空此范围。</small></label>}
               <label>
                 启动参数
                 <textarea
@@ -678,7 +699,7 @@ export function ConnectionsPanel({
                 />
                 <small>仅在服务文档明确要求时填写 JSON 字符串数组。</small>
               </label>
-            </details>
+            </details>}
             <label className="check">
               <input
                 type="checkbox"

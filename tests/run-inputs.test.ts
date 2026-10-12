@@ -20,7 +20,7 @@ function fixture(prepareUserInput:((text:string)=>Promise<string>)=async text=>t
 
 test('durable acceptance waits for a live native loop; mode routes to public Pi queue APIs and submission is not delivery',async()=>{
  const f=fixture(async text=>'prepared:'+text);const first=f.enqueue('补充','steer'),second=f.enqueue('之后核对','follow_up');assert.equal(first.status,'queued');assert.equal(f.records().length,2);
- await f.queue.flush();assert.equal(f.calls.length,0);f.queue.attach(f.runtime);await f.queue.flush();assert.equal(f.calls.length,0);f.stream();await f.queue.flush();
+ await f.queue.flush();assert.equal(f.calls.length,0);f.queue.attach(f.runtime);await f.queue.flush();assert.equal(f.calls.length,0);f.stream();await f.queue.flush();assert.equal(f.calls.length,1);assert.equal(f.records()[1].submittedAt,undefined);await f.queue.flushAtBoundary();
  assert.deepEqual(f.calls.map(call=>call.mode),['steer','follow_up']);assert.match(f.calls[0].text,/prepared:补充$/);assert.equal(f.records()[0].status,'queued');assert.equal(typeof f.records()[0].wireHash,'string');
  const delivered=f.queue.observeUserMessage(f.calls[0].text,100);assert.equal(delivered?.id,first.id);assert.equal(delivered?.status,'delivered');assert.equal(f.records()[0].nativeMessageTimestamp,100);assert.equal(f.records()[1].id,second.id);
 });
@@ -51,7 +51,7 @@ test('permissions are checked again after async preparation; revoked input never
 });
 
 test('clearing native pending entries cancels them while delivered entries remain delivered',async()=>{
- const f=fixture();f.queue.attach(f.runtime);f.stream();f.enqueue('已送达');f.enqueue('尚未送达','follow_up');await f.queue.flush();f.queue.observeUserMessage(f.calls[0].text,100);f.queue.clearQueued();
+ const f=fixture();f.queue.attach(f.runtime);f.stream();f.enqueue('已送达');f.enqueue('尚未送达','follow_up');await f.queue.flushAtBoundary();f.queue.observeUserMessage(f.calls[0].text,100);f.queue.clearQueued();
  assert.deepEqual(f.records().map(record=>record.status),['delivered','cancelled']);await f.queue.flush();assert.equal(f.calls.length,2);assert.deepEqual(f.pending,{steering:[],followUp:[]});
 });
 

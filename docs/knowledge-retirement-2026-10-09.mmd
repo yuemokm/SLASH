@@ -1,0 +1,13 @@
+flowchart TB
+  User[用户] --> Resource[资源]
+  Resource --> Collections[资料集合<br/>只保存引用清单]
+  Collections --> History[历史本机索引只读查看]
+  History --> Verify[原授权与来源版本检查]
+  Verify --> Local[(现有原件 / 索引 / 记录)]
+  User --> Chat[会话]
+  Chat --> Search[既有 search_files<br/>原文关键词 / 表格读取]
+  Search --> Gate[授权目录与来源核对]
+  Gate --> Local
+  Chat --> Memory[既有项目候选备忘]
+  LegacyRequest[旧云发布 / 向量请求] --> Reject[IPC Schema 拒绝<br/>不初始化服务 / 不调用网络]
+  Archived[历史网页源码与远端部署<br/>保留但退出产品范围]

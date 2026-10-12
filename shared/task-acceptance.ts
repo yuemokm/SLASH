@@ -1,7 +1,9 @@
+import {docxTextExtractionSchema} from './docx-read-identity.js';
 import {spreadsheetFieldEvidenceSchema} from './spreadsheet-field-evidence.js';
 import {z} from 'zod';
 import {prototypeAcceptanceCaseSchema,type PrototypeAcceptanceCase,type PrototypeAcceptanceEvidence} from './prototype-acceptance.js';
 import type {QualityReport,WorkflowSourceReceipt} from './types.js';
+import type {TaskPrdTemplate} from './prd-template.js';
 
 export const TASK_ACCEPTANCE_NOTICE='自动检查只证明已执行的具体检查；用户要求的完整业务覆盖、规则含义和视觉判断仍需核对。保存草稿不代表验收通过。';
 export const TASK_ACCEPTANCE_LIMITS={requests:100,requestCharacters:100000,totalRequestCharacters:500000,outputs:100,criteria:200,baselines:100,reports:50,contentBytes:2000000} as const;
@@ -24,7 +26,7 @@ export const taskCheckerSchema=z.discriminatedUnion('kind',[
 ]);
 // The model can propose test definitions, never a status, observation or evidence.
 export const taskCriterionSchema=z.object({id,text,requestIds:z.array(id).min(1).max(100),outputIds:z.array(id).min(1).max(100),origin:z.enum(['user_request','source_rule','template','model_proposal']).default('model_proposal'),required:z.boolean().default(true),checker:taskCheckerSchema}).strict();
-export const taskSourceReceiptSchema=z.object({mountId:id,path:relativePath,artifactId:id.optional(),versionId:id,contentHash:hash,locator:z.string().max(2000).optional(),readAt:z.string().datetime({offset:true}),characters:z.number().int().nonnegative(),includedCharacters:z.number().int().nonnegative(),truncated:z.boolean(),contentStatus:z.enum(['metadata_only','spreadsheet_catalog']).optional(),processingCopyId:id.optional(),size:z.number().int().nonnegative().optional(),spreadsheetEvidence:z.array(spreadsheetFieldEvidenceSchema).max(8).optional()}).strict();
+export const taskSourceReceiptSchema=z.object({textExtraction:docxTextExtractionSchema.optional(),mountId:id,path:relativePath,artifactId:id.optional(),versionId:id,contentHash:hash,locator:z.string().max(2000).optional(),readAt:z.string().datetime({offset:true}),characters:z.number().int().nonnegative(),includedCharacters:z.number().int().nonnegative(),truncated:z.boolean(),contentStatus:z.enum(['metadata_only','spreadsheet_catalog']).optional(),processingCopyId:id.optional(),size:z.number().int().nonnegative().optional(),spreadsheetEvidence:z.array(spreadsheetFieldEvidenceSchema).max(8).optional()}).strict();
 export const taskPrdEvidenceSchema=z.object({
  sources:z.array(taskSourceReceiptSchema).max(100).default([]),
  assumptions:z.array(z.object({id,text,sourceRefIds:z.array(id).max(100).default([])}).strict()).max(200).default([]),
@@ -33,12 +35,15 @@ export const taskPrdEvidenceSchema=z.object({
 export const taskAcceptanceDefineSchema=z.object({expectedRevision:z.number().int().positive().optional(),outputs:z.array(taskOutputSchema).max(TASK_ACCEPTANCE_LIMITS.outputs).optional(),criteria:z.array(taskCriterionSchema).max(TASK_ACCEPTANCE_LIMITS.criteria).optional(),prd:taskPrdEvidenceSchema.optional()}).strict();
 // Model proposals select host-issued source identities, never source hashes or
 // output content. Ordinary draft outputs are automatically registered by host.
-export const taskAcceptanceProposalSchema=z.object({expectedRevision:z.number().int().positive().optional(),targets:z.array(z.object({id,kind:z.enum(['markdown','html','flow','other']),mountId:id,path:relativePath}).strict()).max(100).optional(),criteria:z.array(taskCriterionSchema).max(200).optional(),prd:taskPrdEvidenceSchema.omit({sources:true}).safeExtend({sourceIds:z.array(id).max(100).default([])}).optional()}).strict();
+export const taskAcceptanceProposalSchema=z.object({expectedRevision:z.number().int().positive().optional(),templateOutputId:id.optional(),targets:z.array(z.object({id,kind:z.enum(['markdown','html','flow','other']),mountId:id,path:relativePath}).strict()).max(100).optional(),criteria:z.array(taskCriterionSchema).max(200).optional(),prd:taskPrdEvidenceSchema.omit({sources:true}).safeExtend({sourceIds:z.array(id).max(100).default([])}).optional()}).strict();
 export const taskBaselineInputSchema=z.object({id,outputId:id,target:taskTargetSchema,origin:z.enum(['user_confirmed','previous_verified']),cases:z.array(prototypeAcceptanceCaseSchema).min(1).max(10),specId:id.optional(),specRevision:z.number().int().nonnegative().optional(),specHash:hash.optional()}).strict().refine(v=>new Set(v.cases.map(c=>c.id)).size===v.cases.length,'基线用例ID须唯一');
 /** Host-only amendment. A matching quote is necessary but the service must also
  * establish that the human actually authorized this expectation change. */
 export const taskCriterionAmendmentSchema=z.object({requestId:id,authorizationQuote:text,criterionId:id,replacement:taskCriterionSchema}).strict();
 export const taskBaselineAmendmentSchema=z.object({requestId:id,authorizationQuote:text,baselineId:id,cases:z.array(prototypeAcceptanceCaseSchema).min(1).max(10)}).strict().refine(v=>new Set(v.cases.map(c=>c.id)).size===v.cases.length,'基线用例ID须唯一');
+/** Explicit desktop scope declaration for host-frozen original optional candidates. */
+export const taskAcceptanceOptionalSchema=z.object({runId:id,expectedContractHash:hash,criterionIds:z.array(id).min(1).max(200),note:text}).strict().refine(value=>new Set(value.criterionIds).size===value.criterionIds.length,'检查ID须唯一');
+export type TaskAcceptanceOptionalInput=z.infer<typeof taskAcceptanceOptionalSchema>;
 
 export type TaskAcceptanceStatus='not_applicable'|'unverified'|'passed'|'failed'|'needs_human';
 export type TaskRequestInput=z.infer<typeof taskRequestInputSchema>;
@@ -50,14 +55,14 @@ export type TaskAcceptanceDefine=z.infer<typeof taskAcceptanceDefineSchema>;
 export type TaskPrdEvidence=z.infer<typeof taskPrdEvidenceSchema>;
 export type TaskAcceptanceBaseline=z.infer<typeof taskBaselineInputSchema>&{specHash:string;capturedAt:string};
 export type TaskDependency={mountId:string;path:string;contentHash:string};
-export type TaskCriterionAmendment=z.infer<typeof taskCriterionAmendmentSchema>&{previous:TaskAcceptanceCriterion;recordedAt:string};
-export type TaskAcceptanceContract={schemaVersion:1;id:string;workspaceId:string;runId:string;revision:number;contractHash:string;scope:'conversation'|'deliverable';requests:TaskAcceptanceRequest[];outputs:TaskAcceptanceOutput[];criteria:TaskAcceptanceCriterion[];criterionAmendments:TaskCriterionAmendment[];baseline:TaskAcceptanceBaseline[];baselineAmendments:Array<z.infer<typeof taskBaselineAmendmentSchema>&{previous:TaskAcceptanceBaseline;recordedAt:string}>;prd:TaskPrdEvidence;createdAt:string;updatedAt:string};
-export type TaskCheckEvidence={kind:'static_quality'|'text_observation'|'prototype_report'|'business_check'|'human_decision'|'model_content_review';targetHash:string;checkerVersion:string;observed?:string|number|boolean;reportId?:string;quality?:QualityReport;prototype?:PrototypeAcceptanceEvidence;locator?:string;contentFinding?:import('./content-review.js').ContentReviewVerifiedFinding};
+export type TaskCriterionAmendment=z.infer<typeof taskCriterionAmendmentSchema>&{previous:TaskAcceptanceCriterion;recordedAt:string;authority?:'desktop_user'};
+export type TaskAcceptanceContract={schemaVersion:1;id:string;workspaceId:string;runId:string;revision:number;contractHash:string;scope:'conversation'|'deliverable';requests:TaskAcceptanceRequest[];outputs:TaskAcceptanceOutput[];criteria:TaskAcceptanceCriterion[];criterionAmendments:TaskCriterionAmendment[];baseline:TaskAcceptanceBaseline[];baselineAmendments:Array<z.infer<typeof taskBaselineAmendmentSchema>&{previous:TaskAcceptanceBaseline;recordedAt:string}>;prd:TaskPrdEvidence;template?:TaskPrdTemplate;createdAt:string;updatedAt:string};
+export type TaskCheckEvidence={kind:'static_quality'|'text_observation'|'prototype_report'|'business_check'|'human_decision'|'model_content_review'|'model_visual_review';targetHash:string;checkerVersion:string;observed?:string|number|boolean;reportId?:string;quality?:QualityReport;prototype?:PrototypeAcceptanceEvidence;locator?:string;contentFinding?:import('./content-review.js').ContentReviewVerifiedFinding;visualFinding?:import('./prototype-visual-review.js').VisualReviewFinding};
 export type TaskHostCheckOutcome={status:Exclude<TaskAcceptanceStatus,'not_applicable'>;reason:string;evidence:TaskCheckEvidence[]};
 export type TaskCheckResult=TaskHostCheckOutcome&{criterionId:string;outputId:string;required:boolean;baselineId?:string};
 export type TaskCoverageState={status:'unverified'|'needs_human'|'confirmed';reason:string;unmappedRequestIds:string[];assumptionIds:string[]};
-export type TaskAcceptanceReport={schemaVersion:1;id:string;workspaceId:string;runId:string;contractId:string;contractRevision:number;contractHash:string;status:TaskAcceptanceStatus;automaticStatus?:TaskAcceptanceStatus;contentReview?:import('./content-review.js').ContentReviewReceipt;contentReviewRequired?:boolean;contentReviewNotice?:string;summary:string;checkedAt:string;checkerVersion:string;targets:TaskAcceptanceOutput[];dependencies:TaskDependency[];outputDependencies:Record<string,TaskDependency[]>;sources:WorkflowSourceReceipt[];results:TaskCheckResult[];regression:TaskCheckResult[];businessCoverage:TaskCoverageState;versionState:'current'|'stale'|'unavailable';versionReasons:string[];notice:string};
-export type TaskAcceptanceView={contract:TaskAcceptanceContract;latestReport?:TaskAcceptanceReport;reports:Array<{id:string;status:TaskAcceptanceStatus;checkedAt:string}>;notice:string};
+export type TaskAcceptanceReport={schemaVersion:1;id:string;workspaceId:string;runId:string;contractId:string;contractRevision:number;contractHash:string;status:TaskAcceptanceStatus;automaticStatus?:TaskAcceptanceStatus;contentReview?:import('./content-review.js').ContentReviewReceipt;visualReview?:import('./prototype-visual-review.js').VisualReviewReceipt;visualReviewRequired?:boolean;visualReviewNotice?:string;contentReviewRequired?:boolean;contentReviewNotice?:string;summary:string;checkedAt:string;checkerVersion:string;targets:TaskAcceptanceOutput[];dependencies:TaskDependency[];outputDependencies:Record<string,TaskDependency[]>;sources:WorkflowSourceReceipt[];results:TaskCheckResult[];regression:TaskCheckResult[];businessCoverage:TaskCoverageState;versionState:'current'|'stale'|'unavailable';versionReasons:string[];notice:string};
+export type TaskAcceptanceView={contract:TaskAcceptanceContract;latestReport?:TaskAcceptanceReport;reports:Array<{id:string;status:TaskAcceptanceStatus;checkedAt:string}>;optionalScope?:{candidateCriterionIds:string[];declaredCriterionIds:string[]};notice:string};
 export type TaskHostCheckInput={contract:TaskAcceptanceContract;criterion:TaskAcceptanceCriterion;output:TaskAcceptanceOutput;content:string;dependencies:TaskDependency[];baseline?:TaskAcceptanceBaseline;signal?:AbortSignal};
 export type TaskTargetSnapshot={content:string;dependencies?:TaskDependency[]};
 export type TaskPrototypeCases=PrototypeAcceptanceCase[];

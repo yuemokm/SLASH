@@ -84,7 +84,7 @@ export class ModelSettings {
   for(const model of this.state.get().models??[]){const values=groups.get(model.provider)??[];values.push({...model});groups.set(model.provider,values);}
   return[...groups.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([provider,models])=>({provider,models:models.sort((a,b)=>a.name.localeCompare(b.name))}));
  }
- upsert(input:{id?:string;provider:string;name:string;baseUrl:string;modelId:string;protocol?:ModelProtocol;supportsVision?:boolean;contextWindow?:number|null;maxTokens?:number|null},key?:string){
+ upsert(input:{id?:string;provider:string;name:string;baseUrl:string;proxyUrl?:string|null;modelId:string;protocol?:ModelProtocol;supportsVision?:boolean;contextWindow?:number|null;maxTokens?:number|null},key?:string){
   const state=this.state.get(),models=state.models??[];
   const existing=input.id?models.find(item=>item.id===input.id):undefined;
   if(input.id&&!existing)throw Error('VALIDATION_FAILED: 模型条目不存在');
@@ -95,7 +95,7 @@ export class ModelSettings {
   const maxTokens=input.maxTokens===null?undefined:input.maxTokens??(sameIdentity?existing.maxTokens:undefined);
   // Complete validation precedes credential mutations, so a rejected limit
   // never changes an existing model's secret or saved configuration.
-  const validated=modelEntrySchema.parse({id,provider:input.provider,name:input.name,baseUrl:normalizedUrl(input.baseUrl),modelId:input.modelId,protocol,supportsVision:input.supportsVision,contextWindow,maxTokens,hasKey:false});
+  const validated=modelEntrySchema.parse({id,provider:input.provider,name:input.name,baseUrl:normalizedUrl(input.baseUrl),proxyUrl:input.proxyUrl===null?undefined:input.proxyUrl??existing?.proxyUrl,modelId:input.modelId,protocol,supportsVision:input.supportsVision,contextWindow,maxTokens,hasKey:false});
   const limitsInput={entryId:id,baseUrl:validated.baseUrl,id:validated.modelId,protocol:validated.protocol,contextWindow,maxTokens};
   const fingerprint=thinkingFingerprint(limitsInput);
   const snapshot=this.store.get<{resolution?:{capability?:{fingerprint?:string};metadataLimits?:ModelLimitMetadata}}|undefined>(`model-thinking:v1:${fingerprint}`,undefined);

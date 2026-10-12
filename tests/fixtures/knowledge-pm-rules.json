@@ -1,0 +1,13 @@
+{
+  "description": "合成PM歧义评测资料；本机固定向量只验证协议、分块与来源绑定，不代表云端语义效果。可在配置真实embedding后复用问题和预期。",
+  "filename": "字段规则.md",
+  "text": "| 字段 | 规则 |\n| --- | --- |\n| 定位地址 | 只读，禁止修改 |\n| 图商地址 | 可编辑，支持手工修正 |\n\n| 阶段 | 规则 |\n| --- | --- |\n| F首次录入 | 首次登记 |\n| P后续变更 | 更新已登记记录 |\n\n空值表示未知，不等于否。",
+  "cases": [
+    {"question":"定位地址能修改吗","includes":"只读","excludes":"图商地址"},
+    {"question":"图商地址能编辑吗","includes":"可编辑","excludes":"定位地址"},
+    {"question":"F首次录入是什么","includes":"首次登记","excludes":"P后续变更"},
+    {"question":"P后续变更是什么","includes":"更新已登记记录","excludes":"F首次录入"},
+    {"question":"空值就是否吗","includes":"不等于否","excludes":"可编辑"}
+  ],
+  "noEvidenceQuestion":"火星气候"
+}

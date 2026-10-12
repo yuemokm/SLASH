@@ -21,6 +21,7 @@ set "devExitCode=%errorlevel%"
 if not "%devExitCode%"=="0" (
     echo.
     echo npm run dev exited with code %devExitCode%.
+    echo Startup diagnostics: "%CD%\dev-startup.log"
     pause
 )
 exit /b %devExitCode%

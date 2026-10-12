@@ -1,0 +1,18 @@
+[
+  {
+    "text": "这是 Slash，一个给产品经理用的桌面 Agent。",
+    "startMs": 400,
+    "endMs": 4546,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "给它参考资料，就可以让它帮你整理需求、写需求文档，或者改原型。",
+    "startMs": 4746,
+    "endMs": 11065,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  }
+]

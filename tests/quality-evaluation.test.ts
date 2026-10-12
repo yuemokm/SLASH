@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {DatabaseSync} from 'node:sqlite';
 import {BUSINESS_BENCHMARK_CASES,evaluateBenchmark,type BenchmarkObservation} from '../shared/quality-evaluation.js';
-import {auditEvaluationModels, evaluationHash, insideEvaluationRoot, recordBenchmarkReview} from '../main/quality-evaluation.js';
+import {auditEvaluationModels, evaluationHash, insideEvaluationRoot, recordBenchmarkReview,selectEvaluationModel,assertEvaluationModelRoute} from '../main/quality-evaluation.js';
 
 test('16 business benchmark cases retain independent expectations and unknown unmeasured metrics',()=>{
  assert.equal(BUSINESS_BENCHMARK_CASES.length,16);
@@ -17,6 +17,18 @@ test('16 business benchmark cases retain independent expectations and unknown un
   item.checks.forEach(check=>{if(check.basis==='verified_source')assert.ok(check.sourceIds.length&&check.locator);});
  }
  assert.equal(BUSINESS_BENCHMARK_CASES.find(item=>item.id==='QE16')?.prompts.length,3);
+});
+test('all benchmark cases preserve the public model proxy route and reject changed IPC routes',()=>{
+ const source={id:'astra-fixture',provider:'wangshu',name:'fixture',baseUrl:'https://model.invalid/v1',proxyUrl:'http://127.0.0.1:7897',modelId:'gpt-6-astra',protocol:'openai-responses',hasKey:true,supportsVision:false,contextWindow:65536,maxTokens:12000,apiKey:'NEVER_COPY',history:['NEVER_COPY'],credentials:{key:'NEVER_COPY'}};
+ for(const _case of BUSINESS_BENCHMARK_CASES){
+  const isolated=selectEvaluationModel(source);assert.equal(isolated.proxyUrl,source.proxyUrl);assert.doesNotMatch(JSON.stringify(isolated),/NEVER_COPY|apiKey|credentials|history/);assertEvaluationModelRoute(isolated,structuredClone(isolated));
+  for(const key of ['id','provider','modelId','protocol','baseUrl','proxyUrl'])assert.throws(()=>assertEvaluationModelRoute(isolated,{...isolated,[key]:'changed'}),/EVALUATION_LIVE_MODEL_MISMATCH/);
+  assert.throws(()=>assertEvaluationModelRoute(isolated,{...isolated,proxyUrl:undefined}),/EVALUATION_LIVE_MODEL_MISMATCH/);
+  assert.throws(()=>assertEvaluationModelRoute(isolated,{...isolated,hasKey:false}),/EVALUATION_LIVE_MODEL_MISMATCH/);
+ }
+ const direct=selectEvaluationModel({...source,proxyUrl:undefined});assert.equal('proxyUrl'in direct,false);assertEvaluationModelRoute(direct,{...direct});
+ assert.throws(()=>assertEvaluationModelRoute(direct,{...direct,proxyUrl:source.proxyUrl}),/EVALUATION_LIVE_MODEL_MISMATCH/);
+ assert.throws(()=>assertEvaluationModelRoute(direct),/EVALUATION_LIVE_MODEL_MISMATCH/);
 });
 test('business self-report or wrong evidence cannot create a pass',()=>{
  const c=BUSINESS_BENCHMARK_CASES[0];

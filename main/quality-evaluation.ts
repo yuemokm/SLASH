@@ -4,8 +4,9 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
 import {extractOfficeText} from './office-extraction.js';
-import {BUSINESS_BENCHMARK_CASES, evaluateBenchmark, type BenchmarkObservation} from '../shared/quality-evaluation.js';
+import {BUSINESS_BENCHMARK_CASES, BUSINESS_BENCHMARK_BASE_PROMPT, evaluateBenchmark, type BenchmarkObservation} from '../shared/quality-evaluation.js';
 import {requestSchema} from '../shared/types.js';
+import {freezeProductionInitialStage,initialBenchmarkCase} from './production-agent-initial-stage.js';
 
 export async function evaluationHash(file: string): Promise<string> {
   const hash = createHash('sha256');
@@ -45,6 +46,15 @@ export function auditEvaluationModels(database: string) {
       FROM kv,json_each(json_extract(kv.value,'$.models')) m WHERE kv.key='state'`).all();
   } finally {db.close();}
 }
+/** Same public projection used to seed every isolated benchmark profile; never copy credentials/history. */
+export function selectEvaluationModel(source: Record<string,unknown>): Record<string,unknown> {
+  const keys=['id','provider','name','baseUrl','proxyUrl','modelId','protocol','hasKey','supportsVision','contextWindow','maxTokens','createdAt','updatedAt'];
+  return Object.fromEntries(keys.filter(key=>source[key]!==undefined).map(key=>[key,source[key]]));
+}
+/** Check the public IPC state before sending: isolation must preserve the selected provider and route. */
+export function assertEvaluationModelRoute(expected: Record<string,unknown>, actual?: Record<string,unknown>): void {
+  if(actual?.hasKey!==true||['id','provider','modelId','protocol','baseUrl','proxyUrl'].some(key=>actual[key]!==expected[key]))throw Error('EVALUATION_LIVE_MODEL_MISMATCH');
+}
 const sourceSpecs = [
   {id:'flow', relativePath:'新增终端流程v2.0.docx'},
   {id:'policy', relativePath:'门店运营管理制度-V4.docx'},
@@ -65,7 +75,7 @@ export async function snapshotEvaluationSourceVersions(repo: string): Promise<Re
   for(const item of await fs.readdir(repo,{withFileTypes:true}))if(item.isFile()&&/^(?:package(?:-lock)?\.json|tsconfig.*\.json|vite\.config\..*|index\.html)$/.test(item.name))versions[item.name]=await evaluationHash(path.join(repo,item.name));
   return Object.fromEntries(Object.entries(versions).sort(([a],[b])=>a.localeCompare(b)));
 }
-export async function prepareBusinessBenchmark(repo: string, sourceRoot: string, modelDatabase?: string) {
+export async function prepareBusinessBenchmark(repo: string, sourceRoot: string, modelDatabase?: string,options:{prototypeChecks?:boolean}={}) {
   repo = path.resolve(repo); sourceRoot = await fs.realpath(sourceRoot);
   const testRoot = path.join(repo,'.test-data'); await fs.mkdir(testRoot,{recursive:true});
   if ((await fs.lstat(testRoot)).isSymbolicLink()) throw Error('EVALUATION_SYMLINK_FORBIDDEN');
@@ -129,13 +139,14 @@ export async function prepareBusinessBenchmark(repo: string, sourceRoot: string,
         } catch(error) {if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
       }
     } catch(error) {if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error;}
-    const cases = BUSINESS_BENCHMARK_CASES.map(testCase=>({...testCase,promptSha256:testCase.prompts.map(shaText),expectationSha256:shaText(JSON.stringify(testCase.checks))}));
+    const cases = BUSINESS_BENCHMARK_CASES.map(testCase=>{const initialExecutionProfile=options.prototypeChecks&&testCase.prompts[0].startsWith(BUSINESS_BENCHMARK_BASE_PROMPT)?'prototype-checks' as const:'base' as const;return{...testCase,initialExecutionProfile,promptSha256:testCase.prompts.map(shaText),expectationSha256:shaText(JSON.stringify(testCase.checks)),initialStage:freezeProductionInitialStage(testCase,initialExecutionProfile)};});
     const dummy='00000000-0000-4000-8000-000000000000';
     const ipcExamples=[{type:'state'},{type:'workspace',path:path.join(output,'workspace')},{type:'mount',path:texts,write:false},{type:'conversation',title:'质量基准'},
       {type:'send',id:dummy,text:'离线schema样例，不执行',mode:'build',permissionMode:'full_access',modelEntryId:'sample-model',taskType:'research',workflow:{kind:'research',sources:sources.map(source=>({mountId:dummy,path:path.basename(source.textPath),contentHash:source.textSha256,locator:source.name}))}},
       {type:'pendingApprovals',conversationId:dummy},{type:'cancel',id:dummy},{type:'apply',id:dummy},{type:'versions',mountId:dummy,path:'QE05/PRD.md'}];
     ipcExamples.forEach(example=>requestSchema.parse(example));
-    const manifest = {schemaVersion:1,createdAt:new Date().toISOString(),output,originals,texts,sourceRoot,sources,factChecks,
+    const sourcePreparation={strategy:'official_registered_xlsx_v1' as const,helperSha256:await evaluationHash(path.join(repo,'scripts','quality-evaluation-source-preparation.mjs'))};
+    const manifest = {schemaVersion:2,identityProfile:'observed-wire-v1' as const,createdAt:new Date().toISOString(),output,originals,texts,sourceRoot,sources,factChecks,sourcePreparation,
       preflight:factChecks.every(check=>check.passed)?'passed':'failed_source_expectation_mismatch',cloudExecuted:false,
       sourceCategory:'real_user_reference_documents',cases,versions,sourceVersions,runtimeVersions,skillVersions,skillFiles,
       ipcSchemaPreflight:{passed:true,types:ipcExamples.map(example=>example.type),executed:false},
@@ -157,8 +168,9 @@ export async function prepareBusinessBenchmark(repo: string, sourceRoot: string,
   }
 }
 
-export async function recordBenchmarkReview(testDir: string, caseId: string, observations: BenchmarkObservation[], artifacts: Array<{path:string;sha256:string}>) {
-  const testCase = BUSINESS_BENCHMARK_CASES.find(item=>item.id===caseId);if(!testCase)throw Error('EVALUATION_CASE_UNKNOWN');
+export async function recordBenchmarkReview(testDir: string, caseId: string, observations: BenchmarkObservation[], artifacts: Array<{path:string;sha256:string}>, stage:'final'|'initial'='final') {
+  let testCase = BUSINESS_BENCHMARK_CASES.find(item=>item.id===caseId);if(!testCase)throw Error('EVALUATION_CASE_UNKNOWN');
+  if(stage==='initial')testCase=initialBenchmarkCase(JSON.parse(await fs.readFile(await requireEvaluationPath(testDir,path.join(testDir,'manifest.json')),'utf8')),testCase);
   for(const artifact of artifacts) {
     const actual = await requireEvaluationPath(testDir,artifact.path);
     if(await evaluationHash(actual)!==artifact.sha256)throw Error('EVALUATION_ARTIFACT_CHANGED');

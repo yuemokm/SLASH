@@ -16,8 +16,9 @@ export type ReferencePickerProps = {
   mounts: MountSummary[];
   projectEntries?: ProjectEntrySummary[];
   selected: FileRef[];
+  template?: FileRef;
   onClose: () => void;
-  onConfirm: (files: FileRef[]) => void;
+  onConfirm: (files: FileRef[], template?: FileRef) => void;
 };
 
 type PickerItem = FileRef & {
@@ -36,12 +37,14 @@ export function ReferencePicker({
   mounts,
   projectEntries = [],
   selected,
+  template,
   onClose,
   onConfirm,
 }: ReferencePickerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
-  const [draft, setDraft] = useState<Set<string>>(new Set());
+  const [draft, setDraft] = useState<Set<string>>(() => new Set(selected.map(keyOf)));
+  const [templateDraft, setTemplateDraft] = useState<FileRef | undefined>(template);
 
   const items = useMemo<PickerItem[]>(() => {
     const mountNames = new Map(mounts.map((mount) => [mount.id, mount.name]));
@@ -79,7 +82,8 @@ export function ReferencePicker({
     if (!open) return;
     setQuery("");
     setDraft(new Set(selected.map(keyOf)));
-  }, [open, selected]);
+    setTemplateDraft(template);
+  }, [open, selected, template]);
 
   useEffect(() => {
     if (!open) return;
@@ -104,6 +108,7 @@ export function ReferencePicker({
   if (!open) return null;
 
   const toggle = (item: PickerItem) => {
+    if (templateDraft && keyOf(templateDraft) === item.key) setTemplateDraft(undefined);
     setDraft((current) => {
       const next = new Set(current);
       if (next.has(item.key)) next.delete(item.key);
@@ -114,7 +119,7 @@ export function ReferencePicker({
 
   const confirm = () => {
     const chosen = items.filter((item) => draft.has(item.key));
-    onConfirm(chosen.map(({ mountId, path, size }) => ({ mountId, path, size })));
+    onConfirm(chosen.map(({ mountId, path, size }) => ({ mountId, path, size })), templateDraft);
   };
 
   return (
@@ -128,7 +133,7 @@ export function ReferencePicker({
       <div className="reference-picker-head">
         <div>
           <b>选择引用资料</b>
-          <small>仅显示当前已授权目录中的文件</small>
+          <small>可多选参考资料；Word / Markdown 可单独用作 PRD 模板</small>
         </div>
         <button type="button" className="reference-picker-close" aria-label="关闭引用资料选择器" onClick={onClose}><Icon name="close" size={16}/></button>
       </div>
@@ -141,31 +146,37 @@ export function ReferencePicker({
           placeholder="搜索文件名、路径或目录"
         />
       </div>
-      <div className="reference-picker-list" role="listbox" aria-multiselectable="true">
+      <div className="reference-picker-list" role="list" aria-label="可引用的已授权文件">
         {filteredItems.length ? filteredItems.map((item) => {
           const checked = draft.has(item.key);
+          const isTemplate = Boolean(templateDraft && keyOf(templateDraft) === item.key);
           return (
-            <button
-              key={item.key}
-              type="button"
-              role="option"
-              aria-selected={checked}
-              className={`reference-picker-item ${checked ? "selected" : ""}`}
-              onClick={() => toggle(item)}
-            >
-              <span className="reference-picker-check" aria-hidden="true">{checked ? <Icon name="check" size={13}/> : null}</span>
+            <div key={item.key} role="listitem" className="reference-picker-row">
+            <label className={`reference-picker-item ${checked ? "selected" : ""}`}>
+              <input type="checkbox" checked={checked} aria-label={`引用资料 ${item.label}`} onChange={() => toggle(item)}/>
               <span className="reference-picker-item-copy">
                 <b>{item.label}</b>
                 <small>{item.mountName} · {item.path}{item.kind ? ` · ${item.kind === "artifact" ? "成果" : "资源"}` : ""}</small>
               </span>
-            </button>
+            </label>
+            {/\.(?:docx|md|markdown)$/i.test(item.path) && <button
+              type="button"
+              className={`reference-template-action ${isTemplate ? "selected" : ""}`}
+              aria-label={`${isTemplate ? "取消 PRD 模板" : "用作 PRD 模板"} ${item.label}`}
+              aria-pressed={isTemplate}
+              onClick={() => {
+                setTemplateDraft(isTemplate ? undefined : { mountId: item.mountId, path: item.path, size: item.size });
+                if (!isTemplate) setDraft(current => { const next = new Set(current); next.delete(item.key); return next; });
+              }}
+            >{isTemplate ? "已选模板" : "用作 PRD 模板"}</button>}
+            </div>
           );
         }) : (
           <p className="reference-picker-empty">没有找到可引用的文件</p>
         )}
       </div>
       <div className="reference-picker-foot">
-        <span>{draft.size ? `已选 ${draft.size} 项` : "未选择资料"}</span>
+        <span>{draft.size ? `已选 ${draft.size} 份参考` : "未选择参考"}{templateDraft ? " · 1 份 PRD 模板" : ""}</span>
         <div>
           <button type="button" onClick={onClose}>取消</button>
           <button type="button" className="primary" onClick={confirm}>确认引用</button>

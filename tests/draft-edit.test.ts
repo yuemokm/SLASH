@@ -24,8 +24,36 @@ test('native Pi edit preserves BOM/CRLF and two edits reuse the same pending car
  assert.equal(first.changeId,second.changeId);assert.equal(f.changes.length,1);assert.equal(f.changes[0].before,base);assert.equal(f.changes[0].content,'\uFEFFone\r\ntwo\r\ngamma\r\n');assert.match(second.diff,/two/);assert.equal(await fs.readFile(path.join(f.dir,'index.html'),'utf8'),'\uFEFFalpha\r\nbeta\r\ngamma\r\n');
 });
 test('native Pi rejects duplicate, missing and overlapping matches without any pending draft',async t=>{
- const f=await fixture(t,'same\nsame\n');await assert.rejects(f.edit('same','new'));await assert.rejects(f.edit('absent','new'));
- await assert.rejects(f.domain.edit('run',{...f.target,expectedContentHash:hash('same\nsame\n'),edits:[{oldText:'same\nsame',newText:'a'},{oldText:'same\nsame\n',newText:'b'}]}));assert.equal(f.changes.length,0);
+ const f=await fixture(t,'same\nsame\n');await assert.rejects(f.edit('same','new'),/DRAFT_MATCH_AMBIGUOUS/);await assert.rejects(f.edit('absent','new'),/DRAFT_MATCH_NOT_FOUND/);
+ await assert.rejects(f.domain.edit('run',{...f.target,expectedContentHash:hash('same\nsame\n'),edits:[{oldText:'same\nsame\n',newText:'whole'},{oldText:'same',newText:'second'}]}),error=>{
+  assert.ok(error instanceof Error);assert.ok(error.message.startsWith('DRAFT_MATCH_AMBIGUOUS: '));const details=JSON.parse(error.message.slice('DRAFT_MATCH_AMBIGUOUS: '.length));assert.equal(details.failedEditIndex,1);assert.equal(details.failedEditNumber,2);assert.doesNotMatch(error.message,/\.slash-edit-/);return true;
+ });
+ await assert.rejects(f.domain.edit('run',{...f.target,expectedContentHash:hash('same\nsame\n'),edits:[{oldText:'same\nsame',newText:'a'},{oldText:'same\nsame\n',newText:'b'}]}),/overlap/);assert.equal(f.changes.length,0);
+});
+
+test('21-edit missing g-name attribute at index 7 reports bounded recovery without partial draft or source disclosure',async t=>{
+ const blocks=Array.from({length:21},(_,index)=>index===7?'<div class="field" id="g-name"><label>姓名</label><input value="private-original-name"></div>':`<p id="field-${index}">original-${index}</p>`),content=blocks.join('\n');
+ const f=await fixture(t,content),edits=blocks.map((block,index)=>({oldText:index===7?block.replace(' id="g-name"',''):block,newText:index===7?'<div class="field"><label>姓名</label><input value="private-new-name"></div>':`<p id="field-${index}">updated-${index}</p>`}));
+ assert.equal(edits.filter(edit=>content.includes(edit.oldText)).length,20);
+ let recovery:{mountId:string;path:string;failedEditIndex:number;failedEditNumber:number;totalEdits:number;contentHash:string;changeId?:string;position:string;readDraft:{mountId:string;path:string;offset:number;limit:number}}|undefined;
+ await assert.rejects(f.domain.edit('run',{...f.target,expectedContentHash:hash(content),edits}),error=>{
+  assert.ok(error instanceof Error);assert.ok(error.message.startsWith('DRAFT_MATCH_NOT_FOUND: '));
+  recovery=JSON.parse(error.message.slice('DRAFT_MATCH_NOT_FOUND: '.length));
+  assert.equal(recovery!.mountId,'out');assert.equal(recovery!.path,'index.html');assert.equal(recovery!.failedEditIndex,7);assert.equal(recovery!.failedEditNumber,8);assert.equal(recovery!.totalEdits,21);assert.equal(recovery!.contentHash,hash(content));assert.equal(recovery!.changeId,undefined);assert.equal(recovery!.position,'unknown');
+  assert.deepEqual(recovery!.readDraft,{...f.target,offset:0,limit:8000});assert.doesNotMatch(error.message,/\.slash-edit-|private-original-name|private-new-name|<div|original-0/);assert.ok(!error.message.includes(f.dir));return true;
+ });
+ assert.equal(f.changes.length,0);assert.equal(await fs.readFile(path.join(f.dir,'index.html'),'utf8'),content);
+ const reread=await f.domain.read('run',recovery!.readDraft);
+ await f.domain.edit('run',{...f.target,expectedContentHash:reread.contentHash,oldText:blocks[7],newText:blocks[7].replace('private-original-name','corrected-name')});
+ assert.equal(f.changes.length,1);assert.match(f.changes[0].content,/id="g-name"/);assert.match(f.changes[0].content,/corrected-name/);assert.match(f.changes[0].content,/original-0/);assert.equal(await fs.readFile(path.join(f.dir,'index.html'),'utf8'),content);
+});
+
+test('matching recovery includes the current pending card and preserves it unchanged',async t=>{
+ const f=await fixture(t);const receipt=await f.edit('alpha','one'),before={...f.changes[0]};
+ await assert.rejects(f.edit('missing-private-source','private-new-source'),error=>{
+  assert.ok(error instanceof Error);const details=JSON.parse(error.message.slice('DRAFT_MATCH_NOT_FOUND: '.length));assert.equal(details.changeId,receipt.changeId);assert.equal(details.contentHash,receipt.contentHash);assert.equal(details.failedEditIndex,0);assert.equal(details.failedEditNumber,1);assert.doesNotMatch(error.message,/missing-private-source|private-new-source|\.slash-edit-/);return true;
+ });
+ assert.deepEqual(f.changes,[before]);
 });
 test('Pi native normalization matches curly quotes and whitespace, returns actual diff',async t=>{
  const f=await fixture(t,'<p>“hello”</p>   \n');const result=await f.edit('<p>"hello"</p>','<p>changed</p>');assert.equal(f.changes[0].content,'<p>changed</p>\n');assert.match(result.diff,/changed/);
@@ -66,6 +94,14 @@ test('cancellation, original update and grant revocation after native staging le
   const f=await fixture(t);const original=f.files.resolve.bind(f.files);let count=0;
   f.files.resolve=async(...args)=>{if(++count===3){if(action==='cancel')f.controller.abort();if(action==='change')await fs.writeFile(path.join(f.dir,'index.html'),'external');if(action==='revoke')f.mount.enabled=false;}return original(...args);};
   await assert.rejects(f.domain.edit('run',{...f.target,expectedContentHash:hash('alpha\nbeta\ngamma\n'),oldText:'alpha',newText:'one'}),/CANCELLED|VERSION_CONFLICT|PERMISSION_DENIED/);assert.equal(f.changes.length,0);
+ }
+});
+
+test('cancellation, original update and revocation take precedence over matching recovery',async t=>{
+ for(const action of ['cancel','change','revoke'] as const){
+  const f=await fixture(t);const original=f.files.resolve.bind(f.files);let count=0;
+  f.files.resolve=async(...args)=>{if(++count===3){if(action==='cancel')f.controller.abort();if(action==='change')await fs.writeFile(path.join(f.dir,'index.html'),'external');if(action==='revoke')f.mount.enabled=false;}return original(...args);};
+  await assert.rejects(f.domain.edit('run',{...f.target,expectedContentHash:hash('alpha\nbeta\ngamma\n'),oldText:'missing',newText:'one'}),action==='cancel'?/CANCELLED/:action==='change'?/VERSION_CONFLICT/:/PERMISSION_DENIED/);assert.equal(f.changes.length,0);
  }
 });
 test('same-version competing edits serialize and reject the second stale update; separate files keep both drafts',async t=>{

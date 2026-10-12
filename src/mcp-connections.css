@@ -1,0 +1,6 @@
+.connection-main > .mcp-auth-controls { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:8px; }
+.connection-main .mcp-auth-controls small { white-space:normal; overflow:visible; }
+.mcp-auth-controls .button-row { flex-wrap:wrap; }
+.mcp-elicitation-layer { z-index:500; }
+.mcp-elicitation-layer .subdialog-body { overflow-wrap:anywhere; }
+.mcp-elicitation-layer fieldset { border:1px solid var(--theme-border); border-radius:8px; padding:12px; }

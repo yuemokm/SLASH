@@ -30,11 +30,28 @@ async function fixture(t:test.TestContext,handler:(payload:Payload,res:ServerRes
 const readTool={tool_calls:[{index:0,id:'initial-read',type:'function',function:{name:'read_workspace_rules',arguments:'{}'}}]};
 const addition=(runId:string,text:string,delivery:'steer'|'follow_up')=>({runId,text,delivery,requestId:randomUUID()});
 
+test('真实Service/Pi循环：宿主排队编辑/取消，指定项立即steer，其余正常stop后follow_up只发送一次',async t=>{
+ let secondStillEditable=false;
+ const f=await fixture(t,(_,res,index)=>{if(index===3)secondStillEditable=!f.service.state.runs[0].inputs?.[3].submittedAt;return index===1?reply(res,readTool,'tool_calls'):reply(res,{content:index===2?'即时补充已处理':'排队补充已处理'});});
+ const id=await f.service.send(f.conversation,'真实队列生命周期','build','standard','local-entry');await f.toolStarted.promise;
+ const a=f.service.enqueueRunInput(addition(id,'OLD-TEXT','follow_up')),b=f.service.enqueueRunInput(addition(id,'CANCEL-TEXT','follow_up')),c=f.service.enqueueRunInput(addition(id,'NOW-TEXT','follow_up'));f.service.enqueueRunInput(addition(id,'SECOND-FOLLOW','follow_up'));
+ f.service.mutateRunInput({runId:id,inputId:a.id,expectedRevision:0,action:'edit',text:'EDITED-TEXT'});
+ f.service.mutateRunInput({runId:id,inputId:b.id,expectedRevision:0,action:'cancel'});
+ f.service.mutateRunInput({runId:id,inputId:c.id,expectedRevision:0,action:'send_now'});await wait(()=>Boolean(f.service.state.runs[0].inputs?.[2].submittedAt));
+ assert.equal(f.service.state.runs[0].inputs?.[0].submittedAt,undefined);assert.equal(f.requests.length,1);
+ assert.throws(()=>f.service.mutateRunInput({runId:id,inputId:c.id,expectedRevision:1,action:'edit',text:'TOO-LATE'}),/RUN_INPUT_NOT_EDITABLE/);
+ f.holdTool.release();await wait(()=>f.service.state.runs[0].status==='succeeded');
+ assert.equal(f.requests.length,4);assert.equal(secondStillEditable,true);assert.match(JSON.stringify(f.requests[3]),/SECOND-FOLLOW/);assert.match(JSON.stringify(f.requests[1]),/NOW-TEXT/);assert.doesNotMatch(JSON.stringify(f.requests[1]),/EDITED-TEXT|OLD-TEXT|CANCEL-TEXT/);assert.match(JSON.stringify(f.requests[2]),/EDITED-TEXT/);assert.doesNotMatch(JSON.stringify(f.requests[2]),/OLD-TEXT|CANCEL-TEXT|TOO-LATE/);
+ assert.deepEqual(f.service.state.runs[0].inputs?.map(item=>item.status),['delivered','cancelled','delivered','delivered']);
+ const messages=f.service.state.conversations.find(item=>item.id===f.conversation)!.messages;for(const text of ['NOW-TEXT','EDITED-TEXT','SECOND-FOLLOW'])assert.equal(messages.filter(message=>message.role==='user'&&message.text===text).length,1);assert.equal(messages.some(message=>message.role==='user'&&message.text.includes('宿主追加输入记录ID=')),false);
+ assert.equal(f.service.state.runs[0].id,id);assert.throws(()=>f.service.mutateRunInput({runId:id,inputId:a.id,expectedRevision:1,action:'send_now'}),/RUN_INPUT_NOT_ACTIVE/);
+});
+
 test('真实Service/Pi/HTTP：steer在工具回执后进入下一轮，followUp待当前工具链结束；同Run持久回执',async t=>{
  const f=await fixture(t,(_,res,index)=>index===1?reply(res,readTool,'tool_calls'):reply(res,{content:index===2?'本轮补充处理完成':'后续补充处理完成'}));
  const id=await f.service.send(f.conversation,'读取规则后完成合成任务','build','standard','local-entry');await f.toolStarted.promise;
  const steer=addition(id,'STEER-UNIQUE','steer'),follow=addition(id,'FOLLOW-UNIQUE','follow_up');const first=f.service.enqueueRunInput(steer);assert.equal(f.service.enqueueRunInput(steer).id,first.id);f.service.enqueueRunInput(follow);
- await wait(()=>f.service.state.runs[0].inputs?.every(input=>Boolean(input.submittedAt))??false);assert.deepEqual(f.service.state.runs[0].inputs?.map(input=>input.status),['queued','queued']);assert.equal(f.requests.length,1);
+ await wait(()=>Boolean(f.service.state.runs[0].inputs?.[0].submittedAt));assert.equal(f.service.state.runs[0].inputs?.[1].submittedAt,undefined);assert.deepEqual(f.service.state.runs[0].inputs?.map(input=>input.status),['queued','queued']);assert.equal(f.requests.length,1);
  f.holdTool.release();await wait(()=>f.service.state.runs[0].status==='succeeded');
  assert.equal(f.requests.length,3);assert.match(JSON.stringify(f.requests[1]),/STEER-UNIQUE/);assert.doesNotMatch(JSON.stringify(f.requests[1]),/FOLLOW-UNIQUE/);assert.match(JSON.stringify(f.requests[2]),/FOLLOW-UNIQUE/);
  const run=f.service.state.runs[0];assert.deepEqual(run.inputs?.map(input=>input.status),['delivered','delivered']);assert(run.inputs?.every(input=>input.nativeMessageTimestamp&&input.deliveredAt));assert.equal(run.id,id);assert.equal(run.mode,'build');assert.equal(run.permissionMode,'standard');assert.equal(run.modelEntryId,'local-entry');assert.equal(run.runtimeStatus?.lastUsage?.output,10);
@@ -44,7 +61,7 @@ test('真实Service/Pi/HTTP：steer在工具回执后进入下一轮，followUp�
 
 test('真实Pi取消：clearQueue后abort，不送达、不追加HTTP请求、不遗留queued',async t=>{
  const f=await fixture(t,(_,res)=>reply(res,readTool,'tool_calls'));const id=await f.service.send(f.conversation,'合成取消测试','build','standard','local-entry');await f.toolStarted.promise;
- f.service.enqueueRunInput(addition(id,'CANCEL-STEER','steer'));f.service.enqueueRunInput(addition(id,'CANCEL-FOLLOW','follow_up'));await wait(()=>f.service.state.runs[0].inputs?.every(input=>Boolean(input.submittedAt))??false);
+ f.service.enqueueRunInput(addition(id,'CANCEL-STEER','steer'));f.service.enqueueRunInput(addition(id,'CANCEL-FOLLOW','follow_up'));await wait(()=>Boolean(f.service.state.runs[0].inputs?.[0].submittedAt));assert.equal(f.service.state.runs[0].inputs?.[1].submittedAt,undefined);
  f.service.cancel(id);f.holdTool.release();await wait(()=>f.service.active.size===0);assert.equal(f.service.state.runs[0].status,'cancelled');assert.deepEqual(f.service.state.runs[0].inputs?.map(input=>input.status),['cancelled','cancelled']);assert.equal(f.requests.length,1);
 });
 
@@ -65,7 +82,7 @@ test('追加IPC只接受文字/送达方式和幂等标识，不能更换Run模�
 test('真实技能预处理失败只取消该补充，UI原因有类别；清队列后不重放；原任务继续',async t=>{
  const f=await fixture(t,(_,res,index)=>index===1?reply(res,readTool,'tool_calls'):reply(res,{content:'原任务完成'}));const id=await f.service.send(f.conversation,'合成技能补充测试','build','standard','local-entry');await f.toolStarted.promise;
  f.service.enqueueRunInput(addition(id,'/skill:missing-synthetic-skill 补充','steer'));await wait(()=>f.service.state.runs[0].inputs?.[0].status==='cancelled');assert.equal(f.service.state.runs[0].inputs?.[0].reason,'RUN_INPUT_SKILL_NOT_FOUND');
- f.service.enqueueRunInput(addition(id,'CLEAR-PENDING','follow_up'));await wait(()=>Boolean(f.service.state.runs[0].inputs?.[1].submittedAt));f.service.clearRunInputs({runId:id});f.holdTool.release();await wait(()=>f.service.state.runs[0].status==='succeeded');assert.equal(f.requests.length,2);assert.doesNotMatch(JSON.stringify(f.requests[1]),/CLEAR-PENDING|missing-synthetic-skill/);assert.equal(f.service.state.runs[0].inputs?.[1].reason,'RUN_INPUT_CLEARED');
+ f.service.enqueueRunInput(addition(id,'CLEAR-PENDING','follow_up'));assert.equal(f.service.state.runs[0].inputs?.[1].submittedAt,undefined);f.service.clearRunInputs({runId:id});f.holdTool.release();await wait(()=>f.service.state.runs[0].status==='succeeded');assert.equal(f.requests.length,2);assert.doesNotMatch(JSON.stringify(f.requests[1]),/CLEAR-PENDING|missing-synthetic-skill/);assert.equal(f.service.state.runs[0].inputs?.[1].reason,'RUN_INPUT_CLEARED');
 });
 
 test('Service启动将持久queued变unknown；已送达保留且不创建任何native运行/重放',async t=>{

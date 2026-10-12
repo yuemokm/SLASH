@@ -1,0 +1,11 @@
+flowchart TD
+ A[核验参数与授权原件副本提取链] --> B[完整字段列头值几何与原文绑定]
+ B --> C[完整响应schema核验]
+ C -->|通过| D[返回原证据并记录本次sourceReads]
+ C -->|失败| E{只有根custom预算issue<br/>且完整响应超过12000?}
+ E -->|否| F[保留原schema或几何等诊断<br/>不建议减值掩盖问题]
+ E -->|是| G{只含一个值?}
+ G -->|否| H[稳定RESPONSE_LIMIT<br/>说明本次未返回有效证据<br/>提示原坐标减少values分批核验]
+ G -->|是| I[稳定SINGLE_VALUE_LIMIT<br/>减少values无法恢复本请求<br/>不截断也不放宽预算]
+ H --> J[用户或模型另发明确小请求<br/>仍经过全部权限版本与绑定检查]
+ J --> A

@@ -1,0 +1,14 @@
+flowchart TD
+  BAT[双击开发 BAT] --> Launcher[Node 启动器：版本与 TTY 诊断]
+  Launcher --> Port[检查端口]
+  Port --> Compile[编译 main / preload]
+  Compile --> Vite[启动 Vite]
+  Vite --> HTML[完整 Slash HTML 就绪]
+  HTML --> Electron[启动 Electron]
+  Electron --> Workbench[实际工作台及 IPC]
+  Launcher -.同步阶段.-> Log[dev-startup.log：有界轮换]
+  Compile -.PID / 退出码.-> Log
+  Vite -.PID / 退出码.-> Log
+  Electron -.PID / 退出码.-> Log
+  BAT -->|非零退出| Failure[显示原退出码及日志位置]
+  Failure --> Investigation[根据最后阶段定位：原生根因仍待证据]

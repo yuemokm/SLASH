@@ -1,0 +1,30 @@
+flowchart TB
+  subgraph Local["用户电脑 · Slash"]
+    UI["Electron 渲染进程<br/>React 工作台"]
+    Bridge["Preload 白名单 IPC<br/>请求 Schema / 流式事件"]
+    subgraph Main["Electron 主进程 · 当前同进程模块"]
+      Service["应用服务 Service<br/>项目 · 会话 · Run · 恢复 · 领域协调"]
+      Agent["Pi AgentSession<br/>模型循环 · Skills · 原生上下文压缩"]
+      Gate["能力与执行保护<br/>模式 · 审批 · 目录范围 · 取消"]
+      Domain["领域模块<br/>资源 / 草稿 / 版本 / 质量 / 交付<br/>资料集合 / 既有原文检索"]
+      Adapters["集成适配<br/>MCP · CLI · SMB · Pi 扩展"]
+    end
+    Workers["按需子进程 / 辅助服务<br/>命令执行 · 解析 / 检查<br/>部分 Pi 包工作进程"]
+    Preview["受控原型预览<br/>不赋予原型业务 IPC 权限"]
+    Disk[("本机持久化<br/>SQLite · 项目文件 · 快照<br/>Pi 会话 · 项目候选记忆")]
+    Secret[("系统安全存储<br/>Electron safeStorage")]
+    UI <-->|"受控请求 / 事件"| Bridge
+    Bridge <--> Service
+    Service <--> Agent
+    Agent -->|"工具请求"| Gate
+    Service --> Domain
+    Gate --> Domain
+    Gate --> Adapters
+    Domain --> Disk
+    Agent --> Disk
+    Service --> Secret
+    Adapters --> Workers
+    UI --> Preview
+  end
+  Agent <-->|"选定上下文"| Models["模型提供方 API"]
+  Adapters <--> External["外部系统<br/>MCP 服务 / 官方 CLI<br/>网页搜索 / SMB 网络盘"]

@@ -3,8 +3,9 @@ import {getSupportedThinkingLevels,clampThinkingLevel,type Api,type Model,type T
 import {findCatalogModel,resolveModelLimits,parseModelLimitMetadata,UNVERIFIED_MODEL_LIMITS,type ModelLimitMetadata} from './model-limits.js';
 import {thinkingLevels,type ModelProtocol,type ModelThinkingCapability,type ThinkingLevel} from '../shared/types.js';
 import type {SettingsStore} from './settings.js';
+import {modelProxyFetch} from './model-proxy.js';
 
-export type ThinkingModelConfig={entryId?:string;baseUrl:string;id:string;protocol:ModelProtocol;contextWindow?:number;maxTokens?:number};
+export type ThinkingModelConfig={entryId?:string;baseUrl:string;proxyUrl?:string;id:string;protocol:ModelProtocol;contextWindow?:number;maxTokens?:number};
 export type ThinkingRuntimeConfig=Pick<Model<Api>,'reasoning'|'thinkingLevelMap'|'compat'>;
 export type ThinkingResolution={capability:ModelThinkingCapability;runtime?:ThinkingRuntimeConfig;metadataLimits?:ModelLimitMetadata;limitsNotice?:string};
 const TTL_MS=5*60*1000;
@@ -93,7 +94,7 @@ export class ModelThinkingResolver{
     const endpoint=new URL(input.baseUrl);if(endpoint.username||endpoint.password||endpoint.search||endpoint.hash||!['https:','http:'].includes(endpoint.protocol))throw Error('无效模型API地址');
     const basePath=endpoint.pathname.replace(/\/$/,'');endpoint.pathname=(input.protocol==='anthropic-messages'&&basePath===''?'/v1':basePath)+`/models/${encodeURIComponent(input.id)}`;
     const headers:Record<string,string>=input.protocol==='anthropic-messages'?{'x-api-key':options.key,'anthropic-version':'2023-06-01'}:{Authorization:`Bearer ${options.key}`};
-    const response=await this.fetcher(endpoint,{headers,redirect:'error',signal:AbortSignal.timeout(5000)});if(!response.ok)throw Error(`HTTP ${response.status}`);
+    const response=await(input.proxyUrl?modelProxyFetch(input.proxyUrl):this.fetcher)(endpoint,{headers,redirect:'error',signal:AbortSignal.timeout(5000)});if(!response.ok)throw Error(`HTTP ${response.status}`);
     if(Number(response.headers.get('content-length')??0)>MAX_METADATA_BYTES)throw Error('模型元数据响应过大');
     if(!response.body)throw Error('模型元数据为空');const reader=response.body.getReader();let bytes=0;const chunks:Uint8Array[]=[];
     try{while(true){const next=await reader.read();if(next.done)break;bytes+=next.value.byteLength;if(bytes>MAX_METADATA_BYTES)throw Error('模型元数据响应过大');chunks.push(next.value);}}finally{await reader.cancel().catch(()=>{});reader.releaseLock();}

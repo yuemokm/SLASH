@@ -1,0 +1,15 @@
+flowchart TD
+ A[已结束且关闭的隔离试次] --> B[官方state核对成果版本与原hash]
+ B --> C{既有过程mount enabled且write?}
+ C -->|否| X[拒绝 留失败证据 不增加授权]
+ C -->|是| D[真实路径在evaluationRoot内]
+ D --> E[关闭首实例 重开同profile]
+ E --> F{相同mount ID 路径 写授权?}
+ F -->|否| X
+ F -->|是| G[唯一过程子目录 预选目标不存在]
+ G --> H[官方export 经TaskDelivery门禁]
+ H --> I{返回预选路径且原字节hash一致?}
+ I -->|否| X
+ I -->|是| J[保存候选采证]
+ J --> K[第二实例关闭 所有清理记录完成]
+ K --> L[独占提交完整trial]

@@ -1,19 +1,42 @@
 import {app,BrowserWindow,session} from 'electron';
 import {createHash,randomUUID} from 'node:crypto';
 import path from 'node:path';
+import {PrototypeCaseDiagnosticsRecorder,sanitizePrototypeRuntimeError} from './prototype-browser-diagnostics.js';
+import {inspectPrototypeControlUsability} from './prototype-usability.js';
 import {PROTOTYPE_ACCEPTANCE_LIMITS as LIMITS,PROTOTYPE_ACCEPTANCE_NOTICE,prototypeAcceptanceCaseSchema,type PrototypeAcceptanceCase,type PrototypeCaseResult,type PrototypeStepResult} from '../shared/prototype-acceptance.js';
 
 export type PrototypeBrowserInput={entryPath:string;snapshot:ReadonlyMap<string,{bytes:Buffer;hash:string}>;cases:PrototypeAcceptanceCase[];signal?:AbortSignal;assertCurrent?:()=>void};
-export type PrototypeBrowserResult={status:'passed'|'failed'|'unknown';cases:PrototypeCaseResult[];screenshots:Array<{caseId:string;stepIndex?:number;bytes:Buffer;capture?:{sourceWidth:number;sourceHeight:number;cssWidth:number;cssHeight:number;normalized:boolean}}>;notice:string};
-export const PROTOTYPE_BROWSER_VERSION='electron-snapshot-cdp-v3';
+export type PrototypeBrowserResult={status:'passed'|'failed'|'unknown';cases:PrototypeCaseResult[];screenshots:Array<{caseId:string;stepIndex?:number;bytes:Buffer;capture?:{sourceWidth:number;sourceHeight:number;cssWidth:number;cssHeight:number;normalized:boolean}}>;notice:string;runnerVersion:string};
+export const PROTOTYPE_BROWSER_VERSION='electron-snapshot-cdp-v8';
 const activeJobs=new Map<symbol,()=>void>(),windows=new Set<BrowserWindow>();
 export function cancelAllPrototypeAcceptance(){for(const cancel of activeJobs.values())cancel();}
 export function prototypeBrowserActiveCount(){return windows.size;}
-const STEP_MS=3000,WORLD=1017;
+// Creating an isolated renderer and enabling CDP are startup work. They use a
+// separate bound; native interaction stays at 3s and the job stays at 60s.
+const INITIALIZATION_MS=10000,STEP_MS=3000,WORLD=1017;
 const normalize=(value:string)=>value.replaceAll('\\','/');
 const safePath=(value:string)=>typeof value==='string'&&value.length>0&&value.length<=4096&&!/[:\0\r\n?#]/.test(value)&&!value.startsWith('/')&&!normalize(value).split('/').some(part=>!part||part==='.'||part==='..');
 const reasonOf=(error:unknown)=>error instanceof Error&&/^PROTOTYPE_[A-Z_]+$/.test(error.message)?error.message:'PROTOTYPE_EXECUTION_UNAVAILABLE';
 class Stop extends Error{}
+
+/** Observe before native input: a new document can abandon its old rAF promise.
+ * Same-document and child-frame events do not require a document-load wait.
+ * The caller's existing bounded step/abort guard owns the entire wait budget. */
+function observeInputNavigation(contents:Electron.WebContents){
+ type Outcome={kind:'navigation'|'loaded'}|{kind:'failed';reason:string};
+ let resolveStarted!:(value:Outcome)=>void,resolveFinished!:(value:Outcome)=>void;
+ const started=new Promise<Outcome>(resolve=>{resolveStarted=resolve;}),finished=new Promise<Outcome>(resolve=>{resolveFinished=resolve;});
+ const begin=(details:Electron.Event<Electron.WebContentsDidStartNavigationEventParams>)=>{if(details.isMainFrame&&!details.isSameDocument)resolveStarted({kind:'navigation'});};
+ const loaded=(_event:Electron.Event,isMainFrame:boolean)=>{if(isMainFrame)resolveFinished({kind:'loaded'});};
+ const settleFailure=(reason:string)=>{const outcome:Outcome={kind:'failed',reason};resolveStarted(outcome);resolveFinished(outcome);};
+ const failed=(_event:Electron.Event,_code:number,_description:string,_url:string,isMainFrame:boolean)=>{if(isMainFrame)settleFailure('PROTOTYPE_NAVIGATION_LOAD_FAILED');};
+ const destroyed=()=>{settleFailure('PROTOTYPE_RENDERER_EXITED');dispose();};
+ const dispose=()=>{contents.removeListener('did-start-navigation',begin);contents.removeListener('did-frame-finish-load',loaded);contents.removeListener('did-fail-load',failed);contents.removeListener('did-fail-provisional-load',failed);contents.removeListener('destroyed',destroyed);};
+ contents.on('did-start-navigation',begin);contents.on('did-frame-finish-load',loaded);contents.on('did-fail-load',failed);contents.on('did-fail-provisional-load',failed);
+ contents.once('destroyed',destroyed);
+ return{started,finished,dispose};
+}
+
 
 // This function is fixed application code. The page receives only validated
 // JSON command data; no Agent code, regex, CDP method or host object is exposed.
@@ -28,8 +51,10 @@ function inspectDom(command:{selector?:string;operation:string;value?:string;min
  if(command.operation==='count')return{ok:true,value:Math.min(matches.length,10001)};
  if(command.operation==='visible'&&matches.length===0)return{ok:true,value:false};
  if(matches.length!==1)return{ok:false,reason:'PROTOTYPE_SELECTOR_NOT_UNIQUE',count:matches.length};
- const el=matches[0] as HTMLElement,rect=el.getBoundingClientRect(),style=getComputedStyle(el);
- const visible=rect.width>0&&rect.height>0&&style.display!=='none'&&style.visibility!=='hidden'&&style.visibility!=='collapse'&&Number(style.opacity)!==0;
+ const el=matches[0] as HTMLElement,rect=el.getBoundingClientRect();
+ // Native closed details can retain descendant layout boxes while skipping
+ // their rendering. Use the same browser visibility check as control usability.
+ const visible=rect.width>0&&rect.height>0&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true});
  const disabled=el.matches(':disabled')||el.getAttribute('aria-disabled')==='true';
  if(command.operation==='no-horizontal-overflow')return{ok:true,value:el.scrollWidth<=el.clientWidth+1,measurements:{scrollWidth:el.scrollWidth,availableWidth:el.clientWidth}};
  if(command.operation==='min-target-size')return{ok:true,value:visible&&rect.width>=command.minPixels!&&rect.height>=command.minPixels!,measurements:{width:rect.width,height:rect.height,minPixels:command.minPixels}};
@@ -87,22 +112,22 @@ export async function runPrototypeAcceptance(input:PrototypeBrowserInput):Promis
   const relative=normalize(key);if(snapshot.has(relative))throw Error('PROTOTYPE_SNAPSHOT_INVALID');snapshot.set(relative,{bytes:content,hash:item.hash});
  }
  if(!snapshot.has(normalize(input.entryPath)))throw Error('PROTOTYPE_ENTRY_NOT_IN_SNAPSHOT');
- const result:PrototypeBrowserResult={status:'unknown',cases:[],screenshots:[],notice:PROTOTYPE_ACCEPTANCE_NOTICE};
- let stopReason:string|undefined,terminateCurrent:(reason:string)=>void=()=>{},screenshotBytes=0;
+ const result:PrototypeBrowserResult={status:'unknown',cases:[],screenshots:[],notice:PROTOTYPE_ACCEPTANCE_NOTICE,runnerVersion:PROTOTYPE_BROWSER_VERSION};
+ let stopReason:string|undefined,terminateCurrent:(reason:string,timerExpired?:boolean)=>void=()=>{},screenshotBytes=0;
  const token=Symbol(),abort=()=>{stopReason='PROTOTYPE_CANCELLED';terminateCurrent(stopReason);};
  activeJobs.set(token,abort);input.signal?.addEventListener('abort',abort,{once:true});
- const timer=setTimeout(()=>{stopReason='PROTOTYPE_TOTAL_TIMEOUT';terminateCurrent(stopReason);},LIMITS.timeoutMs);
+ const timer=setTimeout(()=>{stopReason='PROTOTYPE_TOTAL_TIMEOUT';terminateCurrent(stopReason,true);},LIMITS.timeoutMs);
  const current=()=>{if(input.signal?.aborted)abort();if(stopReason)throw new Stop(stopReason);try{input.assertCurrent?.();}catch{stopReason='PROTOTYPE_AUTHORIZATION_CHANGED';terminateCurrent(stopReason);throw new Stop(stopReason);}};
  try{
   for(const testcase of cases){
-   const caseResult:PrototypeCaseResult={caseId:testcase.id,status:'unknown',steps:[]};result.cases.push(caseResult);
-   if(stopReason||input.signal?.aborted){caseResult.reason=stopReason??'PROTOTYPE_CANCELLED';caseResult.steps=testcase.steps.map((_step,stepIndex)=>({stepIndex,status:'not_run',reason:caseResult.reason}));continue;}
+   const diagnostics=new PrototypeCaseDiagnosticsRecorder(testcase.steps.length),caseResult:PrototypeCaseResult={caseId:testcase.id,status:'unknown',steps:[],diagnostics:diagnostics.value};result.cases.push(caseResult);
+   if(stopReason||input.signal?.aborted){caseResult.reason=stopReason??'PROTOTYPE_CANCELLED';diagnostics.stop(caseResult.reason);caseResult.steps=testcase.steps.map((_step,stepIndex)=>({stepIndex,status:'not_run',reason:caseResult.reason}));continue;}
    const isolated=session.fromPartition('prototype-acceptance-'+randomUUID(),{cache:false}),origin='https://prototype-'+randomUUID()+'.invalid';
    const issues=new Set<string>();let win:BrowserWindow|undefined,stopping=false,rejectGuard:(error:Error)=>void=()=>{},stepTimer:ReturnType<typeof setTimeout>|undefined;
    const guard=new Promise<never>((_resolve,reject)=>{rejectGuard=reject;});void guard.catch(()=>{});
-   const terminate=(reason:string)=>{if(stopping)return;stopping=true;rejectGuard(new Stop(reason));if(win&&!win.isDestroyed()){try{win.webContents.forcefullyCrashRenderer();}catch{}win.destroy();}};
+   const terminate=(reason:string,timerExpired=false)=>{if(stopping)return;diagnostics.stop(reason,timerExpired);stopping=true;rejectGuard(new Stop(reason));if(win&&!win.isDestroyed()){try{win.webContents.forcefullyCrashRenderer();}catch{}win.destroy();}};
    terminateCurrent=terminate;
-   const bounded=async<T>(action:()=>Promise<T>):Promise<T>=>{current();stepTimer=setTimeout(()=>terminate('PROTOTYPE_STEP_TIMEOUT'),STEP_MS);try{const value=await Promise.race([guard,action()]);current();return value;}finally{if(stepTimer)clearTimeout(stepTimer);stepTimer=undefined;}};
+   const bounded=<T>(phase:'initialization'|'viewport'|'step'|'screenshot',action:()=>Promise<T>,stepIndex?:number):Promise<T>=>diagnostics.measure(phase,async()=>{current();stepTimer=setTimeout(()=>terminate('PROTOTYPE_STEP_TIMEOUT',true),phase==='initialization'?INITIALIZATION_MS:STEP_MS);try{const value=await Promise.race([guard,action()]);current();return value;}finally{if(stepTimer)clearTimeout(stepTimer);stepTimer=undefined;}},stepIndex);
    const denyDownload=(event:Electron.Event)=>{issues.add('PROTOTYPE_DOWNLOAD_BLOCKED');event.preventDefault();};
    try{
     current();await isolated.setProxy({mode:'fixed_servers',proxyRules:'127.0.0.1:9',proxyBypassRules:'<-loopback>'});isolated.enableNetworkEmulation({offline:true});
@@ -126,25 +151,38 @@ export async function runPrototypeAcceptance(input:PrototypeBrowserInput):Promis
     contents.on('will-redirect',(event,url,_inPlace,isMainFrame)=>{if(!isMainFrame||!navigationAllowed(url)){issues.add('PROTOTYPE_NAVIGATION_BLOCKED');event.preventDefault();}});
     contents.on('will-attach-webview',event=>{issues.add('PROTOTYPE_NAVIGATION_BLOCKED');event.preventDefault();});
     contents.on('render-process-gone',()=>{if(!stopping)terminate('PROTOTYPE_RENDERER_EXITED');});
-    contents.on('console-message',(event,level)=>{if(level===3||(event as unknown as {level?:string}).level==='error')issues.add('PROTOTYPE_RUNTIME_EXCEPTION');});
+    const runtimeError=(description?:unknown)=>{issues.add('PROTOTYPE_RUNTIME_EXCEPTION');diagnostics.runtimeError(sanitizePrototypeRuntimeError(description,origin,new Set(snapshot.keys())));};
+    contents.on('console-message',(event,level)=>{if(level===3||(event as unknown as {level?:string}).level==='error')runtimeError();});
     contents.debugger.attach('1.3');
-    contents.debugger.on('message',(_event,method,params)=>{if(method==='Runtime.exceptionThrown')issues.add('PROTOTYPE_RUNTIME_EXCEPTION');if(method==='Log.entryAdded'&&params.entry?.level==='error'&&['security','network'].includes(params.entry?.source))issues.add('PROTOTYPE_RESOURCE_BLOCKED');});
+    contents.debugger.on('message',(_event,method,params)=>{
+     if(method==='Runtime.exceptionThrown')runtimeError(params.exceptionDetails?.exception?.description);
+     if(method==='Runtime.consoleAPICalled'&&params.type==='error'){
+      const errors=(Array.isArray(params.args)?params.args:[]).slice(0,3).filter((arg:{type?:string;subtype?:string})=>arg.type==='object'&&arg.subtype==='error');
+      if(errors.length)for(const error of errors)runtimeError(error.description);else runtimeError();
+     }
+     if(method==='Log.entryAdded'&&params.entry?.level==='error'&&['security','network'].includes(params.entry?.source))issues.add('PROTOTYPE_RESOURCE_BLOCKED');
+    });
     // A fresh hidden window has no renderer yet. Loading must start before
     // waiting for CDP domain commands, or those commands can wait forever.
-    await bounded(async()=>{await Promise.all([win!.loadURL(origin+'/'+normalize(input.entryPath).split('/').map(encodeURIComponent).join('/')),contents.debugger.sendCommand('Runtime.enable'),contents.debugger.sendCommand('Log.enable')]);});
+    await bounded('initialization',async()=>{await Promise.all([win!.loadURL(origin+'/'+normalize(input.entryPath).split('/').map(encodeURIComponent).join('/')),contents.debugger.sendCommand('Runtime.enable'),contents.debugger.sendCommand('Log.enable')]);});
     const inspect=async(command:Parameters<typeof inspectDom>[0])=>contents.executeJavaScriptInIsolatedWorld(WORLD,[{code:'('+inspectDom.toString()+')('+JSON.stringify(command)+')'}]) as Promise<Record<string,any>>;
     const paint=async(frames=1)=>contents.executeJavaScriptInIsolatedWorld(WORLD,[{code:'new Promise(resolve=>{let n='+frames+';const next=()=>requestAnimationFrame(()=>--n?next():setTimeout(resolve,32));next();})'}]);
-    await bounded(async()=>{
+    await bounded('viewport',async()=>{
      if(testcase.viewport)await contents.debugger.sendCommand('Emulation.setDeviceMetricsOverride',{...testcase.viewport,deviceScaleFactor:1,mobile:false});
      await paint(2);const actual=await inspect({operation:'viewport'});caseResult.viewport={width:actual.width,height:actual.height};
      if(testcase.viewport&&(actual.width!==testcase.viewport.width||actual.height!==testcase.viewport.height))throw Error('PROTOTYPE_VIEWPORT_UNAVAILABLE');
     });
+    if(issues.size)throw Error([...issues][0]);
     const key=async(keyName:string,keyCode:number,code=keyName,modifiers=0)=>{await contents.debugger.sendCommand('Input.dispatchKeyEvent',{type:'keyDown',key:keyName,code,windowsVirtualKeyCode:keyCode,nativeVirtualKeyCode:keyCode,modifiers});await contents.debugger.sendCommand('Input.dispatchKeyEvent',{type:'keyUp',key:keyName,code,windowsVirtualKeyCode:keyCode,nativeVirtualKeyCode:keyCode,modifiers});};
     for(let stepIndex=0;stepIndex<testcase.steps.length;stepIndex++){
      const step=testcase.steps[stepIndex];let stepResult:PrototypeStepResult;
      try{
-      stepResult=await bounded(async()=>{
+      stepResult=await bounded('step',async()=>{
        if(step.action==='assert'){
+        if(step.assertion==='control-usability'){
+         const read=await contents.executeJavaScriptInIsolatedWorld(WORLD,[{code:'('+inspectPrototypeControlUsability.toString()+')('+JSON.stringify(step.selector??'body')+')'}]);
+         return{stepIndex,status:!read.ok?'unknown' as const:read.value?'passed' as const:'failed' as const,...(read.ok?{observed:read.value}:{}),...(read.usability?{usability:read.usability}:{}),...(read.reason?{reason:read.reason}:!read.value?{reason:'PROTOTYPE_ASSERTION_MISMATCH'}:{})};
+        }
         const assertion=step.assertion,end=Date.now()+STEP_MS-150;let observed:string|number|boolean='',measurements:PrototypeStepResult['measurements'];
         do{
          if(assertion==='url'){const url=new URL(contents.getURL());observed=step.expected.startsWith('#')?url.hash:url.pathname.slice(1)+url.search+url.hash;}
@@ -162,6 +200,8 @@ export async function runPrototypeAcceptance(input:PrototypeBrowserInput):Promis
        }
        const target=await inspect({selector:step.selector,operation:step.action,...('value'in step?{value:step.value}:{})});
        if(!target.ok)return{stepIndex,status:target.reason==='PROTOTYPE_SELECTOR_NOT_UNIQUE'||target.reason==='PROTOTYPE_CONTROL_UNSUPPORTED'||target.reason==='PROTOTYPE_FOCUS_UNAVAILABLE'?'unknown' as const:'failed' as const,reason:target.reason};
+       const navigation=observeInputNavigation(contents);
+       try{
        if(step.action==='click'){
         await contents.debugger.sendCommand('Input.dispatchMouseEvent',{type:'mousePressed',x:target.x,y:target.y,button:'left',clickCount:1});
         await contents.debugger.sendCommand('Input.dispatchMouseEvent',{type:'mouseReleased',x:target.x,y:target.y,button:'left',clickCount:1});
@@ -172,29 +212,37 @@ export async function runPrototypeAcceptance(input:PrototypeBrowserInput):Promis
         if(!selected.ok||selected.value!==step.value)return{stepIndex,status:'unknown' as const,reason:'PROTOTYPE_SELECT_NATIVE_UNAVAILABLE'};
        }
        else{const keys={Enter:['Enter',13],Tab:['Tab',9],Escape:['Escape',27],Space:[' ',32]} as const;const selected=keys[step.key];await key(selected[0],selected[1],step.key==='Space'?'Space':step.key);}
-       await paint();
+       const afterInput=await Promise.race([paint().then(()=>({kind:'paint' as const})),navigation.started]);
+       if(afterInput.kind==='failed')throw Error(afterInput.reason);
+       if(afterInput.kind==='navigation'){
+        const loaded=await navigation.finished;if(loaded.kind==='failed')throw Error(loaded.reason);
+        await paint();
+       }
        return{stepIndex,status:'passed' as const};
-      });
+       }finally{navigation.dispose();}
+      },stepIndex);
      }catch(error){stepResult={stepIndex,status:'unknown',reason:reasonOf(error)};}
+     if(issues.has('PROTOTYPE_RUNTIME_EXCEPTION')&&stepResult.status==='passed')stepResult={...stepResult,status:'unknown',reason:'PROTOTYPE_RUNTIME_EXCEPTION'};
      caseResult.steps.push(stepResult);
      if(stepResult.status!=='passed'||issues.size){
       caseResult.status=issues.size?'unknown':stepResult.status==='failed'?'failed':'unknown';caseResult.reason=[...issues][0]??stepResult.reason;
+      diagnostics.stop(caseResult.reason??'PROTOTYPE_EXECUTION_UNAVAILABLE');
       for(let index=stepIndex+1;index<testcase.steps.length;index++)caseResult.steps.push({stepIndex:index,status:'not_run',reason:'PROTOTYPE_PREVIOUS_STEP_STOPPED'});
       break;
      }
     }
     if(caseResult.steps.every(item=>item.status==='passed'))caseResult.status=issues.size?'unknown':'passed';
-    if(issues.size){caseResult.status='unknown';caseResult.reason=[...issues][0];}
+    if(issues.size){caseResult.status='unknown';caseResult.reason=[...issues][0];diagnostics.stop(caseResult.reason);}
     if(!win.isDestroyed()){
      // Hidden native capture can return display-scaled pixels (e.g. 537 for
      // CSS 390). Preserve those dimensions, then normalize the saved PNG.
      let capture:{sourceWidth:number;sourceHeight:number;cssWidth:number;cssHeight:number;normalized:boolean}|undefined;
-     const png=await bounded(async()=>{current();await paint(2);const viewport=caseResult.viewport!,original=await contents.capturePage(undefined,{stayHidden:true}),size=original.getSize();capture={sourceWidth:size.width,sourceHeight:size.height,cssWidth:viewport.width,cssHeight:viewport.height,normalized:size.width!==viewport.width||size.height!==viewport.height};const buffer=original.resize({width:viewport.width,height:viewport.height,quality:'best'}).toPNG();current();return buffer;});
+     const png=await bounded('screenshot',async()=>{current();await paint(2);const viewport=caseResult.viewport!,original=await contents.capturePage(undefined,{stayHidden:true}),size=original.getSize();capture={sourceWidth:size.width,sourceHeight:size.height,cssWidth:viewport.width,cssHeight:viewport.height,normalized:size.width!==viewport.width||size.height!==viewport.height};const buffer=original.resize({width:viewport.width,height:viewport.height,quality:'best'}).toPNG();current();return buffer;});
      if(!png.length||png.length>LIMITS.screenshotBytes||screenshotBytes+png.length>LIMITS.screenshotsBytes)throw Error('PROTOTYPE_SCREENSHOT_LIMIT');
      screenshotBytes+=png.length;result.screenshots.push({capture,caseId:testcase.id,stepIndex:caseResult.steps.find(item=>item.status!=='passed')?.stepIndex,bytes:png});
     }
-    if(issues.size){caseResult.status='unknown';caseResult.reason=[...issues][0];}
-   }catch(error){caseResult.status='unknown';caseResult.reason=reasonOf(error);for(let index=caseResult.steps.length;index<testcase.steps.length;index++)caseResult.steps.push({stepIndex:index,status:'not_run',reason:caseResult.reason});}
+    if(issues.size){caseResult.status='unknown';caseResult.reason=[...issues][0];diagnostics.stop(caseResult.reason);}
+   }catch(error){caseResult.status='unknown';caseResult.reason=reasonOf(error);diagnostics.stop(caseResult.reason);for(let index=caseResult.steps.length;index<testcase.steps.length;index++)caseResult.steps.push({stepIndex:index,status:'not_run',reason:caseResult.reason});}
    finally{
     stopping=true;if(stepTimer)clearTimeout(stepTimer);terminateCurrent=()=>{};
     if(win){windows.delete(win);if(!win.isDestroyed())win.destroy();}
@@ -202,7 +250,7 @@ export async function runPrototypeAcceptance(input:PrototypeBrowserInput):Promis
     await isolated.clearStorageData().catch(()=>{});await isolated.clearCache().catch(()=>{});
    }
   }
-  try{current();}catch{if(stopReason==='PROTOTYPE_AUTHORIZATION_CHANGED')for(const testcase of result.cases)if(testcase.status==='passed'){testcase.status='unknown';testcase.reason=stopReason;}}
+  try{current();}catch{if(stopReason==='PROTOTYPE_AUTHORIZATION_CHANGED')for(const testcase of result.cases)if(testcase.status==='passed'){testcase.status='unknown';testcase.reason=stopReason;if(testcase.diagnostics)testcase.diagnostics.stopReason='PROTOTYPE_AUTHORIZATION_CHANGED';}}
   result.status=stopReason||result.cases.some(item=>item.status==='unknown')?'unknown':result.cases.some(item=>item.status==='failed')?'failed':'passed';
   return result;
  }finally{clearTimeout(timer);input.signal?.removeEventListener('abort',abort);activeJobs.delete(token);terminateCurrent=()=>{};}

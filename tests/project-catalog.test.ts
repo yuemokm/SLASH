@@ -41,7 +41,7 @@ test('同名文件归属不同项目，目录授权按实际项目校验且撤�
  const {store,service,oneId,twoId}=await fixture(t),catalog=service.projectCatalog(),projects=catalog.list().projects;
  const a=projects.find(item=>item.id===oneId)!.mounts.find(mount=>mount.name==='资源')!,b=projects.find(item=>item.id===twoId)!.mounts.find(mount=>mount.name==='资源')!;
  assert.equal((await catalog.read(twoId,b.id,'参考资料/同名.md')).content,'项目二正文');
- await assert.rejects(catalog.read(oneId,b.id,'参考资料/同名.md'),/PERMISSION_DENIED/);
+ await assert.rejects(catalog.read(oneId,b.id,'参考资料/同名.md'),error=>{assert.match(String(error),/^UnknownMountIdError: MOUNT_ID_UNKNOWN:/);assert.doesNotMatch(String(error),/可用目标：/);return true;});
  await assert.rejects(catalog.browse(oneId,a.id,'../../'),/PERMISSION_DENIED/);
  await assert.rejects(catalog.browse(oneId,a.id,'C:/Windows'),/INVALID_PATH/);
  const key=String(store.db.prepare("SELECT key FROM kv WHERE key LIKE 'workspace-state:%'").all().map(item=>item.key).find(key=>store.get<{root:string}>(String(key),{root:''}).root.endsWith('项目一')));

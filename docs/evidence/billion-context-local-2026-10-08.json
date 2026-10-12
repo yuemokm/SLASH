@@ -1,0 +1,331 @@
+{
+  "date": "2026-10-08",
+  "comparison": "B-only mechanism audit; not Pi vs B semantic/token/cost benchmark",
+  "runs": [
+    {
+      "evidenceDirectory": "%TEMP%/slash-billion-local-Qb16yc",
+      "role": "implementation verification",
+      "package": "billion-context",
+      "version": "0.1.188",
+      "distSha256": "d8d2909ef32798507447542b959da6eead5485e6b27c7f5dcb73dece1e75c280",
+      "passed": true,
+      "cloudCalls": false,
+      "semanticQualityMeasured": false,
+      "elapsedMs": 6843,
+      "upstreamRequests": 18,
+      "checks": [
+        "real published proxy and native plugin protocol; synthetic credential and reasoning preserved",
+        "summary omits exact evidence; search locates summary and full decompress returns original field details",
+        "three further real compress/decompress-to-file cycles retain exact source messages",
+        "openai-completions native reasoning and host tool call/result ID pair survives",
+        "streamed native reasoning and fragmented tool arguments survive actual proxy",
+        "logical conversation separation holds; shared loopback API has no project authorization boundary",
+        "upstream disconnect has bounded model retries; host write-tool exactly-once needs Slash gateway validation",
+        "public network.replayRetryMax=1 disables model HTTP replay; upstreamTimeoutMs=200 bounds a stalled upstream",
+        "forced process termination and restart rebinds durable synthetic history and compression blocks"
+      ],
+      "bytes": {
+        "before": 72456,
+        "after": 63912,
+        "reductionPercent": 12
+      },
+      "nudgeVisible": true,
+      "omittedOriginal": true,
+      "repeated": [
+        {
+          "round": 0,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 1,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 2,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        }
+      ],
+      "cancelUpstreamClosed": true,
+      "defaultReplayAttempts": 3,
+      "disabledReplayAttempts": 1,
+      "upstreamTimeout": {
+        "status": 502,
+        "elapsedMs": 216
+      },
+      "restart": {
+        "before": 16,
+        "after": 16,
+        "persistedBlocks": 4
+      },
+      "logicalIsolation": true,
+      "hostCanAccessOtherKnownConversation": true,
+      "blockedEgress": ""
+    },
+    {
+      "evidenceDirectory": "%TEMP%/slash-billion-local-M276Uy",
+      "role": "implementation verification",
+      "package": "billion-context",
+      "version": "0.1.188",
+      "distSha256": "d8d2909ef32798507447542b959da6eead5485e6b27c7f5dcb73dece1e75c280",
+      "passed": true,
+      "cloudCalls": false,
+      "semanticQualityMeasured": false,
+      "elapsedMs": 6961,
+      "upstreamRequests": 18,
+      "checks": [
+        "real published proxy and native plugin protocol; synthetic credential and reasoning preserved",
+        "summary omits exact evidence; search locates summary and full decompress returns original field details",
+        "three further real compress/decompress-to-file cycles retain exact source messages",
+        "openai-completions native reasoning and host tool call/result ID pair survives",
+        "streamed native reasoning and fragmented tool arguments survive actual proxy",
+        "logical conversation separation holds; shared loopback API has no project authorization boundary",
+        "upstream disconnect has bounded model retries; host write-tool exactly-once needs Slash gateway validation",
+        "public network.replayRetryMax=1 disables model HTTP replay; upstreamTimeoutMs=200 bounds a stalled upstream",
+        "forced process termination and restart rebinds durable synthetic history and compression blocks"
+      ],
+      "bytes": {
+        "before": 72456,
+        "after": 63912,
+        "reductionPercent": 12
+      },
+      "nudgeVisible": true,
+      "omittedOriginal": true,
+      "repeated": [
+        {
+          "round": 0,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 1,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 2,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        }
+      ],
+      "cancelUpstreamClosed": true,
+      "defaultReplayAttempts": 3,
+      "disabledReplayAttempts": 1,
+      "upstreamTimeout": {
+        "status": 502,
+        "elapsedMs": 216
+      },
+      "restart": {
+        "before": 16,
+        "after": 16,
+        "persistedBlocks": 4
+      },
+      "logicalIsolation": true,
+      "hostCanAccessOtherKnownConversation": true,
+      "blockedEgress": ""
+    },
+    {
+      "evidenceDirectory": "%TEMP%/slash-billion-local-ttnbwE",
+      "role": "implementation verification",
+      "package": "billion-context",
+      "version": "0.1.188",
+      "distSha256": "d8d2909ef32798507447542b959da6eead5485e6b27c7f5dcb73dece1e75c280",
+      "passed": true,
+      "cloudCalls": false,
+      "semanticQualityMeasured": false,
+      "elapsedMs": 6993,
+      "upstreamRequests": 18,
+      "checks": [
+        "real published proxy and native plugin protocol; synthetic credential and reasoning preserved",
+        "summary omits exact evidence; search locates summary and full decompress returns original field details",
+        "three further real compress/decompress-to-file cycles retain exact source messages",
+        "openai-completions native reasoning and host tool call/result ID pair survives",
+        "streamed native reasoning and fragmented tool arguments survive actual proxy",
+        "logical conversation separation holds; shared loopback API has no project authorization boundary",
+        "upstream disconnect has bounded model retries; host write-tool exactly-once needs Slash gateway validation",
+        "public network.replayRetryMax=1 disables model HTTP replay; upstreamTimeoutMs=200 bounds a stalled upstream",
+        "forced process termination and restart rebinds durable synthetic history and compression blocks"
+      ],
+      "bytes": {
+        "before": 72456,
+        "after": 63912,
+        "reductionPercent": 12
+      },
+      "nudgeVisible": true,
+      "omittedOriginal": true,
+      "repeated": [
+        {
+          "round": 0,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 1,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 2,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        }
+      ],
+      "cancelUpstreamClosed": true,
+      "defaultReplayAttempts": 3,
+      "disabledReplayAttempts": 1,
+      "upstreamTimeout": {
+        "status": 502,
+        "elapsedMs": 217
+      },
+      "restart": {
+        "before": 16,
+        "after": 16,
+        "persistedBlocks": 4
+      },
+      "logicalIsolation": true,
+      "hostCanAccessOtherKnownConversation": true,
+      "blockedEgress": ""
+    },
+    {
+      "evidenceDirectory": "%TEMP%/slash-billion-local-YxYFbq",
+      "role": "implementation verification",
+      "package": "billion-context",
+      "version": "0.1.188",
+      "distSha256": "d8d2909ef32798507447542b959da6eead5485e6b27c7f5dcb73dece1e75c280",
+      "passed": true,
+      "cloudCalls": false,
+      "semanticQualityMeasured": false,
+      "elapsedMs": 6996,
+      "upstreamRequests": 18,
+      "checks": [
+        "real published proxy and native plugin protocol; synthetic credential and reasoning preserved",
+        "summary omits exact evidence; search locates summary and full decompress returns the four original texts byte-for-byte inside an export receipt",
+        "three further real compress/decompress-to-file cycles retain exact source messages",
+        "openai-completions native reasoning and host tool call/result ID pair survives",
+        "streamed native reasoning and fragmented tool arguments survive actual proxy",
+        "logical conversation separation holds; shared loopback API has no project authorization boundary",
+        "upstream disconnect has bounded model retries; host write-tool exactly-once needs Slash gateway validation",
+        "public network.replayRetryMax=1 disables model HTTP replay; upstreamTimeoutMs=200 bounds a stalled upstream",
+        "forced process termination and restart rebinds durable synthetic history and compression blocks"
+      ],
+      "bytes": {
+        "before": 72456,
+        "after": 63912,
+        "reductionPercent": 12
+      },
+      "nudgeVisible": true,
+      "omittedOriginal": true,
+      "repeated": [
+        {
+          "round": 0,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 1,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 2,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        }
+      ],
+      "cancelUpstreamClosed": true,
+      "defaultReplayAttempts": 3,
+      "disabledReplayAttempts": 1,
+      "upstreamTimeout": {
+        "status": 502,
+        "elapsedMs": 220
+      },
+      "restart": {
+        "before": 16,
+        "after": 16,
+        "persistedBlocks": 4
+      },
+      "logicalIsolation": true,
+      "hostCanAccessOtherKnownConversation": true,
+      "blockedEgress": ""
+    },
+    {
+      "evidenceDirectory": "%TEMP%/slash-billion-local-BG2Brf",
+      "role": "independent parent verification",
+      "package": "billion-context",
+      "version": "0.1.188",
+      "distSha256": "d8d2909ef32798507447542b959da6eead5485e6b27c7f5dcb73dece1e75c280",
+      "passed": true,
+      "cloudCalls": false,
+      "semanticQualityMeasured": false,
+      "elapsedMs": 7360,
+      "upstreamRequests": 18,
+      "checks": [
+        "real published proxy and native plugin protocol; synthetic credential and reasoning preserved",
+        "summary omits exact evidence; search locates summary and full decompress returns original field details",
+        "three further real compress/decompress-to-file cycles retain exact source messages",
+        "openai-completions native reasoning and host tool call/result ID pair survives",
+        "streamed native reasoning and fragmented tool arguments survive actual proxy",
+        "logical conversation separation holds; shared loopback API has no project authorization boundary",
+        "upstream disconnect has bounded model retries; host write-tool exactly-once needs Slash gateway validation",
+        "public network.replayRetryMax=1 disables model HTTP replay; upstreamTimeoutMs=200 bounds a stalled upstream",
+        "forced process termination and restart rebinds durable synthetic history and compression blocks"
+      ],
+      "bytes": {
+        "before": 72456,
+        "after": 63912,
+        "reductionPercent": 12
+      },
+      "nudgeVisible": true,
+      "omittedOriginal": true,
+      "repeated": [
+        {
+          "round": 0,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 1,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        },
+        {
+          "round": 2,
+          "folded": true,
+          "restored": true,
+          "sourceMessageCount": 16
+        }
+      ],
+      "cancelUpstreamClosed": true,
+      "defaultReplayAttempts": 3,
+      "disabledReplayAttempts": 1,
+      "upstreamTimeout": {
+        "status": 502,
+        "elapsedMs": 227
+      },
+      "restart": {
+        "before": 16,
+        "after": 16,
+        "persistedBlocks": 4
+      },
+      "logicalIsolation": true,
+      "hostCanAccessOtherKnownConversation": true,
+      "blockedEgress": ""
+    }
+  ]
+}

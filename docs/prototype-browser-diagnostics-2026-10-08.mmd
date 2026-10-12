@@ -1,0 +1,21 @@
+flowchart TD
+    A[正式 runner 校验输入和快照] --> B[创建隔离 session 和 window]
+    B --> C[initialization: loadURL 与 CDP]
+    C --> D[viewport: 设置 绘制 实测 3秒]
+    D --> E[step: 原生动作或原断言 3秒]
+    E --> F{是否继续步骤}
+    F -->|继续| E
+    F -->|结束或断言失败| G[screenshot: 绘制 捕获 缩放 PNG]
+    G --> H[清理隔离环境与最终授权检查]
+    H --> I[正式 domain 校验可选 diagnostics]
+    I --> J[保存并读取 evidence 旧报告兼容]
+    C -.-> K[finally 用单调时钟记录实际阶段耗时]
+    D -.-> K
+    E -.-> K
+    G -.-> K
+    L[v8 初始化10秒 其余阶段3秒 总60秒不重置] --> M[记录兼容固定停止原因及活动 timeoutPhase]
+    N[取消 撤权 渲染器退出] --> O[记录固定停止原因 不标 timeoutPhase]
+    M --> K
+    O --> K
+    K --> I
+    B -.阶段外失败不虚构阶段.-> I

@@ -12,6 +12,13 @@ import type {AppPreferences,Connection,DocumentDeliveryInput,ExternalActionPropo
 
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 
+test('HTML外网加载明确失败仍阻断交付，关闭可选质量不能豁免关键失败与版本保护',async t=>{
+ const {store,service,mount,input}=await fixture(t),file='cdn.html',content='<!doctype html><html><head><script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script></head><body>页面</body></html>',request={...input,path:file,sourceHash:digest(content)};await fs.writeFile(path.join(mount.path,file),content);
+ const blocked=await makeGate(store,service,[]).check(request,{contentReviewed:true,destinationConfirmed:true});assert.equal(blocked.allowed,false);assert.equal(blocked.quality!.passed,false);assert.equal(blocked.checks.find(c=>c.id==='quality')!.status,'blocked');
+ const optional=makeGate(store,service,[],{qualityGateEnabled:false});const skipped=await optional.check(request,{contentReviewed:true,destinationConfirmed:true});assert.equal(skipped.allowed,false);assert.equal(skipped.quality!.passed,false);assert.equal(skipped.checks.find(c=>c.id==='quality')!.status,'blocked');
+ await fs.writeFile(path.join(mount.path,file),content+' ');assert.equal((await optional.check(request,{contentReviewed:true,destinationConfirmed:true})).allowed,false);
+});
+
 test('模块 PRD 的格式建议不阻断交付，真实空文件仍阻断',async t=>{
  const {store,service,mount,input}=await fixture(t);const gate=makeGate(store,service,[]);
  const content='# 退回模块 PRD\n\n## 规则\n退回时原因必填。\n';await fs.writeFile(path.join(mount.path,input.path),content);

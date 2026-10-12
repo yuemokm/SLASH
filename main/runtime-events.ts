@@ -1,4 +1,6 @@
 import type {RuntimeContextUsage,RuntimeObservedStatus,RuntimeTokenUsage} from '../shared/runtime-status.js';
+import type {RuntimeRequestDiagnostics,RuntimeResponseDiagnostics} from '../shared/runtime-status.js';
+import {contentReviewResponseDiagnostics} from './content-review-response.js';
 
 const object=(value:unknown):Record<string,unknown>|undefined=>value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:undefined;
 const count=(value:unknown):value is number=>typeof value==='number'&&Number.isSafeInteger(value)&&value>=0;
@@ -12,6 +14,8 @@ export class RuntimeEventObserver{
  snapshot(){return this.value?structuredClone(this.value):undefined;}
  private error(value:unknown){if(typeof value!=='string')return undefined;try{return this.redact(value).slice(0,300);}catch{return'运行诊断暂不可用';}}
  private update(patch:Partial<RuntimeObservedStatus>){this.value={activity:'model',...this.value,...patch,updatedAt:this.now().toISOString()};return this.snapshot();}
+ observeRequest(requestDiagnostics:RuntimeRequestDiagnostics){return this.update({requestDiagnostics,responseDiagnostics:undefined});}
+ observeResponse(content:readonly unknown[],stopReason:unknown){const responseDiagnostics:RuntimeResponseDiagnostics={...contentReviewResponseDiagnostics(content),stopReason:['stop','length','toolUse','error','aborted'].includes(stopReason as string)?stopReason as RuntimeResponseDiagnostics['stopReason']:'unknown'};return this.update({responseDiagnostics});}
  observe(input:unknown):RuntimeObservedStatus|undefined{
   const event=object(input);if(!event)return;
   switch(event.type){

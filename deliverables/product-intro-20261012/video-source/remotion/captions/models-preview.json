@@ -1,0 +1,26 @@
+[
+  {
+    "text": "模型可以自己配。",
+    "startMs": 400,
+    "endMs": 2600,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "填服务地址、API 密钥和模型 ID，再选协议。",
+    "startMs": 2800,
+    "endMs": 7163,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  },
+  {
+    "text": "官方 API、模型供应商，或者兼容的中转服务，都从这里接入。",
+    "startMs": 7363,
+    "endMs": 13030,
+    "timestampMs": null,
+    "confidence": null,
+    "pageBreakAfter": true
+  }
+]

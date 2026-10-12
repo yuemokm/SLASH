@@ -10,7 +10,7 @@ const snapshot={requests:[{id:'r',text:'对照原资料检查规则及待确认�
 const reviewer={provider:'fixture-only',modelId:'no-network',protocol:'injected-domain-callback'};
 const directions=['fact_inference','scope_expansion','contradiction','cross_artifact_consistency','field_semantics','request_coverage'];
 const coverage={artifactRefs:['A1'],sourceRefs:['S1'],requestRefs:['R1'],directions,limitations:[]};
-const finding={category:'contradiction',severity:'blocking',confidence:'high',explanation:'成果与已引用资料的复核要求不同。',artifacts:[{artifactRef:'A1',quote:'审批无需复核。'}],sources:[{sourceRef:'S1',quote:'审批必须复核。'}],requests:[]};
+const finding={category:'contradiction',severity:'blocking',confidence:'high',scope:'uncertain',repairDisposition:'record_only',explanation:'成果与已引用资料的复核要求不同。',artifacts:[{artifactRef:'A1',quote:'审批无需复核。'}],sources:[{sourceRef:'S1',quote:'审批必须复核。'}],requests:[]};
 const run=async(raw:unknown,stopReason='stop')=>{let calls=0;const receipt=await reviewContent({input:buildContentReviewInput(snapshot),reviewer,review:async()=>{calls++;return{raw,stopReason};}});assert.equal(calls,1,'invalid output never retries');assert.ok(verifyContentReviewReceipt(receipt));return receipt;};
 
 test('full prompt schema derives actual finding/coverage validators with required arrays/enums/limits/strict objects',()=>{

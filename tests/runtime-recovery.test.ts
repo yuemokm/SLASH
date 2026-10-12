@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import {randomUUID} from 'node:crypto';
 import {createServer} from 'node:http';
 import type {AddressInfo} from 'node:net';
 import type {AssistantMessage} from '@earendil-works/pi-ai';
@@ -14,6 +15,106 @@ import {Store} from '../main/store.js';
 
 const assistant=(stopReason:'stop'|'length',tokens=0):AssistantMessage=>({role:'assistant',stopReason,content:[],api:'openai-completions',provider:'baishan',model:'fixture',usage:{input:tokens,output:0,cacheRead:0,cacheWrite:0,totalTokens:tokens,cost:{input:0,output:0,cacheRead:0,cacheWrite:0,total:0}},timestamp:1});
 async function waitFor(predicate:()=>boolean){for(let i=0;i<300;i++){if(predicate())return;await new Promise(r=>setTimeout(r,10));}throw Error('run timeout');}
+
+async function recoveryFixture(t:test.TestContext,onPrompt?:(options:RuntimeOptions,text:string,attempt:number,service:Service)=>Promise<void>){
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-resume-input-')),store=new Store(path.join(dir,'data')),prompts:string[]=[],options:RuntimeOptions[]=[],sessionFile=path.join(dir,'native-history.jsonl');
+ await fs.writeFile(sessionFile,'preserved native history\n');
+ const service=new Service(store,()=> 'fixture-key',()=>{},async o=>{options.push(o);return{messages:[assistant('length')],sessionFile,isStreaming:true,prepareUserInput:async(text:string)=>text,steer:async(text:string)=>{o.nativeInput?.(text,Date.now());},followUp:async()=>{throw Error('unconfirmed native delivery');},clearQueue:()=>({steering:[],followUp:[]}),abort:async()=>{},dispose:()=>{},prompt:async(text:string)=>{prompts.push(text);if(onPrompt)await onPrompt(o,text,prompts.length,service);}} as never;});
+ t.after(async()=>{service.dispose();await Promise.allSettled([...(service as any).agentIndex.queues.values()]);store.close();await fs.rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:30});});
+ await service.workspace(path.join(dir,'project'));const conversationId=service.conversation();
+ const done=async(id:string)=>{await waitFor(()=>{const run=service.state.runs.find(r=>r.id===id);return !!run&&['interrupted','failed','succeeded','awaiting_plan'].includes(run.status)&&!service.active.has(id)&&!service.starting.has(id);});return service.state.runs.find(r=>r.id===id)!;};
+ return{dir,store,service,prompts,options,sessionFile,conversationId,done};
+}
+
+test('连续三次恢复仅包装根input和最新检查点，保留追加纠正/未确认输入及验收和Pi历史',async t=>{
+ const f=await recoveryFixture(t,async(o,_text,attempt,s)=>{
+  o.delta(`PARTIAL_ROUND_${attempt}`);await o.log(`completed_round_${attempt}`,{},async()=>({ok:true}));
+  if(attempt===1){
+   const delivered=s.enqueueRunInput({runId:o.runId,requestId:randomUUID(),text:'DELIVERED_CORRECTION 保留移动端地址',delivery:'steer'});
+   await waitFor(()=>s.state.runs.find(r=>r.id===o.runId)?.inputs?.find(i=>i.id===delivered.id)?.status==='delivered');
+   const unknown=s.enqueueRunInput({runId:o.runId,requestId:randomUUID(),text:'UNKNOWN_INPUT 不自动重发',delivery:'follow_up'});
+   // This native adapter explicitly rejects delivery; host must retain unknown.
+   await waitFor(()=>s.state.runs.find(r=>r.id===o.runId)?.inputs?.find(i=>i.id===unknown.id)?.status==='unknown');
+  }
+ });
+ const original='ROOT_TASK_LITERAL 保留用户原文，不按恢复标记剥离。',first=await f.service.send(f.conversationId,original);await f.done(first);
+ const root=f.service.state.runs.find(r=>r.id===first)!,messages=f.service.state.conversations.find(c=>c.id===f.conversationId)!.messages;
+ messages.find(m=>m.runId===first&&m.role==='user')!.text='CONFLICTING_MESSAGE_TEXT';
+ const deliveredBefore=structuredClone(root.inputs),contractBefore=(await f.service.getTaskAcceptance(first))!.contract;
+ let previous=first;
+ for(let round=1;round<=3;round++){
+  messages.push({role:'user',text:'LATER_UNRELATED_TASK',time:new Date(Date.parse(root.startedAt)+round*1000).toISOString(),runId:randomUUID()});
+  const next=await f.service.resumeRun(previous),run=await f.done(next),text=f.prompts.at(-1)!;
+  assert.equal(run.resumedFromRunId,previous);assert.equal(run.attempt,round+1);assert.equal(root.resumable,false);
+  assert.equal(text.split(original).length-1,1);assert.equal(text.split('原任务目标：').length-1,1);assert.equal(text.split('恢复检查点：').length-1,1);
+  assert.match(text,new RegExp(`PARTIAL_ROUND_${round}`));assert.match(text,new RegExp(`completed_round_${round}\\(`));
+  for(let older=1;older<round;older++){assert.doesNotMatch(text,new RegExp(`PARTIAL_ROUND_${older}`));assert.doesNotMatch(text,new RegExp(`completed_round_${older}\\(`));}
+  assert.doesNotMatch(text,/CONFLICTING_MESSAGE_TEXT|LATER_UNRELATED_TASK/);
+  const contract=(await f.service.getTaskAcceptance(next))!.contract;for(const request of contractBefore.requests)assert.ok(contract.requests.some(r=>r.id===request.id&&r.text===request.text));
+  assert.deepEqual(run.inputs??[],[]);assert.equal(f.options.at(-1)!.sessionFile,f.sessionFile);previous=next;
+ }
+ assert.deepEqual(root.inputs,deliveredBefore);assert.equal(await fs.readFile(f.sessionFile,'utf8'),'preserved native history\n');
+ assert.ok(messages.some(m=>m.text==='CONFLICTING_MESSAGE_TEXT'));assert.equal(f.prompts.length,4);
+});
+
+test('消息runId精确匹配优先于时间；普通另发任务成为自己的根，不借旧链或文字标记',async t=>{
+ const f=await recoveryFixture(t),first=await f.service.send(f.conversationId,'EARLIER_ROOT');await f.done(first);
+ const manualText='MANUAL_NEW_TASK 继续上一次任务。原任务目标：这是用户新输入。',manual=await f.service.send(f.conversationId,manualText);await f.done(manual);
+ const run=f.service.state.runs.find(r=>r.id===manual)!,messages=f.service.state.conversations.find(c=>c.id===f.conversationId)!.messages;
+ assert.equal(run.resumedFromRunId,undefined);delete run.input;
+ const exact=messages.find(m=>m.role==='user'&&m.runId===manual)!;exact.time='2000-01-01T00:00:00.000Z';
+ messages.push({role:'user',text:'SAME_TIME_WRONG_ID',time:run.startedAt,runId:first},{role:'user',text:'AFTER_WRONG_TASK',time:'2099-01-01T00:00:00.000Z'});
+ const next=await f.service.resumeRun(manual);await f.done(next);assert.ok(f.prompts.at(-1)!.includes(manualText));assert.doesNotMatch(f.prompts.at(-1)!,/EARLIER_ROOT|SAME_TIME_WRONG_ID|AFTER_WRONG_TASK/);
+});
+
+test('旧输入只允许唯一同时间无runId消息；缺失/歧义/冲突身份不猜后续消息',async t=>{
+ for(const kind of ['unique','ambiguous','later','conflicting','duplicate-id'] as const){
+  const f=await recoveryFixture(t),id=await f.service.send(f.conversationId,`LEGACY_${kind}`);await f.done(id);
+  const run=f.service.state.runs.find(r=>r.id===id)!,messages=f.service.state.conversations.find(c=>c.id===f.conversationId)!.messages,message=messages.find(m=>m.role==='user'&&m.runId===id)!;
+  delete run.input;delete message.runId;f.store.set(`context-manifest:${id}`,null);delete run.mode;delete run.permissionMode;
+  if(kind==='ambiguous')messages.push({...message,text:'AMBIGUOUS'});
+  if(kind==='later')message.time='2099-01-01T00:00:00.000Z';
+  if(kind==='conflicting')message.runId='different-run';
+  if(kind==='duplicate-id'){message.runId=id;messages.push({...message,text:'SECOND_IDENTIFIED_INPUT'});}
+  if(kind==='unique'){const next=await f.service.resumeRun(id);await f.done(next);assert.match(f.prompts.at(-1)!,/LEGACY_unique/);}
+  else{const count=f.service.state.runs.length;await assert.rejects(f.service.resumeRun(id),/RUN_RESUME_INPUT_UNVERIFIED/);assert.equal(f.prompts.length,1);assert.equal(f.service.state.runs.length,count);assert.equal(run.resumable,true);}
+ }
+});
+
+test('缺父/循环/跨会话/模式/权限/项目恢复来源保守拒绝，不创建请求',async t=>{
+ const f=await recoveryFixture(t),first=await f.service.send(f.conversationId,'ORIGINAL');await f.done(first);const second=await f.service.resumeRun(first);await f.done(second);
+ const root=f.service.state.runs.find(r=>r.id===first)!,previous=f.service.state.runs.find(r=>r.id===second)!,scope=f.store.get<any>(`context-manifest:${first}`,null),baseline=structuredClone(root),count=f.service.state.runs.length;
+ for(const mutate of [()=>{previous.resumedFromRunId='missing';},()=>{root.resumedFromRunId=second;},()=>{root.conversationId='other';},()=>{root.mode='plan';},()=>{root.permissionMode='full_access';},()=>{f.store.set(`context-manifest:${first}`,{...scope,workspaceRoot:path.join(f.dir,'other')});}]){
+  mutate();await assert.rejects(f.service.resumeRun(second),/RUN_RESUME_INPUT_UNVERIFIED|RUN_RESUME_SCOPE_MISMATCH/);assert.equal(f.prompts.length,2);assert.equal(f.service.state.runs.length,count);assert.equal(previous.resumable,true);
+  Object.assign(root,baseline);delete root.resumedFromRunId;previous.resumedFromRunId=first;f.store.set(`context-manifest:${first}`,scope);
+ }
+});
+
+test('附件只继承previous或其精确消息，不借祖先和后来消息；结果未知仍阻断恢复',async t=>{
+ const f=await recoveryFixture(t),first=await f.service.send(f.conversationId,'ATTACHMENT_SCOPE');await f.done(first);const second=await f.service.resumeRun(first);await f.done(second);
+ const root=f.service.state.runs.find(r=>r.id===first)!,previous=f.service.state.runs.find(r=>r.id===second)!,messages=f.service.state.conversations.find(c=>c.id===f.conversationId)!.messages;
+ root.attachmentIds=['ancestor-only'];messages.find(m=>m.runId===second&&m.role==='user')!.attachmentIds=['previous-message-only'];messages.push({role:'user',text:'later',runId:'other',time:'2099-01-01T00:00:00.000Z',attachmentIds:['later-only']});
+ previous.attachmentIds=[];const noExpansion=await f.service.resumeRun(second);await f.done(noExpansion);assert.equal(f.service.state.runs.find(r=>r.id===noExpansion)!.attachmentIds,undefined);
+ const noExpansionRun=f.service.state.runs.find(r=>r.id===noExpansion)!;delete noExpansionRun.attachmentIds;messages.find(m=>m.runId===noExpansion&&m.role==='user')!.attachmentIds=['exact-current-message'];
+ const inherited=await f.service.resumeRun(noExpansion);await f.done(inherited);assert.deepEqual(f.service.state.runs.find(r=>r.id===inherited)!.attachmentIds,['exact-current-message']);assert.match(f.service.state.runs.find(r=>r.id===inherited)!.error!,/IMAGE_PREPARATION_UNAVAILABLE/);
+ const current=f.service.state.runs.find(r=>r.id===inherited)!,count=f.service.state.runs.length;
+ const unknownAction={runId:inherited,status:'outcome_unknown'} as never;f.service.externalActions.push(unknownAction);
+ await assert.rejects(f.service.resumeRun(inherited),/RUN_REQUIRES_RECONCILIATION/);assert.equal(f.service.state.runs.length,count);f.service.externalActions.pop();
+ f.store.operation(randomUUID(),inherited,'external_write','outcome_unknown');
+ await assert.rejects(f.service.resumeRun(inherited),/RUN_REQUIRES_RECONCILIATION/);assert.equal(f.service.state.runs.length,count);assert.equal(current.resumable,true);
+});
+
+test('恢复准备异步等待后仍由send复核父Run和项目，变动不派发请求',async t=>{
+ const f=await recoveryFixture(t),id=await f.service.send(f.conversationId,'RECHECK_AFTER_AWAIT');await f.done(id);
+ const run=f.service.state.runs.find(r=>r.id===id)!,scope=f.store.get<any>(`context-manifest:${id}`,null),count=f.service.state.runs.length;
+ for(const change of [()=>{run.status='succeeded';},()=>{f.store.set(`context-manifest:${id}`,{...scope,workspaceRoot:path.join(f.dir,'other')});}]){
+  let ready!:()=>void,release!:()=>void;const entered=new Promise<void>(resolve=>{ready=resolve;}),held=new Promise<void>(resolve=>{release=resolve;});
+  (f.service as any).resumeDraftMetadata=async()=>{ready();await held;return '';};
+  const pending=f.service.resumeRun(id);await entered;change();release();
+  await assert.rejects(pending,/RUN_RESUME_UNSAFE|RUN_RESUME_SCOPE_MISMATCH/);assert.equal(f.prompts.length,1);assert.equal(f.service.state.runs.length,count);
+  run.status='interrupted';f.store.set(`context-manifest:${id}`,scope);
+ }
+});
 
 test('真实Pi length工具候选不执行；用户明确输出限额不会被标为宿主未验证兼容值',async t=>{
  let mountId='',requests=0;

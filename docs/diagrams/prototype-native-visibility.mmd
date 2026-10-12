@@ -1,0 +1,13 @@
+flowchart TD
+    Snapshot[授权与内容hash绑定快照] --> Node[固定选择器找到唯一节点]
+    Node --> Box[边界框宽高为正]
+    Box --> Native[Chromium checkVisibility opacity与CSS可见性]
+    Native --> Hidden[关闭details后代或普通隐藏返回不可见]
+    Native --> Summary[原生summary仍可见]
+    Hidden --> Assert[visible断言按实际隐藏状态返回]
+    Hidden --> Deny[后代动作拒绝 TARGET_HIDDEN]
+    Summary --> Mouse[固定CDP原生点击]
+    Mouse --> Toggle[展开 关闭 再展开及嵌套状态回归]
+    Toggle --> Receipt[v6源码验收与hash绑定PNG]
+    Receipt --> Limit[仅说明专项通过 不代表七项视觉通过]
+    Old[旧v5误判与旧202步失败报告] --> Preserve[原样保留 不追认未执行步骤]

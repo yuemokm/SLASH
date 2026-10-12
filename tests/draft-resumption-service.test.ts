@@ -9,7 +9,9 @@ import type {RuntimeOptions} from '../main/agent.js';
 
 async function fixture(t:test.TestContext,execute:(o:RuntimeOptions,service:Service,text:string)=>Promise<void>){
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-draft-resume-')),store=new Store(path.join(dir,'data'));
- const service=new Service(store,()=> 'offline-key',()=>{},async o=>({messages:[{role:'assistant',stopReason:'stop'}],abort:async()=>{},dispose:()=>{},prompt:async(text:string)=>{await execute(o,service,text);o.delta('完成');}}));
+ // This suite tests explicit Run resumption, not model quality repair. Retain
+ // the real failed HTML report without replaying the resumed operation.
+ const service=new Service(store,()=> 'offline-key',()=>{},async o=>{let prompts=0;return{messages:[{role:'assistant',stopReason:'stop',content:[{type:'text',text:'草稿恢复夹具回复。'}]}],abort:async()=>{},dispose:()=>{},prompt:async(text:string)=>{if(prompts++>0){assert.match(text,/^宿主已对当前草稿执行检查。这是本任务第[12]\/2轮有限修正/);assert.match(text,/<untrusted_host_check_observations>/);o.delta('夹具仅验证恢复，质量问题保持未修复。');return;}await execute(o,service,text);o.delta('完成');}};});
  t.after(async()=>{service.dispose();await Promise.allSettled([...(service as any).agentIndex.queues.values()]);store.close();await fs.rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:30});});
  await service.workspace(path.join(dir,'project'));const output=service.state.mounts.find(m=>m.name==='成果')!,target={mountId:output.id,path:'index.html'};
  await fs.writeFile(path.join(output.path,target.path),'<main>base</main>');
@@ -23,9 +25,9 @@ test('两次明确恢复在执行前建立父关系；同卡逐次增量承接�
   const target={mountId:s.state.mounts.find(m=>m.name==='成果')!.id,path:'index.html'},run=s.state.runs.find(r=>r.id===o.runId)!;
   if(++attempt===1){first=o.runId;const draft=await o.files.draft(target.mountId,target.path,'<main>one</main>',o.runId);changeId=draft.id;o.draft(draft);throw Error('FIXTURE_FIRST_INTERRUPTION');}
   assert.equal(run.resumedFromRunId,attempt===2?first:second);assert.equal(run.permissionMode,'standard');assert.equal(run.mode,'build');
-  const read=await o.readDraft!(target);assert.equal(read.changeId,changeId);
+  const read=await o.readDraft!(target);assert.equal(read.changeId,changeId);assert.equal(read.parentRunId,attempt===2?first:second);assert.notEqual(read.parentRunId,o.runId);
   const metadata=JSON.parse([...text.matchAll(/<untrusted_resume_draft_metadata>\n([^\n]+)\n<\/untrusted_resume_draft_metadata>/g)].at(-1)![1]);assert.equal(metadata.drafts.length,1);assert.equal(metadata.drafts[0].changeId,changeId);assert.equal(metadata.drafts[0].currentHash,read.contentHash);assert.equal(metadata.drafts[0].originalRunId,first);assert.equal('content' in metadata.drafts[0],false);
-  const edit=await o.editDraft!({...target,changeId:read.changeId,expectedContentHash:read.contentHash,oldText:attempt===2?'one':'two',newText:attempt===2?'two':'three'});assert.equal(edit.changeId,changeId);
+  const edit=await o.editDraft!({...target,changeId:read.changeId,expectedContentHash:read.contentHash,oldText:attempt===2?'one':'two',newText:attempt===2?'two':'three'});assert.equal(edit.changeId,changeId);assert.equal(edit.parentRunId,o.runId);assert.equal((await o.readDraft!(target)).parentRunId,o.runId);
   // Even retained old runtime options cannot write once their Run has exited.
   await assert.rejects(s.editDraftForRun(first,{...target,changeId:read.changeId,expectedContentHash:read.contentHash,oldText:'two',newText:'stale'}),/CANCELLED/);
   if(attempt===2){second=o.runId;throw Error('FIXTURE_SECOND_INTERRUPTION');}
@@ -42,7 +44,7 @@ test('中间恢复只读后失败时，下一次明确恢复能承接原祖先pe
  let attempt=0,first='',middle='';
  const f=await fixture(t,async(o)=>{
   if(++attempt===1){first=o.runId;o.draft(await o.files.draft(f.target.mountId,f.target.path,'<main>ancestor</main>',o.runId));throw Error('FIXTURE_FAILURE');}
-  const read=await o.readDraft!(f.target);if(attempt===2){middle=o.runId;assert.equal(f.service.state.changes[0].runId,first);throw Error('FIXTURE_READ_ONLY_FAILURE');}
+  const read=await o.readDraft!(f.target);assert.equal(read.parentRunId,first);if(attempt===2){middle=o.runId;assert.equal(f.service.state.changes[0].runId,first);throw Error('FIXTURE_READ_ONLY_FAILURE');}
   assert.equal(f.service.state.runs.find(r=>r.id===o.runId)?.resumedFromRunId,middle);await o.editDraft!({...f.target,changeId:read.changeId,expectedContentHash:read.contentHash,oldText:'ancestor',newText:'retained'});
  });
  const c=f.service.conversation();await done(f.service,await f.service.send(c,'保留祖先草稿'));await done(f.service,await f.service.resumeRun(first));const final=await f.service.resumeRun(middle);assert.equal((await done(f.service,final)).status,'succeeded');assert.equal(f.service.state.changes.length,1);assert.equal(f.service.state.changes[0].originRunId,first);assert.deepEqual(f.service.state.changes[0].resumptionHistory?.map(item=>[item.fromRunId,item.toRunId]),[[first,final]]);

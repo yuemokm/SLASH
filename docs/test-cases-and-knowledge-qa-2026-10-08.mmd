@@ -1,0 +1,24 @@
+flowchart LR
+    PM[PM在Slash选择项目资料] --> SRC[授权核对与原件保护\nOffice副本解析及来源版本]
+    SRC --> TC[Pi生成测试用例草稿]
+    TC --> CHECK[规范与来源校验\n固定未执行]
+    CHECK --> OUT[成果可读预览\nMarkdown / Excel导出]
+    SRC --> CHUNK[知识库分块与真实Embedding]
+    CHUNK --> LOCAL[持久化本机索引\n失败明确恢复 / 同模型同版本复用]
+    LOCAL --> ENABLE[显式启用本机版本]
+    ENABLE --> FRESH[查询前后核对原件hash\n项目 / 目录 / 外部调用权限]
+    FRESH --> EVIDENCE[本机向量与关键词检索\n原文块 / 来源版本 / 定位]
+    FRESH --> EXPORT[受控新建版本包\nmanifestHash / 不覆盖原件]
+    SRC -.变化或撤权.-> BLOCK[停用旧片段\n等待重新构建]
+    BLOCK -.阻断.-> EVIDENCE
+    EXPORT --> STAGE[Supabase待发布索引版本\n云导入不保存本机路径身份]
+    STAGE --> LIVE[已发布pgvector与关键词索引]
+    USER[同事浏览器] --> WEB[Vercel独立问答页]
+    WEB --> API[服务端鉴权与限额]
+    API --> LIVE
+    LIVE --> ANSWER[模型依据检索片段回答\n引用与无依据提示]
+    ANSWER --> WEB
+    PM --> CONNECT[Slash连接管理\nOAuth / 加密凭据 / 服务端交互]
+    CONNECT --> MCP[Vercel与Supabase官方MCP\n管理创建和发布]
+    MCP -.管理面.-> WEB
+    MCP -.管理面.-> STAGE

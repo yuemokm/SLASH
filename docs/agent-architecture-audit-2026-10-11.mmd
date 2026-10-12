@@ -1,0 +1,15 @@
+flowchart TB
+  UI[Electron UI] --> IPC[Schema 与发送者校验]
+  subgraph MAIN[当前 Electron 主进程]
+    IPC --> Service[Service 业务协调]
+    Service <--> Pi[Pi AgentSession]
+    Pi --> Gate[受控工具与权限校验]
+    Gate --> Draft[草稿与版本检查]
+    Gate --> Tools[命令与外部适配]
+    Service --> Store[SQLite 操作与检查点]
+  end
+  Draft --> Quality[业务与视觉验收 A04 待完成]
+  Store --> Recover[启动恢复]
+  Recover --> Gap[A01 未决命令仍 executing 却允许恢复]
+  Tools --> OAuth[A02 OAuth 地址缺少内网范围限制]
+  MAIN -.-> Isolation[A03 故障隔离与职责边界待完善]

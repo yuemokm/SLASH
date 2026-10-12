@@ -1,0 +1,15 @@
+flowchart TB
+  UI[Slash 会话 / 模型与扩展设置] --> Run[Pi AgentSession\n唯一父任务执行底座]
+  Run --> Gateway[Slash 工具网关\n模式 / 权限 / 目录 / 总预算 / 取消]
+  Gateway --> Web[pi-web-access\n每个 Run 独立 MCP 会话与网页缓存]
+  Gateway --> MCP[pi-mcp-adapter host-managed\nstdio 目录和单次派发]
+  Gateway --> HTTP[已有 HTTP MCP\nOAuth / elicitation / 结果未知保护]
+  Gateway --> Sub[pi-subagents\n受限独立只读子会话]
+  Sub --> Evidence[证据与草稿返回父 Run]
+  Evidence --> Run
+  Gateway --> Lens[pi-lens\n临时草稿副本静态诊断]
+  Gateway --> Plan[Plannotator\n绑定 Run 与计划哈希的浏览器评阅]
+  Plan --> Feedback[批注回到 Slash\n保留原 Plan / Build 确认流程]
+  Run -. 显式启用且仅元数据 .-> Observe[Langfuse Pi 插件\n独立进程 / 凭据隔离]
+  Run --> Native[Pi 原生上下文压缩\n本轮保持唯一默认机制]
+  Candidate[长期记忆候选 pi-memory\n尚未接入，需项目隔离验收] -. 后续选型 .-> Run

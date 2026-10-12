@@ -1,0 +1,13 @@
+flowchart LR
+  Draft[精确版本草稿快照] --> Guard[既有权限与哈希核对]
+  Intent[用户明确移动要求] --> Viewport[宿主桌面与适用移动用例]
+  Guard --> Runner[受限离线 Electron runner]
+  Viewport --> Runner
+  Runner --> Check[固定有界控件检查]
+  Check --> Limits[超限或无适用控件为 unknown]
+  Check --> Issues[结构 selector 与视口及数值问题]
+  Check --> LimitedPass[仅此控件范围 passed]
+  Runner --> Screenshot[同版本真实截图]
+  Screenshot --> Review[视觉反馈与修稿复查]
+  LimitedPass --> Review
+  Issues --> Review

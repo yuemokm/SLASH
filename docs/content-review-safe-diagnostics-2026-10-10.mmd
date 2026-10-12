@@ -1,0 +1,12 @@
+flowchart TD
+    M["正式模型输出<br/>正文仅在内存解析"] --> Z["原有严格 schema / refine<br/>谓词与总引用≤3不变"]
+    Z -->|"有效"| B["原有原句绑定 / scope / repair gate"]
+    Z -->|"无效"| R["宿主固定 params 枚举<br/>BASIS / QUOTE_TOTAL / NONBLANK"]
+    R --> S["安全投影<br/>固定 code + schema字段路径 + 白名单tag<br/>不存 message / input / raw正文 / 思考"]
+    S --> I["沿 existing invalidFindings.reason 保存<br/>invalid / unverified；混合有效项也不可自动修"]
+    H["旧 generic custom 回执<br/>原原因仍未知"] --> K["历史文件与 resultHash保持<br/>不回填新诊断"]
+    B --> K
+    I --> K
+    T["26/26 + 类型检查<br/>真实3旧回执重放有效"] --> C["schema / prompt / 完整QE05 input字节不变<br/>无云；子代理未build"]
+    K --> C
+    C --> U["改善格式排查<br/>不宣称QE05语义通过；原violated不变"]

@@ -1,0 +1,277 @@
+[
+  {
+    "id": "intro",
+    "title": "Slash 产品工作台",
+    "text": "Slash 是面向产品经理的桌面 Agent。把参考资料、需求文档和交互原型，放在同一个工作台里。",
+    "audio": "voice/intro.mp3",
+    "duration": 9.768,
+    "frames": 311,
+    "captions": [
+      {
+        "text": "斜杠工作台是面向产品经理的桌面Agent把参考资料需求",
+        "startMs": 97.625,
+        "endMs": 5892.832,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "文档和交互原型放在同一个工作台里",
+        "startMs": 5904.75,
+        "endMs": 9226.166,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "architecture",
+    "title": "复用 Pi，专注产品工作",
+    "text": "底层复用轻量的 Pi SDK，承接模型适配、会话上下文和工具循环。OpenClaw 早期也采用过 Pi。Slash 补上权限、文件版本和成果交付，让这些能力接近日常工作。",
+    "audio": "voice/architecture.mp3",
+    "duration": 16.968,
+    "frames": 527,
+    "captions": [
+      {
+        "text": "底层复用轻量的派SDK承接模型适配会话上下文和工具",
+        "startMs": 97.625,
+        "endMs": 5907.124,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "循环OpenClaw早期也采用过Pi斜杠工作台补上权限",
+        "startMs": 5919.041,
+        "endMs": 11773.833,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "文件版本和成果交付让这些能力接近日常工作",
+        "startMs": 11940.458,
+        "endMs": 16404.749,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "models",
+    "title": "用你需要的模型",
+    "text": "模型设置支持三种接口协议，可以连接官方 API、供应商或兼容中转。填好服务地址、密钥和模型 ID，再选择适合任务的模型。",
+    "audio": "voice/models.mp3",
+    "duration": 12.504,
+    "frames": 393,
+    "captions": [
+      {
+        "text": "模型设置支持三种接口协议可以连接官方API供应商或",
+        "startMs": 97.625,
+        "endMs": 5728.582,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "兼容中转填好服务地址密钥和模型ID再选择适合任务的",
+        "startMs": 5740.458,
+        "endMs": 11416.666,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "模型",
+        "startMs": 11428.583,
+        "endMs": 11940.499,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "skills",
+    "title": "导入团队的工作方法",
+    "text": "已有技能可以从本地或 GitHub 导入。也可以用 Skill Creator 等外部工具编写，再带进 Slash，把常用方法变成可复用的工作流程。",
+    "audio": "voice/skills.mp3",
+    "duration": 12.24,
+    "frames": 385,
+    "captions": [
+      {
+        "text": "已有技能可以从本地或GitHub导入也可以用Skill",
+        "startMs": 97.625,
+        "endMs": 4595.207,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "Creator等外部工具编写再带进斜杠工作台把常用方法变成可",
+        "startMs": 4607.125,
+        "endMs": 10416.666,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "复用的工作流程",
+        "startMs": 10428.583,
+        "endMs": 11702.416,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "permissions",
+    "title": "先研究，再执行",
+    "text": "Plan 先研究，Build 生成和修改。标准权限按授权目录工作；完全访问可以使用本机文件，运行中也能切换。还可以补充指令，编辑待发送内容，或立即发送。",
+    "audio": "voice/permissions.mp3",
+    "duration": 15.024,
+    "frames": 469,
+    "captions": [
+      {
+        "text": "Plan先研究Build生成和修改标准权限按授权目录工作",
+        "startMs": 97.625,
+        "endMs": 5619.041,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "完全访问可以使用本机文件运行中也能切换还可以补充指令",
+        "startMs": 5988.083,
+        "endMs": 11690.457,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "编辑待发送内容或立即发送",
+        "startMs": 11916.666,
+        "endMs": 14476.166,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "smb",
+    "title": "围绕同一份原型工作",
+    "text": "团队可以通过 SMB 共享目录，使用同一份原型项目和资料，减少各自保留副本后再合版的麻烦。遇到版本冲突，仍然需要核对处理。",
+    "audio": "voice/smb.mp3",
+    "duration": 12.144,
+    "frames": 382,
+    "captions": [
+      {
+        "text": "团队可以通过SMB共享目录使用同一份原型项目和资料减少",
+        "startMs": 97.625,
+        "endMs": 5797.624,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "各自保留副本后再合版的麻烦遇到版本冲突仍然需要核对处理",
+        "startMs": 5821.416,
+        "endMs": 11583.333,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "resources",
+    "title": "资料与产出，就在右侧",
+    "text": "右侧集中查看任务详情、成果和文件。文档可以直接预览，原型可以打开查看；修改先保留为草稿，确认后再应用。",
+    "audio": "voice/resources.mp3",
+    "duration": 11.088,
+    "frames": 351,
+    "captions": [
+      {
+        "text": "右侧集中查看任务详情成果和文件文档可以直接预览",
+        "startMs": 97.625,
+        "endMs": 5309.541,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "原型可以打开查看修改先保留为草稿确认后再应用",
+        "startMs": 5607.125,
+        "endMs": 10523.791,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "slash",
+    "title": "斜杠，唤起常用流程",
+    "text": "在输入框使用斜杠，选择需要的技能或工作流。少记命令，让常用方法直接进入当前任务。",
+    "audio": "voice/slash.mp3",
+    "duration": 8.688,
+    "frames": 279,
+    "captions": [
+      {
+        "text": "在输入框使用斜杠选择需要的技能或工作流少记命令让常用",
+        "startMs": 97.625,
+        "endMs": 6047.583,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "方法直接进入当前任务",
+        "startMs": 6059.541,
+        "endMs": 8119.041,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "prd",
+    "title": "从资料到 PRD 草稿",
+    "text": "给出资料位置，写清目标，再选择 PRD 流程。生成草稿后，在右侧预览，核对来源和关键规则。继续补充修改要求，查看新版本，最后应用成果。",
+    "audio": "voice/prd.mp3",
+    "duration": 14.616,
+    "frames": 456,
+    "captions": [
+      {
+        "text": "给出资料位置写清目标再选择PRD流程生成草稿后",
+        "startMs": 97.625,
+        "endMs": 5940.457,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "在右侧预览核对来源和关键规则继续补充修改要求查看",
+        "startMs": 6142.875,
+        "endMs": 11928.583,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "新版本最后应用成果",
+        "startMs": 11952.375,
+        "endMs": 14047.582,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  },
+  {
+    "id": "close",
+    "title": "持续完善实际交付质量",
+    "text": "当前仍处于开发验证阶段，复杂任务的完整性和产出质量，还需要继续提升。Slash 会围绕真实资料和实际任务，持续完善。",
+    "audio": "voice/close.mp3",
+    "duration": 12.384,
+    "frames": 390,
+    "captions": [
+      {
+        "text": "当前仍处于开发验证阶段复杂任务的完整性和产出质量还需要",
+        "startMs": 97.625,
+        "endMs": 5847.582,
+        "timestampMs": null,
+        "confidence": null
+      },
+      {
+        "text": "继续提升斜杠工作台会围绕真实资料和实际任务持续完善",
+        "startMs": 5871.416,
+        "endMs": 11821.458,
+        "timestampMs": null,
+        "confidence": null
+      }
+    ]
+  }
+]

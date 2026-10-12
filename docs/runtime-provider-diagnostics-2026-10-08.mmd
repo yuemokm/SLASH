@@ -1,0 +1,16 @@
+flowchart TD
+  Config[既有模型配置与思考档位] --> Pi[既有 Pi session.agent.streamFunction]
+  Pi --> Hook[官方 onPayload 先执行原回调]
+  Hook --> Payload[保留原返回变换及异常行为]
+  Payload --> Flags[仅投影安全枚举与正整数]
+  Payload --> Send[既有 SDK 发送 不改参数预算重试]
+  Flags --> Clear[保存最近请求 清除旧 responseDiagnostics]
+  Clear --> Status[既有 RuntimeObservedStatus 持久化]
+  Send --> Event{主会话 message_end}
+  Event -->|有| Shape[仅统计块数量 字符数 固定停止原因]
+  Shape --> Status
+  Event -->|尚无或摘要不同事件| Unknown[不借用旧响应 不推断上游行为]
+  Send --> Length{上游返回 length}
+  Length --> Error[保留 interrupted 和原错误代码]
+  Error --> Counts[按实际可见正文与草稿数提示]
+  Counts --> Budget[兼容预算未验证 不宣称上游最大值]

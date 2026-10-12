@@ -1,0 +1,88 @@
+// Fixed published CLI, synthetic data, loopback-only transport. No Slash routing or credentials.
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {spawn} from 'node:child_process';
+import {mkdtemp,mkdir,writeFile,readFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
+
+const packageDir=process.argv[2]??path.join(tmpdir(),'slash-billion-runtime-20261008','package');
+assert.equal(JSON.parse(await readFile(path.join(packageDir,'package.json'),'utf8')).version,'0.1.188');
+const root=await mkdtemp(path.join(tmpdir(),'slash-billion-local-'));
+const startedAt=Date.now();
+const requests=[],evidence={package:'billion-context',version:'0.1.188',root,cloudCalls:false,semanticQualityMeasured:false,checks:[],upstreamRequests:0,distSha256:createHash('sha256').update(await readFile(path.join(packageDir,'dist','index.js'))).digest('hex')};
+let child,base,proxyPort;let output='';
+const watchdog=setTimeout(()=>{console.error('BILLION_AUDIT_TIMEOUT');child?.kill();process.exit(1);},60000);
+const guard=path.join(root,'loopback-only.mjs');
+await writeFile(guard,`import net from 'node:net';import fs from 'node:fs';import {syncBuiltinESMExports}from'node:module';const original=net.Socket.prototype.connect;net.Socket.prototype.connect=function(...args){let a=args[0];if(Array.isArray(a))a=a[0];const host=typeof a==='object'?a.host:(typeof args[1]==='string'?args[1]:'localhost');if(host&&!['localhost','127.0.0.1','::1'].includes(host)){fs.appendFileSync(${JSON.stringify(path.join(root,'blocked-egress.log'))},host+'\\n');throw new Error('AUDIT_EXTERNAL_EGRESS_BLOCKED '+host);}return original.apply(this,args);};syncBuiltinESMExports();`);
+for(const name of ['config','data','cache','state'])await mkdir(path.join(root,name,'billion-context'),{recursive:true});
+await writeFile(path.join(root,'cache','billion-context','models-dev.json'),JSON.stringify({models:{'local/slash-local-audit':{limit:{context:32768,output:1024}}},costs:{'local/slash-local-audit':{input:1,output:1}}}));
+let responseMode='normal',closedSlow=0;
+const upstream=createServer(async(req,res)=>{const chunks=[];for await(const c of req)chunks.push(c);const body=JSON.parse(Buffer.concat(chunks));requests.push({body,headers:req.headers});
+ if(responseMode==='slow'){res.on('close',()=>closedSlow++);return;}
+ if(responseMode==='disconnect'){req.socket.destroy();return;}
+ if(responseMode==='stream'){
+  res.writeHead(200,{'content-type':'text/event-stream'});
+  for(const [delta,finish]of [[{role:'assistant',reasoning_content:'SYNTHETIC_STREAM_REASONING'},null],[{tool_calls:[{index:0,id:'call_stream_001',type:'function',function:{name:'read_authorized_file',arguments:'{"path":'}}]},null],[{tool_calls:[{index:0,function:{arguments:'"synthetic.md"}'}}]},null],[{},'tool_calls']])res.write('data: '+JSON.stringify({id:'stream-local',object:'chat.completion.chunk',created:1,model:'slash-local-audit',choices:[{index:0,delta,finish_reason:finish}]})+'\n\n');
+  res.end('data: [DONE]\n\n');return;
+ }
+ const tool=responseMode==='tool';
+ res.writeHead(200,{'content-type':'application/json'});res.end(JSON.stringify({id:'local-'+requests.length,object:'chat.completion',created:1,model:'slash-local-audit',choices:[{index:0,message:{role:'assistant',content:tool?null:'Local protocol fixture response.',reasoning_content:'SYNTHETIC_REASONING',...(tool?{tool_calls:[{id:'call_local_001',type:'function',function:{name:'read_authorized_file',arguments:'{"path":"synthetic.md"}'}}]}:{})},finish_reason:tool?'tool_calls':'stop'}],usage:{prompt_tokens:25000,completion_tokens:20,total_tokens:25020}}));});
+await new Promise(resolve=>upstream.listen(0,'127.0.0.1',resolve));
+const upstreamUrl=`http://127.0.0.1:${upstream.address().port}`;
+const reserve=createServer();await new Promise(resolve=>reserve.listen(0,'127.0.0.1',resolve));proxyPort=reserve.address().port;await new Promise(resolve=>reserve.close(resolve));base=`http://127.0.0.1:${proxyPort}`;
+await writeFile(path.join(root,'config.json'),JSON.stringify({host:'127.0.0.1',port:proxyPort,upstream:upstreamUrl,modelContextLimit:32768,autoUpdate:false,advisoryCheck:false,releaseNotesCheck:false,mitm:{enabled:false},compress:{enabled:true,maxContextLimit:'75%',emergencyThresholdPercent:'95%',nudgeGrowthTokens:500,preserveRecentMessages:2,preserveRecentTokens:0,minCompressRangeChars:0}}));
+const env=Object.fromEntries(['PATH','Path','SystemRoot','WINDIR','COMSPEC','PATHEXT','TEMP','TMP'].flatMap(k=>process.env[k]===undefined?[]:[[k,process.env[k]]]));
+Object.assign(env,{HOME:root,USERPROFILE:root,TEMP:root,TMP:root,XDG_CONFIG_HOME:path.join(root,'config'),XDG_DATA_HOME:path.join(root,'data'),XDG_CACHE_HOME:path.join(root,'cache'),XDG_STATE_HOME:path.join(root,'state'),BILI_CONFIG_FILE:path.join(root,'config.json'),BILI_SESSIONS_DIR:path.join(root,'sessions'),ACP_AUTO_UPDATE:'0',ACP_AUTO_RESTART_ON_UPDATE:'0',BILI_ADVISORY_CHECK:'0',BILI_RELEASE_NOTES_CHECK:'0',BILI_MITM:'0',BILI_UPSTREAM_PROXY_MODE:'direct'});
+async function start(){output='';child=spawn(process.execPath,['--import',pathToFileURL(guard).href,path.join(packageDir,'dist','index.js'),'start','--no-auto-update'],{cwd:root,env,windowsHide:true,stdio:['ignore','pipe','pipe']});for(const stream of[child.stdout,child.stderr])stream.on('data',b=>output=(output+b).slice(-12000));const deadline=Date.now()+15000;while(Date.now()<deadline){if(child.exitCode!==null)throw new Error('proxy exited '+output);try{const r=await fetch(base+'/__bili/plugin/manifest',{signal:AbortSignal.timeout(500)});if(r.ok){console.log('BILLION_PROXY_READY');return await r.json();}}catch{}await new Promise(resolve=>setTimeout(resolve,100));}throw new Error('proxy start timeout '+output);}
+async function stop(){if(!child||child.exitCode!==null)return;const exited=new Promise(resolve=>child.once('exit',resolve));child.kill();await exited;}
+async function api(endpoint,body){const r=await fetch(base+endpoint,{...(body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(10000)});return {status:r.status,body:await r.json()};}
+const conversationId='slash-synthetic-project-A';
+const messages=[{role:'system',content:'PM fixture. Preserve exact revised field constraints.'}];
+for(let i=0;i<8;i++){messages.push({role:'user',content:`Synthetic revision ${i}. Field latitude F=first-location-not-editable P=after-change-yes. Address F=allowed P=yes. Encoding P=no. Source P=missing. Exact evidence key ROW_${i}_SECRET. `+'Historical synthetic explanation. '.repeat(120)});messages.push({role:'assistant',content:'Acknowledged synthetic constraints '+i+'. '+'Historical response. '.repeat(100)});}
+const postBody=()=>({model:'slash-local-audit',messages,stream:false,max_tokens:1024,tools:[{type:'function',function:{name:'read_authorized_file',description:'Read synthetic data',parameters:{type:'object',properties:{path:{type:'string'}},required:['path']}}}]});
+async function model(body=postBody(),id=conversationId,signal=AbortSignal.timeout(10000)){return await fetch(base+'/bili/'+upstreamUrl+'/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer SYNTHETIC_ONLY','x-bili-plugin':'pi','x-bili-plugin-conversation':id,'x-bili-plugin-context-window':'32768','x-bili-plugin-max-output':'1024'},body:JSON.stringify(body),signal});}
+async function tool(name,args={},extra={}){return await api('/__bili/plugin/tool',{conversationId,tool:name,args,nativeCaller:true,...extra});}
+try{
+ const manifest=await start();assert.ok(manifest.toolNames.includes('compress'));evidence.manifest=manifest.toolNames;
+ const first=await model();assert.equal(first.status,200);const answer=await first.json();assert.equal(answer.choices[0].message.reasoning_content,'SYNTHETIC_REASONING');assert.equal(requests[0].headers.authorization,'Bearer SYNTHETIC_ONLY');evidence.checks.push('real published proxy and native plugin protocol; synthetic credential and reasoning preserved');
+ evidence.initialStatus=await api('/__bili/plugin/status?conversationId='+conversationId);evidence.contextStatus=await tool('acp_status');
+ evidence.nudgeVisible=evidence.contextStatus.body.result.includes('Nudge: ACTIVE');assert.equal(evidence.nudgeVisible,true);
+ await(await model()).json();const beforeBytes=Buffer.byteLength(JSON.stringify(requests.at(-1).body));
+ const fold=await tool('compress',{startId:'m00001',endId:'m00004',summary:'PM constraints first two revisions; precise source details available through restore.',topic:'PM field revisions'});evidence.firstFold=fold;assert.equal(fold.status,200);assert.equal(fold.body.outcome,'applied');
+ const blocks=(await api('/__bili/plugin/status?conversationId='+conversationId)).body.blocks;assert.ok(blocks.some(b=>b.active));const blockId=blocks.find(b=>b.active).id;
+ await(await model()).json();const compressedWire=JSON.stringify(requests.at(-1).body);await writeFile(path.join(root,'compressed-wire.json'),JSON.stringify(requests.at(-1).body,null,2));evidence.omittedOriginal=!compressedWire.includes('ROW_1_SECRET');assert.equal(evidence.omittedOriginal,true);const afterBytes=Buffer.byteLength(compressedWire);assert.ok(afterBytes<beforeBytes);evidence.bytes={before:beforeBytes,after:afterBytes,reductionPercent:Math.round(100*(1-afterBytes/beforeBytes))};
+ const search=await tool('search_context',{query:'PM field revisions',limit:5});assert.equal(search.status,200);assert.ok(search.body.result.includes(blockId));evidence.search=search;
+ const restoredFile=path.join(root,'restored.txt');const restored=await tool('decompress',{blockId,full:true,toFile:restoredFile});evidence.restore=restored;assert.equal(restored.status,200);const restoredText=await readFile(restoredFile,'utf8');assert.ok(messages.slice(1,5).every(message=>restoredText.includes(message.content)));assert.ok(restoredText.includes('ROW_1_SECRET'));assert.ok(restoredText.includes('Source P=missing'));evidence.checks.push('summary omits exact evidence; search locates summary and full decompress returns the four original texts byte-for-byte inside an export receipt');
+ evidence.repeated=[];
+ for(let round=0;round<3;round++){
+  await(await model()).json();const snapshot=(await api('/__bili/plugin/snapshot?conversationId='+conversationId)).body;
+  const ranges=(await api('/__bili/plugin/status?conversationId='+conversationId)).body.compressibleRanges;
+  const range=ranges.find(r=>r.count>=2);assert.ok(range,'compressible range remains after restore');
+  const folded=await tool('compress',{startId:range.startRef,endId:range.endRef,summary:'PM field revisions cycle '+round+'; original constraints remain retrievable for exact field editing.',topic:'PM field revisions'});assert.equal(folded.body.outcome,'applied');
+  const active=(await api('/__bili/plugin/status?conversationId='+conversationId)).body.blocks.filter(b=>b.active);assert.ok(active.length>0);
+  const cycleFile=path.join(root,'restored-'+round+'.txt');const restoredRound=await tool('decompress',{blockId:active.at(-1).id,full:true,toFile:cycleFile});assert.equal(restoredRound.body.outcome,'success');const cycleText=await readFile(cycleFile,'utf8');const startIndex=snapshot.messages.findIndex(m=>m.ref===range.startRef),endIndex=snapshot.messages.findIndex(m=>m.ref===range.endRef);assert.ok(startIndex>=0&&endIndex>=startIndex);assert.ok(snapshot.messages.slice(startIndex,endIndex+1).every(m=>cycleText.includes(m.text)));assert.ok(cycleText.includes('Source P=missing'));
+  evidence.repeated.push({round,folded:true,restored:true,sourceMessageCount:snapshot.orderedMessages.length});
+ }
+ evidence.checks.push('three further real compress/decompress-to-file cycles retain exact source messages');console.log('BILLION_COMPRESSION_PASSED');
+ responseMode='tool';const toolResponse=await(await model()).json();assert.equal(toolResponse.choices[0].message.tool_calls[0].id,'call_local_001');assert.equal(toolResponse.choices[0].message.reasoning_content,'SYNTHETIC_REASONING');
+ responseMode='normal';const withTool=postBody();withTool.messages=[...messages,toolResponse.choices[0].message,{role:'tool',tool_call_id:'call_local_001',content:'SYNTHETIC_TOOL_RESULT'}];await(await model(withTool)).json();const outbound=requests.at(-1).body.messages;const calls=outbound.filter(m=>m.tool_calls?.some(t=>t.id==='call_local_001'));const results=outbound.filter(m=>m.tool_call_id==='call_local_001');assert.equal(calls.length,1);assert.equal(results.length,1);assert.equal(results[0].content.includes('SYNTHETIC_TOOL_RESULT'),true);evidence.checks.push('openai-completions native reasoning and host tool call/result ID pair survives');
+ responseMode='stream';const streamed=await(await model({...postBody(),stream:true})).text();const deltas=streamed.split('\n').filter(line=>line.startsWith('data: ')&&!line.includes('[DONE]')).map(line=>JSON.parse(line.slice(6)).choices[0]);assert.ok(deltas.some(c=>c.delta.reasoning_content==='SYNTHETIC_STREAM_REASONING'));const fragments=deltas.flatMap(c=>c.delta.tool_calls??[]);assert.equal(fragments.find(t=>t.id)?.id,'call_stream_001');assert.deepEqual(JSON.parse(fragments.map(t=>t.function?.arguments??'').join('')),{path:'synthetic.md'});assert.ok(deltas.some(c=>c.finish_reason==='tool_calls'));evidence.checks.push('streamed native reasoning and fragmented tool arguments survive actual proxy');responseMode='normal';
+ const other='slash-synthetic-project-B';await(await model({model:'slash-local-audit',messages:[{role:'user',content:'PROJECT_B_ONLY'}],stream:false},other)).json();const bSnapshot=await api('/__bili/plugin/snapshot?conversationId='+other);assert.ok(!JSON.stringify(bSnapshot).includes('ROW_0_SECRET'));evidence.logicalIsolation=true;
+ const foreign=await api('/__bili/plugin/tool',{conversationId,tool:'search_context',args:{query:'PM field revisions'},nativeCaller:true});evidence.hostCanAccessOtherKnownConversation=foreign.status===200;evidence.checks.push('logical conversation separation holds; shared loopback API has no project authorization boundary');
+ responseMode='slow';const count=requests.length;const controller=new AbortController();const pending=model(postBody(),conversationId,controller.signal);while(requests.length===count)await new Promise(resolve=>setTimeout(resolve,10));controller.abort();await assert.rejects(pending);await new Promise(resolve=>setTimeout(resolve,250));evidence.cancelUpstreamClosed=closedSlow>0;responseMode='normal';
+ responseMode='disconnect';const disconnectCount=requests.length;let disconnected;try{const r=await model();disconnected={status:r.status,body:await r.text()};}catch(error){disconnected={error:String(error)};}responseMode='normal';evidence.disconnect={...disconnected,upstreamAttempts:requests.length-disconnectCount};assert.ok(requests.length-disconnectCount<=3);evidence.checks.push('upstream disconnect has bounded model retries; host write-tool exactly-once needs Slash gateway validation');
+ const configFile=path.join(root,'config.json');const config=JSON.parse(await readFile(configFile,'utf8'));config.network={replayRetryMax:1,upstreamTimeoutMs:200};await writeFile(configFile,JSON.stringify(config));
+ responseMode='disconnect';const noReplayCount=requests.length;await(await model()).text();evidence.disabledReplayAttempts=requests.length-noReplayCount;assert.equal(evidence.disabledReplayAttempts,1);
+ responseMode='slow';const timeoutStarted=Date.now();const timedOut=await model();evidence.upstreamTimeout={status:timedOut.status,elapsedMs:Date.now()-timeoutStarted};assert.ok(timedOut.status>=500);assert.ok(evidence.upstreamTimeout.elapsedMs<3000);await timedOut.text();responseMode='normal';evidence.checks.push('public network.replayRetryMax=1 disables model HTTP replay; upstreamTimeoutMs=200 bounds a stalled upstream');
+ await(await model()).json();const preRestart=(await api('/__bili/plugin/snapshot?conversationId='+conversationId)).body;const preBlocks=(await api('/__bili/plugin/status?conversationId='+conversationId)).body.blocks;await new Promise(resolve=>setTimeout(resolve,500));await stop();await start();await(await model()).json();const postRestart=(await api('/__bili/plugin/snapshot?conversationId='+conversationId)).body;const postBlocks=(await api('/__bili/plugin/status?conversationId='+conversationId)).body.blocks;assert.equal(postRestart.orderedMessages.length,preRestart.orderedMessages.length);assert.ok(JSON.stringify(postRestart).includes('ROW_0_SECRET'));assert.deepEqual(postBlocks,preBlocks);evidence.restart={before:preRestart.orderedMessages.length,after:postRestart.orderedMessages.length,persistedBlocks:postBlocks.length};evidence.checks.push('forced process termination and restart rebinds durable synthetic history and compression blocks');
+ try{evidence.blockedEgress=await readFile(path.join(root,'blocked-egress.log'),'utf8');}catch{evidence.blockedEgress='';}assert.equal(evidence.blockedEgress,'');
+ evidence.passed=true;console.log('BILLION_LOCAL_AUDIT_PASSED',JSON.stringify({checks:evidence.checks,bytes:evidence.bytes,cancelUpstreamClosed:evidence.cancelUpstreamClosed}));
+}catch(error){evidence.error=String(error.stack??error);evidence.proxyOutput=output;process.exitCode=1;console.error(evidence.error);}
+finally{evidence.upstreamRequests=requests.length;await stop();upstream.closeAllConnections();await new Promise(resolve=>upstream.close(resolve));evidence.elapsedMs=Date.now()-startedAt;await writeFile(path.join(root,'evidence.json'),JSON.stringify(evidence,null,2));clearTimeout(watchdog);console.log('BILLION_AUDIT_EVIDENCE',root);}
+
+
+
+

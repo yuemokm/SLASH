@@ -1,0 +1,15 @@
+flowchart TD
+  A[全新隔离 profile / 首个 Run 前] --> B{来源 ID 唯一且完整?}
+  B -- 否 --> X[失败回执 / 不发送模型]
+  B -- 是 --> C[核对授权挂载、原件及提取文本 hash]
+  C --> D[官方 copyForProcessing]
+  D --> E[官方 extract_text]
+  E --> F{真实输出 hash 与来源版本一致?}
+  F -- 否 --> X
+  F -- 是 --> G[核对 user-processing Change / 官方 apply 或真实已应用复用]
+  G --> H[再次核对权限、原件与全部完整映射]
+  H --> I[独占保存 host-preparation.json]
+  I --> J[runner 关联真实 receipt hash / production start]
+  J --> K[发送本轮任务]
+  K --> L[任务 Run 自有成果、首稿时间和模型读取证据]
+  G -. 不计任务成果、不代表模型已读 .-> L

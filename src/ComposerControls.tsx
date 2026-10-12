@@ -14,13 +14,13 @@ export function ComposerModeMenu({ value, onChange }: { value: "build" | "plan";
  ] as const).map(option => <button type="button" role="radio" aria-checked={value === option.value} className="composer-choice" key={option.value} onClick={() => { onChange(option.value);close(); }}><span><b>{option.label}</b><small>{option.description}</small></span>{value === option.value && <Icon name="check" size={15}/>}</button>)}</div></>}</ComposerPopover>;
 }
 
-export function ComposerPermissionMenu({ value, onChange }: { value: "standard" | "accept_edits" | "full_access"; onChange: (value: "standard" | "accept_edits" | "full_access") => void }) {
+export function ComposerPermissionMenu({ value, onChange, busy = false }: { value: "standard" | "accept_edits" | "full_access"; onChange: (value: "standard" | "accept_edits" | "full_access") => void;busy?:boolean }) {
  const options = [
   { value: "standard", label: "标准权限", description: "遇到需要授权的能力时逐项询问" },
   { value: "accept_edits", label: "自动接受", description: "成果编辑自动通过，其他能力仍按设置处理" },
-  { value: "full_access", label: "完全访问", description: "自动允许未禁止的能力；明确禁止仍然优先" },
+  { value: "full_access", label: "完全访问", description: "可访问电脑文件，不限项目目录；明确禁止仍优先" },
  ] as const;
- return <ComposerPopover label="权限" text={options.find(option => option.value === value)?.label} icon="shield">{close => <><div className="composer-popover-heading">权限</div><div role="radiogroup" aria-label="权限">{options.map(option => <button type="button" role="radio" aria-checked={value === option.value} className="composer-choice" key={option.value} onClick={() => { onChange(option.value);close(); }}><span><b>{option.label}</b><small>{option.description}</small></span>{value === option.value && <Icon name="check" size={15}/>}</button>)}</div><p className="composer-permission-note">明确禁止始终优先。完全访问不提升 Windows 身份，也不绕过目录、文件版本和外部结果核对。</p></>}</ComposerPopover>;
+ return <ComposerPopover label="权限" text={options.find(option => option.value === value)?.label} icon="shield">{close => <><div className="composer-popover-heading">权限</div><div role="radiogroup" aria-label="权限">{options.map(option => <button type="button" role="radio" aria-checked={value === option.value} className="composer-choice" key={option.value} disabled={busy} onClick={() => { onChange(option.value);close(); }}><span><b>{option.label}</b><small>{option.description}</small></span>{value === option.value && <Icon name="check" size={15}/>}</button>)}</div><p className="composer-permission-note">可访问电脑文件，不限项目目录；不会提升 Windows 身份。明确禁止始终优先。</p></>}</ComposerPopover>;
 }
 
 export function ComposerPopover({ label, text, icon, className = "", children }: { label: string; text?: string; icon: IconName; className?: string; children: (close: () => void) => React.ReactNode }) {

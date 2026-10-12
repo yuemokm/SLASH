@@ -3,6 +3,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {pmWorkflowSchema,type PmWorkflow,type RunWorkflow,type WorkflowSource,type WorkflowSourceReceipt} from '../shared/types.js';
 import {readFileVersion} from './artifacts.js';
+import type {DocxTextExtraction} from '../shared/docx-read-identity.js';
 import type {Files} from './files.js';
 import {isOfficeDocument} from './office-extraction.js';
 import {PROTOTYPE_GUIDANCE} from './prototype-guidance.js';
@@ -16,7 +17,7 @@ const digest=(value:string|Buffer)=>createHash('sha256').update(value).digest('h
  * silently switch to newly edited source material. No source body is stored. */
 export function inheritWorkflow(workflow?:RunWorkflow):PmWorkflow|undefined{
  if(!workflow)return undefined;
- return{kind:workflow.kind,sources:workflow.sources.map((source,index)=>({...source,contentHash:workflow.receipts[index]?.contentHash??source.contentHash}))};
+ return{kind:workflow.kind,sources:workflow.sources.map((source,index)=>({...source,contentHash:workflow.receipts[index]?.contentHash??source.contentHash})),...(workflow.template?{template:{...workflow.template,contentHash:workflow.templateSnapshot?.source.contentHash??workflow.template.contentHash}}:{})};
 }
 
 export function validateWorkflow(input:PmWorkflow):PmWorkflow{
@@ -40,7 +41,7 @@ const catalogPacket=(catalog:SpreadsheetNavigationResponse)=>({spreadsheetCatalo
 const catalogOverhead=JSON.stringify({spreadsheetCatalog:null,notice:CATALOG_NOTICE}).length-4;
 async function readSource(files:Files,backupDir:string,source:WorkflowSource,unsupportedMetadata?:UnsupportedSourceMetadata,spreadsheetCatalog?:WorkflowSpreadsheetCatalog,catalogCharacters=0){
  const target=await files.resolve(source.mountId,source.path);
- let content='',contentHash:string,metadata:ProcessingSourceMetadata|undefined,catalog:SpreadsheetNavigationResponse|undefined;
+ let content='',contentHash:string,textExtraction:DocxTextExtraction|undefined,metadata:ProcessingSourceMetadata|undefined,catalog:SpreadsheetNavigationResponse|undefined;
  const versionId=source.versionId??'current';
  if(versionId==='current'){
   const stat=await fs.stat(target);if(!stat.isFile())throw Error('WORKFLOW_SOURCE_NOT_FILE: 来源必须是文件');
@@ -64,7 +65,7 @@ async function readSource(files:Files,backupDir:string,source:WorkflowSource,uns
     if(JSON.stringify(catalog).length>catalogCharacters)throw Error('WORKFLOW_CATALOG_LIMIT: 宿主目录页超过首包预算，请按真实游标分页');
    }
   }
-  if(!metadata&&!catalog)try{content=await files.read(source.mountId,source.path);}catch(error){if(!(error instanceof Error)||error.message!=='暂不支持此文件的文本解析'||!unsupportedMetadata)throw error;metadata=await unsupportedMetadata(source);if(!metadata)throw error;if(metadata.contentHash!==before)throw Error('WORKFLOW_SOURCE_CHANGED: 处理副本读取期间已更改');content='';}
+  if(!metadata&&!catalog)try{const snapshot=/\.docx$/i.test(source.path)?await files.readTextSnapshot(source.mountId,source.path):{content:await files.read(source.mountId,source.path),textExtraction:undefined};content=snapshot.content;textExtraction=snapshot.textExtraction;}catch(error){if(!(error instanceof Error)||error.message!=='暂不支持此文件的文本解析'||!unsupportedMetadata)throw error;metadata=await unsupportedMetadata(source);if(!metadata)throw error;if(metadata.contentHash!==before)throw Error('WORKFLOW_SOURCE_CHANGED: 处理副本读取期间已更改');content='';}
   const current=await files.resolve(source.mountId,source.path),latest=await fs.stat(current);
   if(latest.size!==stat.size||latest.mtimeMs!==stat.mtimeMs||latest.ino!==stat.ino)throw Error('WORKFLOW_SOURCE_CHANGED: 读取期间资料已更改，请更新引用');
   contentHash=digest(await fs.readFile(current));
@@ -79,7 +80,7 @@ async function readSource(files:Files,backupDir:string,source:WorkflowSource,uns
  }
  if(source.contentHash&&source.contentHash.toLowerCase()!==contentHash)throw Error('WORKFLOW_SOURCE_CHANGED: 资料版本已更改，请更新引用后重新确认');
  await files.resolve(source.mountId,source.path);
- return{content,contentHash,versionId,metadata,catalog};
+ return{content,contentHash,versionId,metadata,catalog,textExtraction};
 }
 
 /** LCS compares ordered lines, including repetitions. The bounded matrix makes
@@ -105,13 +106,14 @@ const instructions:Record<PmWorkflow['kind'],string>={
  research:'整理研究证据，保留每份材料的用户、场景和原文位置，区分证据、冲突、假设和问题。'+BUSINESS_FACT_GUIDANCE+'可用已配置的只读联网工具；没有联网证据时不要声称完成外部调研。',
  meeting:'根据真实会议材料整理已确认事项、未解决问题和行动项；没有明确负责人或期限时标记待确认，不虚构发言或自动向他人发送消息。',
  prototype_to_prd:'读取指定原型，依据实际界面和交互补充 PRD；界面无法证明的后台规则、权限、数据约束列为待确认，保留页面与章节对应关系。',
+ test_cases:'根据实际读取的PRD、原型和业务规则创建供PM审阅的手工测试用例。加载test_cases工具组，使用draft_test_cases生成.testcases.json规范文件，不能只在回复列清单。每条用例含编号、模块、优先级P0-P3、正常/异常/边界/权限/状态/数据类型、前置条件、测试数据、逐步操作及逐步预期、真实sourceIds、可选真实需求/规则ID和待确认项。sourceIds从宿主来源回执或get_task_acceptance的sources取得；仅文件信息/工作表目录不算已读正文，必要时先读取。无法从界面证明的后台、权限、状态或数值标待确认，不猜规则、不写浏览器选择器测试。宿主固定未执行和业务未验证；生成不表示测试通过。来源部分已读必须说明覆盖限制，候选规则不能当已确认事实。修改已存在用例使用read_draft/edit_draft保留宿主来源快照；补充新来源时先读正文并通过专用工具新建规范稿。',
  change_summary:'依据系统计算的两个真实版本差异写变更说明。只说明实际新增、删除或改变的内容；业务原因若无证据则标记未知，零差异明确无变化，不编造改动。',
 };
 
 export async function prepareWorkflow(files:Files,backupDir:string,input:PmWorkflow,verifyArtifact?:(source:WorkflowSource)=>void,unsupportedMetadata?:UnsupportedSourceMetadata,spreadsheetCatalog?:WorkflowSpreadsheetCatalog):Promise<{workflow:RunWorkflow;prompt:string}>{
  const validated=validateWorkflow(input);const receipts:WorkflowSourceReceipt[]=[];const contents:string[]=[];const bodies:string[]=[];let remaining=WORKFLOW_LIMITS.totalCharacters;
  for(const source of validated.sources){verifyArtifact?.(source);const allowance=Math.min(WORKFLOW_LIMITS.sourceCharacters,remaining);const read=await readSource(files,backupDir,source,unsupportedMetadata,validated.kind==='change_summary'?undefined:spreadsheetCatalog,allowance-catalogOverhead);contents.push(read.content);const included=validated.kind==='change_summary'?0:Math.min(read.content.length,WORKFLOW_LIMITS.sourceCharacters,remaining);remaining-=read.catalog?JSON.stringify(catalogPacket(read.catalog)).length:included;
-  const receipt:WorkflowSourceReceipt={...source,versionId:read.versionId,contentHash:read.contentHash,readAt:new Date().toISOString(),characters:read.catalog?.textCharacters??read.content.length,includedCharacters:included,truncated:!!read.catalog||validated.kind!=='change_summary'&&included<read.content.length,...(read.catalog?{contentStatus:'spreadsheet_catalog' as const,processingCopyId:read.catalog.identity!.copyId}:read.metadata?{contentStatus:'metadata_only' as const,processingCopyId:read.metadata.copyId,size:read.metadata.size}:{})};receipts.push(receipt);
+  const receipt:WorkflowSourceReceipt={...source,...(read.textExtraction?{textExtraction:read.textExtraction}:{}),versionId:read.versionId,contentHash:read.contentHash,readAt:new Date().toISOString(),characters:read.catalog?.textCharacters??read.content.length,includedCharacters:included,truncated:!!read.catalog||validated.kind!=='change_summary'&&included<read.content.length,...(read.catalog?{contentStatus:'spreadsheet_catalog' as const,processingCopyId:read.catalog.identity!.copyId}:read.metadata?{contentStatus:'metadata_only' as const,processingCopyId:read.metadata.copyId,size:read.metadata.size}:{})};receipts.push(receipt);
   if(read.catalog){bodies.push(JSON.stringify({source:receipt,...catalogPacket(read.catalog)}));continue;}
   // Preview limits bound included body characters, not the provider's complete token request.
   // read_file offset/limit are lines; host continuation uses explicit UTF-16 character fields.

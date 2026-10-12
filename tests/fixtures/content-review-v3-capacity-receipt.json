@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "id": "synthetic-v3-receipt-capacity",
+  "version": "content-review-v1",
+  "inputHash": "6f0bcd2991ee4878d27b6a33db3f7f1b3300b1ec3a691ab9289004c4078496dc",
+  "promptHash": "36dd6ff81875595308ef4f6858e364fa0e3f47f88e1f4226d2fbc47bdc3df39c",
+  "resultHash": "1c7e03b140c5c96f16392ec4920332f1e219280c1c0196b4af7fbae665491bc6",
+  "reviewer": {
+    "provider": "fixture-only",
+    "modelId": "no-network",
+    "protocol": "offline-callback"
+  },
+  "startedAt": "2026-10-11T00:00:00.000Z",
+  "finishedAt": "2026-10-11T00:00:00.000Z",
+  "durationMs": 0,
+  "usage": "unknown",
+  "stopReason": "stop",
+  "status": "issues_found",
+  "versionState": "current",
+  "completion": "completed",
+  "humanConfirmed": false,
+  "findings": [
+    {
+      "id": "finding-1",
+      "category": "contradiction",
+      "severity": "advisory",
+      "confidence": "high",
+      "scope": "in_scope",
+      "repairDisposition": "candidate",
+      "explanation": "Consumer-specific rule cannot automatically become an overall rule.",
+      "artifacts": [
+        {
+          "artifactId": "artifact-one",
+          "quote": "Consumer-only manual creation is the overall rule."
+        }
+      ],
+      "sources": [
+        {
+          "sourceId": "policy",
+          "quote": "New consumer accounts are created manually."
+        }
+      ],
+      "requests": [
+        {
+          "requestId": "request",
+          "quote": "Compare the two supplied account rules. Identify supported facts and uncertain scope."
+        }
+      ],
+      "binding": "verified_quotes",
+      "validation": "bound",
+      "repairEligible": true,
+      "repairMode": "align_explicit_evidence",
+      "repairConstraint": "只对齐本finding已绑定的正面原句或真实用户要求；未提供部分保持未验证，不扩展规则、阶段或权限。",
+      "artifactBindings": [
+        {
+          "id": "artifact-one",
+          "quote": "Consumer-only manual creation is the overall rule.",
+          "sha256": "a607e5e27118e718267c187434429d591e64d6d6163886c0843be224158439c2",
+          "start": 0,
+          "end": 50,
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "sourceBindings": [
+        {
+          "id": "policy",
+          "quote": "New consumer accounts are created manually.",
+          "sha256": "1c0e0ac2778c9f75e1ab3d74ee176f11abe54cca066bb3e1dc31f81e87019fb8",
+          "start": 0,
+          "end": 43,
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "requestBindings": [
+        {
+          "id": "request",
+          "quote": "Compare the two supplied account rules. Identify supported facts and uncertain scope.",
+          "sha256": "eb381f74b51cda9449319aa161a71f28330a2826de2baf58f3c453405257198a",
+          "start": 0,
+          "end": 85,
+          "startLine": 1,
+          "endLine": 1
+        }
+      ],
+      "notice": "引文绑定只证明摘录来自冻结输入，不能证明模型解释正确；独立模型审查不等于用户确认。没有发现问题也不自动判定业务通过。"
+    }
+  ],
+  "invalidFindings": [],
+  "coverageLimits": [],
+  "diagnostics": [],
+  "requests": [
+    {
+      "id": "request",
+      "sha256": "eb381f74b51cda9449319aa161a71f28330a2826de2baf58f3c453405257198a"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "artifact-one",
+      "sha256": "a607e5e27118e718267c187434429d591e64d6d6163886c0843be224158439c2"
+    },
+    {
+      "id": "artifact-two",
+      "sha256": "5a9e8b2cae1cc25198f27616366cd1204d378527897b1861cc0716a7d0a25854"
+    }
+  ],
+  "sources": [
+    {
+      "id": "policy",
+      "sha256": "1c0e0ac2778c9f75e1ab3d74ee176f11abe54cca066bb3e1dc31f81e87019fb8"
+    },
+    {
+      "id": "workflow",
+      "sha256": "cb6b5929a6f432d4262088d83fb58cc3f63e5e03bdc8f8252c09974ee179c687"
+    }
+  ],
+  "notice": "引文绑定只证明摘录来自冻结输入，不能证明模型解释正确；独立模型审查不等于用户确认。没有发现问题也不自动判定业务通过。",
+  "rawResultHash": "378a48a6247ecaee404b3b0e413cf9b33f48b21354d9a9b967c176acb5a31b66",
+  "coverage": {
+    "artifactIds": [
+      "artifact-one",
+      "artifact-two"
+    ],
+    "sourceIds": [
+      "policy",
+      "workflow"
+    ],
+    "requestIds": [
+      "request"
+    ],
+    "directions": [
+      "fact_inference",
+      "scope_expansion",
+      "contradiction",
+      "cross_artifact_consistency",
+      "field_semantics",
+      "request_coverage"
+    ],
+    "limitations": []
+  }
+}

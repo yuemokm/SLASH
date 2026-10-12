@@ -1,0 +1,17 @@
+flowchart TD
+  Select[引用资料：明确选择一份 PRD 模板] --> Mode{任务模式}
+  Mode -->|Plan| ReadOnly[读取已有副本；无副本则未验证]
+  Mode -->|Build| Copy[授权目录内的登记副本]
+  Copy --> Parse[复用可信提取或解析结构]
+  Parse --> Freeze[应用冻结来源版本、章节与表头]
+  Freeze --> Draft[Pi 原有任务循环生成草稿]
+  Draft --> Bind{普通 Markdown 成果数量}
+  Bind -->|唯一| Auto[自动关联]
+  Bind -->|多份| Explicit[明确绑定 PRD 成果]
+  Auto --> Check[模板仅复核授权原字节 当前版本和结构解析身份]
+  Explicit --> Check
+  Check -.与业务正文身份独立.-> Body[业务DOCX仍核验parserVersion与全文textHash]
+  Check -->|缺项| Repair[现有有限修正流程]
+  Repair --> Check
+  Check -->|结构满足| Semantic[业务覆盖继续独立验收]
+  Check -->|依据不足或已变化| Unknown[未验证或失效；不冒充通过]

@@ -1,0 +1,21 @@
+flowchart TD
+    UI[当前会话权限菜单] --> RPC[可信 runPermissionModeSet]
+    RPC --> MODE[会话当前模式与活动 Run 实际模式]
+    INPUT[真实用户补充输入] --> QUEUE[宿主可编辑队列]
+    QUEUE --> PREP[核输入 revision 与活跃授权
+附当前模式和 computer scope 回执]
+    PREP --> PI[Pi awaited turn_end 正常边界
+每次一条 follow_up 或立即 steer]
+    PI --> FILE[现有 Files 文件网关]
+    MODE --> GUARD[当前授权与工具启动 revision
+Plan / deny / 禁用 / 原件保护]
+    GUARD --> FILE
+    FILE --> REF[绝对路径转换为稳定盘根引用
+无持久全盘挂载或索引]
+    REF --> READ[读取与指定目录检索]
+    REF --> OFFICE[已有副本与文本提取链]
+    REF --> DRAFT[ChangeSet 草稿]
+    DRAFT --> APPLY[物理文件锁与版本核对后应用]
+    FILE --> AFTER[异步后再次检查当前权限]
+    PI --> RECEIPT[真实 native 送达回执]
+    RECEIPT --> HISTORY[原始用户文字记录一次]

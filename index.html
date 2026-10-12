@@ -1,1 +1,22 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src http://127.0.0.1:*; connect-src 'self' ws://127.0.0.1:*;"><link rel="icon" type="image/svg+xml" href="/brand/slash.svg"><title>slash</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-src http://127.0.0.1:*; connect-src 'self' ws://127.0.0.1:*;">
+ <link rel="icon" type="image/svg+xml" href="/brand/slash.svg">
+ <title>slash</title>
+ <script src="/startup.js"></script>
+</head>
+<body>
+ <div id="root">
+  <main id="startup-status" role="status" style="min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font:16px/1.7 'Segoe UI','Microsoft YaHei',sans-serif;color:#20242b;background:#f6f7f8">
+   <strong style="font-size:28px">Slash</strong>
+   <p id="startup-message">正在启动工作台，请稍候…</p>
+   <p id="startup-detail" style="font-size:14px;color:#626873">首次启动或更新后，准备界面可能需要一些时间。</p>
+   <button id="startup-retry" type="button" hidden style="font:inherit;padding:6px 20px;cursor:pointer">重新加载</button>
+  </main>
+ </div>
+ <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

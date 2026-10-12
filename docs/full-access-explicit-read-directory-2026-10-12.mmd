@@ -1,0 +1,15 @@
+flowchart TD
+ User[当前用户原始目录请求] --> Fresh{fresh send + full_access?}
+ Fresh -->|否| Existing[保持原有授权目录]
+ Fresh -->|是| Parse[保守精确路径识别]
+ Parse --> Exclude[否定 / 引文 / 代码 / 数据区不授权]
+ Parse --> Verify[所有目录预核：存在 / 普通真实目录 / 禁用重叠]
+ Verify -->|不满足| Reject[明确拒绝，不回退父目录]
+ Verify -->|满足| Mount[复用既有Mount数据路径，新增只读目录]
+ Mount --> History[KV绑定Run / input hash / mount / 路径]
+ Mount --> Runtime[索引与Pi收到真实mount ID]
+ Runtime --> Resolve[Files与索引每次核自动目录真实根身份]
+ Resolve -->|未变| Read[受权限网关约束的资料读取]
+ Resolve -->|撤权或根漂移| Deny[拒绝读取]
+ Mount --> Settings[设置中可见与可撤销]
+ Resume[恢复 / 方案生成执行] --> Existing

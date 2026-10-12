@@ -1,0 +1,19 @@
+{
+  "operationId": "899413a2-90de-48f4-b594-3261b05f603f",
+  "proposalId": "9e3bb804-051a-4159-bc7c-f8aefbfe449e",
+  "reconstructedService": true,
+  "originalServiceDisposedBeforeReopen": true,
+  "originalQueuesSettledBeforeReopen": true,
+  "originalStoreClosedBeforeReopen": true,
+  "sqliteReopened": true,
+  "processRestart": false,
+  "productionIPC": false,
+  "operationPersistence": "explicit API calls by harness; production automatic dispatch persistence unverified",
+  "actualReceivedCount": 1,
+  "operationState": "outcome_unknown",
+  "proposalState": "outcome_unknown",
+  "nextDeliveryRejected": "Error: RUN_REQUIRES_RECONCILIATION: 此任务存在结果待核对的操作，请先完成核对",
+  "automaticRetry": false,
+  "profile": "E:\\code\\slash\\temp\\prototype-delivery-d4d4ce89-9f81-44d1-a643-e844246f3cec\\profile",
+  "browser": "fixture-only; no actual browser evidence"
+}

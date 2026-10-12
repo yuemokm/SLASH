@@ -1,3 +1,5 @@
+import {isTestCasePath} from '../shared/test-cases.js';
+import {installStartupRecovery} from './startup-window.js';
 import {exportAcceptedPrototype} from './prototype-export.js';
 import {app,BrowserWindow,ipcMain,dialog,safeStorage,shell} from 'electron';
 import path from 'node:path';
@@ -8,21 +10,22 @@ import {createHash,randomUUID} from 'node:crypto';
 import os from 'node:os';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import mammoth from 'mammoth';
-import {contentText} from '@earendil-works/pi-ai';
-import {Client} from '@modelcontextprotocol/sdk/client/index.js';
-import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
-import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {McpHost} from './mcp-host.js';
+import {inspectMcp,pageMcpTools} from './mcp-client.js';
+import {safeMcpMessage} from './mcp-errors.js';
+import {mcpBinding} from './mcp-credentials.js';
 import {requestSchema,type AppPreferences,type Connection,type ConnectionDiscovery,type DeliveryPreflight,type DeliveryRecord,type ExternalActionProposal,type ExternalResult,type OperationStatus,type ApprovalRequest,type PermissionCapability,type PermissionDecision} from '../shared/types.js';
 import {Store} from './store.js';
+import {PiPackageSettings} from './pi-package-settings.js';
+import {piPackageStatus} from './pi-packages.js';
 import {Service} from './service.js';
 import {runReferenceScript} from './reference-script.js';
-import {runPrototypeAcceptance,cancelAllPrototypeAcceptance} from './prototype-browser.js';
+import {runPrototypeAcceptance,cancelAllPrototypeAcceptance,PROTOTYPE_BROWSER_VERSION} from './prototype-browser.js';
 import {isHiddenTestProfile} from './test-profile.js';
 import {deterministicDiff} from './pm-workflows.js';
 import {classifyReceipt,ExternalCallError,mcpCall,runCli,validateExecutable} from './integrations.js';
 import {selectionBridge} from './preview.js';
-import {exportMarkdownToWord,listFileVersions,packageHtmlProject,prepareRestoreDraft,readFileVersion,type ArtifactFileRef} from './artifacts.js';
+import {exportMarkdownToWord,listFileVersions,packageHtmlProject,prepareRestoreDraft,readFileVersion,writeAuthorizedBuffer,type ArtifactFileRef} from './artifacts.js';
 import {ProductRecordsRepository,productRecordsWorkspaceIdentity} from './product-records.js';
 import {DecisionRepository,decisionRepositoryKey} from './decision-center.js';
 import {processDrawio} from './flow.js';
@@ -33,6 +36,7 @@ import {connectNetworkShare,createNetworkShareInvitation,inspectNetworkShareTarg
 import {discoverInstalledClis,ModelSettings} from './settings.js';
 import {buildWritableShareScript,describeShareFolder,inspectSharingSetup} from './sharing-setup.js';
 import {createOpenAICompatibleModelRuntime} from './model-runtime.js';
+import {testModelTextConnection} from './model-connection-test.js';
 import {AttachmentRepository} from './image-attachments.js';
 import {VisionBridge} from './vision.js';
 import {MemoryVisionCache} from '../shared/vision.js';
@@ -48,7 +52,7 @@ app.setPath('userData',userDataDir);
 
 type ExternalExecution=
  | {kind:'document_delivery';connectionId:string;mountId:string;path:string;title:string;provider:'feishu'|'dingtalk';remoteId?:string;sourceHash:string}
- | {kind:'mcp_call';connectionId:string;tool:string;args:Record<string,unknown>};
+ | (import('../shared/types.js').McpCallInput&{connectionId:string});
 type ExternalService=Service&{
  listExternalActions:(filter?:{conversationId?:string;mountId?:string;path?:string;sourceHash?:string})=>ExternalActionProposal[];
  listPendingExternalActions:(conversationId?:string)=>ExternalActionProposal[];
@@ -70,13 +74,15 @@ let service:Service;
 let store:Store;
 let deliveryGate:DeliveryGate;
 let modelSettings:ModelSettings;
+let piPackageSettings:PiPackageSettings;
+let mcpHost:McpHost;
 let attachmentRepository:AttachmentRepository;
 let visionRequest:(input:{model:any;prompt:string;images:readonly any[];signal:AbortSignal;credential?:unknown})=>Promise<unknown>;
 const visionCache=new MemoryVisionCache(100,10*60_000);
 const previews=new Map<string,{mountId:string;file:string;base:string}>();
 let port=0;
 
-function redact(value:string){return modelSettings?.redact(value)??value;}
+function redact(value:string){const safe=mcpHost?.redact(value)??value;return modelSettings?.redact(safe)??safe;}
 function receiptText(value:unknown){let text='';try{text=JSON.stringify(value);}catch{text=String(value);}return redact(text).slice(0,200_000);}
 function snapshotImpact(store:Store,root:string,artifactId:string){const snapshot=new ProductRecordsRepository(store,{key:productRecordsWorkspaceIdentity(root).key}).snapshot();return{requirements:snapshot.requirements.filter(req=>snapshot.artifacts.some(a=>a.id===artifactId&&requirementRelatedToPath(req,a.mountId,a.relativePath))).map(req=>req.id),links:snapshot.artifactLinks.filter(link=>link.fromArtifactId===artifactId||link.toArtifactId===artifactId).map(link=>link.id),reviews:snapshot.reviews.filter(review=>review.artifactId===artifactId).map(review=>review.id)};}
 async function buildImpactGraph(store:Store,root:string,artifactId:string,query:{direction?:'outgoing'|'incoming'|'both';includeCandidates?:boolean;maxDepth?:number}){
@@ -196,7 +202,7 @@ const server=http.createServer(async(req,res)=>{
 
 function persistConnectionHealth(connection:Connection,snapshot:ConnectionHealthSnapshot){
  const current=service.state.connections.find(item=>item.id===connection.id);
- if(!current)return;
+ if(!current||!current.enabled||mcpBinding(current)!==mcpBinding(connection))return;
  current.healthStatus=snapshot.status;
  current.lastCheckedAt=snapshot.checkedAt;
  current.healthSummary=snapshot.summary;
@@ -209,7 +215,7 @@ function persistConnectionHealth(connection:Connection,snapshot:ConnectionHealth
  service.save();
 }
 
-async function inspectConnection(connection:Connection){
+async function inspectConnection(connection:Connection,options:{query?:string;cursor?:string;limit?:number}={}){
  try{
   if(connection.kind==='cli'){
    validateExecutable(connection.command);
@@ -219,19 +225,15 @@ async function inspectConnection(connection:Connection){
    persistConnectionHealth(connection,health);
    return{...inspection,health};
   }
-  const client=new Client({name:'slash',version:'0.1.0'});
-  try{
-   await client.connect(connection.url?new StreamableHTTPClientTransport(new URL(connection.url)):new StdioClientTransport({command:connection.command,args:connection.args,stderr:'pipe'}));
-   const catalog=await client.listTools();
-   const inspection={kind:'mcp' as const,tools:catalog.tools.map(tool=>({name:tool.name,description:tool.description||''})),notice:'已读取 MCP 能力；这不代表任何发布操作成功'};
+   const inspection=await inspectMcp(connection);
    const health=summarizeConnectionHealth(connection.id,inspection);
    persistConnectionHealth(connection,health);
-   return{...inspection,health};
-  }finally{await client.close().catch(()=>{});}
+   const page=pageMcpTools(inspection.tools,inspection.catalogHash,options);
+   return{...inspection,...page,health:{...health,capabilities:health.capabilities.slice(0,50),capabilityCount:health.capabilities.length,hasMore:health.capabilities.length>50}};
  }catch(error){
   const health=summarizeConnectionFailure(connection.id,error);
   persistConnectionHealth(connection,health);
-  throw error;
+  if(connection.kind==='mcp')throw Error(safeMcpMessage(error));throw error;
  }
 }
 async function testConnection(id:string){
@@ -242,12 +244,10 @@ async function testConnection(id:string){
 
 async function testConfiguredModel(id:string){
  const model=modelSettings.model(id),key=modelSettings.credential(id);
- const input={entryId:model.id,baseUrl:model.baseUrl,id:model.modelId,protocol:model.protocol,contextWindow:model.contextWindow,maxTokens:model.maxTokens};
+ const input={entryId:model.id,provider:model.provider,name:model.name,baseUrl:model.baseUrl,proxyUrl:model.proxyUrl,id:model.modelId,protocol:model.protocol,contextWindow:model.contextWindow,maxTokens:model.maxTokens};
  const capabilities=await service.modelRuntimeCapabilities(input);
- const configured=await createOpenAICompatibleModelRuntime({...input,contextWindow:capabilities.capability.limits!.contextWindow,maxTokens:capabilities.capability.limits!.maxTokens,thinkingRuntime:capabilities.runtime},key);
- const response=await configured.runtime.completeSimple(configured.model,{messages:[{role:'user',content:'只回复：连接成功',timestamp:Date.now()}]},{maxTokens:Math.min(256,configured.model.maxTokens),maxRetries:0,timeoutMs:60_000,signal:AbortSignal.timeout(60_000)});
- if(response.stopReason==='error'||response.stopReason==='aborted')throw Error(response.errorMessage||'模型请求未成功完成');
- return{modelId:model.id,model:model.modelId,reply:contentText(response.content),notice:'模型响应成功；使用与会话一致的 Pi provider 配置，凭据只在本次运行内存中使用'};
+ const result=await testModelTextConnection({...input,contextWindow:capabilities.capability.limits!.contextWindow,maxTokens:capabilities.capability.limits!.maxTokens,thinkingRuntime:capabilities.runtime},key);
+ return{modelId:model.id,model:model.modelId,...result};
 }
 
 function connectionFor(id:string,kind:Connection['kind']){
@@ -272,10 +272,13 @@ async function executeDelivery(input:{connectionId:string;mountId:string;path:st
  const currentHash=await fileVersion(source);
  if(currentHash!==input.sourceHash)throw Error('VERSION_CONFLICT: 文件内容已变化，请重新打开并预览后再发布');
  const content=await service.files.read(input.mountId,input.path);
+ if(createHash('sha256').update(content).digest('hex')!==input.sourceHash)throw Error('VERSION_CONFLICT: 发布正文与核对版本不一致');
+ const taskDelivery=input.dryRun?undefined:await service.prepareTaskDelivery({mountId:input.mountId,path:input.path,expectedContentHash:input.sourceHash});
  const args=input.provider==='dingtalk'
   ?(input.remoteId?['doc','+update','--node',input.remoteId,'--command','overwrite','--content','-','--format','json']:['doc','+create','--name',input.title,'--content','-','--format','json'])
   :(input.remoteId?['docs','+update','--doc',input.remoteId,'--mode','overwrite','--markdown','-']:['docs','+create','--title',input.title,'--markdown','-']);
  if(input.dryRun)args.push('--dry-run');
+ await taskDelivery?.assertCurrent();
  store.operation(operationId,'manual-delivery',input.provider,input.dryRun?'preview':'executing');
  try{
   const receipt=await runCli(connection.command,[...connection.args,...args],content,service.state.root);
@@ -291,11 +294,13 @@ async function executeDelivery(input:{connectionId:string;mountId:string;path:st
  }
 }
 
-async function executeMcp(input:{connectionId:string;tool:string;args:Record<string,unknown>},operationId=randomUUID()):Promise<ExternalResult>{
+async function executeMcp(input:{connectionId:string;tool:string;args:Record<string,unknown>},operationId=randomUUID(),beforeDispatch?:()=>Promise<void>):Promise<ExternalResult>{
  const connection=connectionFor(input.connectionId,'mcp');
+ if(connection.mcpPublisher)throw Error('PUBLISHER_HOST_ONLY');
+ await beforeDispatch?.();
  store.operation(operationId,'manual-mcp',input.tool,'executing');
  try{
-  const receipt=await mcpCall(connection,input.tool,input.args);
+  const receipt=await mcpCall(connection,input.tool,input.args,beforeDispatch);
   const outcome=classifyReceipt(receipt);
   store.operation(operationId,'manual-mcp',input.tool,outcome.status,receiptText(receipt));
   return{operationId,...outcome,receipt};
@@ -340,8 +345,12 @@ async function boot(){
   service=new Service(store,()=>modelSettings?.defaultCredential()??'',event=>win?.webContents.send('pm:event',event),undefined,{
   runReferenceScript,
   runPrototypeAcceptance,
+  expectedPrototypeRunnerVersion:PROTOTYPE_BROWSER_VERSION,
   discoverConnections:discoverInstalledClis,
-  inspectConnection,
+  openPlanReview:async value=>{const url=new URL(value);if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.pathname!=='/'||!/^\w{48}$/.test(url.searchParams.get('slashReview')??''))throw Error('PI_PLAN_REVIEW_URL_INVALID');if(!await isHiddenTestProfile(configuredDataDir,path.resolve(here,'../..','.test-data'),process.env.PM_SLASH_TEST_HIDDEN))await shell.openExternal(url.toString());},
+  inspectConnection:async(connection,options)=>mcpHost?.publisherInspection(connection)??inspectConnection(connection,options),
+  prototypePublicationTarget:id=>mcpHost?.publisherTarget(id),
+  connectionChanged:(before,after)=>mcpHost?.changed(before,after),
    executeExternalAction:execution=>execution.kind==='document_delivery'
    ?executeDelivery({...execution,dryRun:false})
    :executeMcp(execution),
@@ -354,7 +363,7 @@ async function boot(){
     const evidence=prepare.evidence?formatVisionEvidence(prepare.evidence):prepare.raw;
     return{images:prepare.images?Array.from(prepare.images):undefined,evidenceText:evidence,attachments:prepare.attachments};
    },
-   redact:value=>modelSettings?.redact(value)??value,
+   redact,
   },id=>{try{return modelSettings?.credential(id);}catch{return undefined;}});
   // Keep a usable default project available before the renderer asks for state.
   // Existing workspaces are restored by Service; a first run gets a private
@@ -365,6 +374,7 @@ async function boot(){
   files:service.files,
   businessProvenance:()=>service.createBusinessProvenanceResolver(),
   prototypeAcceptance:(mountId,path)=>service.prototypeAcceptanceDeliveryCheck(mountId,path),
+  taskAcceptance:async(mountId,path,sourceHash)=>(await service.prepareTaskDelivery({mountId,path,expectedContentHash:sourceHash})).view,
   workspace:()=>({root:service.state.root,connections:service.state.connections}),
   actions:()=> (service as ExternalService).listExternalActions(),
   records:()=>service.state.root?new ProductRecordsRepository(store,{key:productRecordsWorkspaceIdentity(service.state.root).key}).snapshot():undefined,
@@ -372,11 +382,13 @@ async function boot(){
  });
  modelSettings=new ModelSettings(store,safeStorage,{get:()=>service.state,save:()=>service.save()});
  modelSettings.initialize();
+ piPackageSettings=new PiPackageSettings(store,safeStorage);service.configurePiPackageSettings(piPackageSettings);
+ mcpHost=new McpHost({store,cipher:safeStorage,publicationDirectory:userDataDir,connections:()=>service.state.connections,openExternal:url=>shell.openExternal(url)});
  visionRequest=async ({model,prompt,images,signal})=>{
    const entry=service.state.models?.find(item=>item.id===model.id)??service.state.models?.find(item=>item.modelId===model.modelId&&item.baseUrl===model.baseUrl&&item.protocol===model.protocol);
    const key=entry?modelSettings.credential(entry.id):'';
    if(!key||!model.baseUrl||!model.modelId)throw Error('VISION_CREDENTIAL_MISSING');
-   const input={entryId:entry?.id,baseUrl:model.baseUrl,id:model.modelId,protocol:(model.protocol as import('../shared/types.js').ModelProtocol)||'openai-completions',contextWindow:entry?.contextWindow,maxTokens:entry?.maxTokens};
+   const input={entryId:entry?.id,baseUrl:model.baseUrl,proxyUrl:entry?.proxyUrl,id:model.modelId,protocol:(model.protocol as import('../shared/types.js').ModelProtocol)||'openai-completions',contextWindow:entry?.contextWindow,maxTokens:entry?.maxTokens};
    const capabilities=await service.modelRuntimeCapabilities(input);
    const configured=await createOpenAICompatibleModelRuntime({...input,contextWindow:capabilities.capability.limits!.contextWindow,maxTokens:capabilities.capability.limits!.maxTokens,thinkingRuntime:capabilities.runtime,supportsVision:true},key);
    return configured.runtime.complete(configured.model,{messages:[{role:'user',content:[{type:'text',text:prompt},...images],timestamp:Date.now()}]},{maxTokens:Math.min(3000,configured.model.maxTokens),maxRetries:0,signal});
@@ -389,11 +401,30 @@ async function boot(){
    const request=requestSchema.parse(input);
    switch(request.type){
     case 'state':return{ok:true,data:service.stateSnapshot()};
+    case 'knowledgeList':return{ok:true,data:await service.knowledgeList()};
+    case 'knowledgeGet':return{ok:true,data:await service.knowledgeGet(request.id)};
+    case 'knowledgeCreate':return{ok:true,data:await service.knowledgeCreate({title:request.title,sources:request.sources})};
+    case 'knowledgeSetSources':return{ok:true,data:await service.knowledgeSetSources(request.id,request.sources)};
+    case 'knowledgeInspectLocal':return{ok:true,data:await service.knowledgeInspectLocal(request.id)};
+    case 'knowledgeRevealSource':shell.showItemInFolder(await service.knowledgeSource(request.id,request.chunkId));return{ok:true,data:{revealed:true}};
+    case 'knowledgeRemove':return{ok:true,data:await service.knowledgeRemove(request.id)};
+    case 'piPackages':return{ok:true,data:{packages:piPackageStatus(),observability:piPackageSettings.view()}};
+    case 'piPlanReviewCancel':return{ok:true,data:await service.cancelPiPlanReview(request.runId)};
+    case 'piPlanReviewOpen':return{ok:true,data:await service.openPiPlanReview(request.runId)};
+    case 'piObservabilitySave':{
+     if(service.state.permissions?.connection_config==='deny')throw Error('PERMISSION_DENIED: 连接配置已禁用');
+     await service.stopPiObservability();return{ok:true,data:piPackageSettings.save(request.config)};
+    }
     case 'eventReplay':return{ok:true,data:store.replayEvents(request.streamId,request.afterSequence,request.limit)};
     case 'deliveryRecords':return{ok:true,data:store.get<DeliveryRecord[]>('delivery-records',[]).filter(item=>!request.runId||item.runId===request.runId)};
     case 'contextManifest':return{ok:true,data:store.get(`context-manifest:${request.runId}`,null)};
     case 'runCheckpoint':return{ok:true,data:store.get(`run-checkpoint:${request.runId}`,null)};
     case 'taskAcceptanceGet':return{ok:true,data:await service.getTaskAcceptance(request.runId)};
+    case 'taskAcceptanceRecheck':{const{type,...input}=request;return{ok:true,data:await service.recheckTaskAcceptance(input)};}
+    case 'taskDeliveryGet':return{ok:true,data:await service.taskDeliveryGet(request.runId,request.reportId)};
+    case 'taskDeliveryReview':{const{type,...input}=request;return{ok:true,data:await service.reviewTaskDelivery(input)};}
+    case 'taskAcceptanceOptional':{const{type,...input}=request;return{ok:true,data:await service.declareTaskAcceptanceOptional(input)};}
+    case 'skillCommands':return{ok:true,data:await service.skillCommands()};
     case 'globalSkills':{const{type,...input}=request;if(input.action==='importFolder'&&!globalSkillFolderAuthorizations.has(path.resolve(input.path)))throw Error('GLOBAL_SKILL_FOLDER_AUTHORIZATION_REQUIRED: 请通过选择目录授权技能来源');return{ok:true,data:await service.globalSkillsRequest(input)};}
     case 'globalSkillsChooseFolder':{const folder=(await dialog.showOpenDialog(win,{title:'选择全局技能目录',properties:['openDirectory']})).filePaths[0];if(folder)globalSkillFolderAuthorizations.add(path.resolve(folder));return{ok:true,data:folder};}
     case 'appPreferences':{const defaults:AppPreferences={qualityGateEnabled:true,forceQualityCheckBeforeDelivery:true,maxParallelTasks:4,maxParallelConcurrency:2,subAgentMaxDepth:1,subAgentMaxTasks:8,shareLockTtlMs:120000,modelRouting:{strategy:'task_type',taskTypes:{research:'',analysis:'',writing:'',coding:'',review:'',general:''}},subAgentTools:['read_file','search_files','read_workspace_rules','list_artifact_versions','list_product_records','query_artifact_impact','read_web_page','list_connections'],visionAutoFallback:true};const current={...defaults,...(store.get<Partial<AppPreferences>>('app-preferences',{})),...(request.patch||{}),modelRouting:{...defaults.modelRouting,...(store.get<Partial<AppPreferences>>('app-preferences',{}).modelRouting||{}),...((request.patch as Partial<AppPreferences>|undefined)?.modelRouting||{})}};if(request.patch)store.set('app-preferences',current);return{ok:true,data:current};}
@@ -437,10 +468,14 @@ async function boot(){
     case 'conversationDelete':return{ok:true,data:service.deleteConversation(request.id)};
     case 'send':return{ok:true,data:await service.send(request.id,request.text,request.mode,request.permissionMode,request.modelEntryId,undefined,undefined,request.taskType,request.attachmentIds,request.workflow,request.thinkingLevel)};
     case 'runInputEnqueue':{const{type,...input}=request;return{ok:true,data:service.enqueueRunInput(input)};}
+    case 'runInputMutate':{const{type,...input}=request;return{ok:true,data:service.mutateRunInput(input)};}
+    case 'runPermissionModeSet':return{ok:true,data:service.setRunPermissionMode(request.conversationId,request.runId,request.permissionMode)};
     case 'runInputClearQueued':return{ok:true,data:service.clearRunInputs({runId:request.runId})};
     case 'planDraft':return{ok:true,data:await service.savePlanDraft(request.id,request.selectedOptionIds,request.customText)};
     case 'planConfirm':return{ok:true,data:await service.confirmPlan(request.id,request.selectedOptionIds,request.customText,request.permissionMode,request.modelEntryId,request.thinkingLevel)};
-    case 'resume':return{ok:true,data:await service.resumeRun(request.id)};
+    case 'resume':return{ok:true,data:await service.resumeRun(request.id,request.freshContext)};
+    case 'runRecoveryGet':return{ok:true,data:await service.listRunRecovery(request.runId)};
+    case 'runRecoveryReconcile':{const{type,...input}=request;return{ok:true,data:await service.reconcileRunOperation(input)};}
     case 'cancel':service.cancel(request.id);break;
      case 'files':{const ids=new Set(service.state.mounts.map(m=>m.id));return{ok:true,data:(await service.files.list(request.query)).filter(file=>ids.has(file.mountId))};}
      case 'importFiles':return{ok:true,data:await service.importFiles(request.files??request.paths??[],request.category,request.target)};
@@ -451,12 +486,8 @@ async function boot(){
     case 'readDocument':{
      const file=await service.files.resolve(request.mountId,request.path);
      const extension=path.extname(file).toLowerCase();
+     if(extension==='.docx')return{ok:true,data:await service.readWordDocument(request.mountId,request.path)};
      const version=await fileVersion(file);
-     if(extension==='.docx'){
-      const stat=await fs.stat(file);if(stat.size>20_000_000)throw Error('Word 文件超过阅读限制 20 MB');
-      const parsed=await mammoth.extractRawText({path:file});
-      return{ok:true,data:{content:parsed.value,version,format:'word',notice:parsed.messages.length?'已提取正文，复杂样式、批注或文本框可能未完整保留':undefined}};
-     }
      const content=await service.files.read(request.mountId,request.path);
      return{ok:true,data:{content,version,format:/\.md$/i.test(extension)?'markdown':'text'}};
     }
@@ -491,9 +522,20 @@ async function boot(){
     case 'connection':{
      const connection={...request.connection,name:request.connection.name.trim(),command:request.connection.command.trim(),url:request.connection.url?.trim()||undefined};
      if(connection.kind==='cli')validateExecutable(connection.command);
+     mcpHost.changed(service.state.connections.find(item=>item.id===connection.id),connection);
      service.state.connections=service.state.connections.filter(item=>item.id!==connection.id);service.state.connections.push(connection);service.save();break;
     }
-    case 'connectionRemove':service.state.connections=service.state.connections.filter(item=>item.id!==request.id);service.save();break;
+    case 'connectionRemove':mcpHost.changed(service.state.connections.find(item=>item.id===request.id),undefined);service.state.connections=service.state.connections.filter(item=>item.id!==request.id);service.save();break;
+    case 'prototypePublicationStatus':{
+     const action=(service as ExternalService).listExternalActions().find(item=>item.id===request.id);
+     if(!action?.operationId||!service.isHostPrototypePublication(request.id))throw Error('PUBLICATION_HOST_ACTION_IDENTITY');
+     return{ok:true,data:await service.executePrototypePublication(request.id,action.operationId,'status')};
+    }
+    case 'mcpPublisherVerify':
+    case 'mcpPublisherStatus':
+    case 'mcpPublisherCredential':
+    case 'mcpPublisherDisconnect':
+    case 'mcpAuthStatus':case 'mcpAuthLogin':case 'mcpAuthCancel':case 'mcpAuthDisconnect':case 'mcpElicitations':case 'mcpElicitationOpen':case 'mcpElicitationRespond':return{ok:true,data:await mcpHost.request(request)};
     case 'testConnection':return{ok:true,data:await testConnection(request.id)};
     case 'connectionDiscover':return{ok:true,data:await (service as ExternalService).discoverConnections()};
     case 'connectionSelectExecutable':{
@@ -503,7 +545,7 @@ async function boot(){
     case 'deliveryPreflight':return{ok:true,data:await deliveryPreflight(request)};
     case 'deliveryChecklist':return{ok:true,data:await deliveryGate.check(request,request.patch)};
     case 'deliver':if(!request.dryRun)return{ok:true,data:await queueManualExternalAction({kind:'document_delivery',connectionId:request.connectionId,mountId:request.mountId,path:request.path,title:request.title,provider:request.provider,remoteId:request.remoteId,sourceHash:request.sourceHash,target:`${request.provider}:${request.path}`,userAuthorizationExcerpt:'用户在交付面板中明确确认发布',conversationId:service.state.conversations.find(item=>!item.archived)?.id})};return{ok:true,data:await executeDelivery(request)};
-    case 'mcpCall':return{ok:true,data:await queueManualExternalAction({kind:'mcp_call',connectionId:request.connectionId,tool:request.tool,args:request.args,target:`MCP 工具：${request.tool}`,userAuthorizationExcerpt:'用户在 MCP 面板中明确确认执行',conversationId:service.state.conversations.find(item=>!item.archived)?.id})};
+    case 'mcpCall':return{ok:true,data:await queueManualExternalAction({kind:'mcp_call',connectionId:request.connectionId,tool:request.tool,args:request.args,artifactBinding:request.artifactBinding,prototypeProject:request.prototypeProject,target:`MCP 工具：${request.tool}`,userAuthorizationExcerpt:'用户在 MCP 面板中明确确认执行',conversationId:service.state.conversations.find(item=>!item.archived)?.id})};
     case 'externalActions':return{ok:true,data:(service as ExternalService).listPendingExternalActions(request.conversationId)};
     case 'permissionSet':(service as ExternalService).setPermission(request.capability,request.decision);break;
     case 'pendingApprovals':return{ok:true,data:(service as ExternalService).listPendingApprovals(request.conversationId)};
@@ -511,7 +553,9 @@ async function boot(){
     case 'externalAction':{
      const external=service as ExternalService;
      if(request.decision==='reject'){const rejected=external.rejectExternalAction(request.id,request.reason);if(rejected.runId.startsWith('manual:'))store.operation(rejected.id,rejected.runId,'external-action','rejected',redact(rejected.diagnostic??''));return{ok:true,data:rejected};}
+     const pendingDelivery=await service.prepareExternalTaskDelivery(request.id);await pendingDelivery.assertCurrent();
      const approved=external.approveExternalAction(request.id,request.input);
+     const taskDelivery=await service.prepareExternalTaskDelivery(request.id);await taskDelivery.assertCurrent();
     if(approved.execution.kind==='document_delivery'){
       const delivery=approved.execution as Extract<ExternalExecution,{kind:'document_delivery'}>;
       let preflight:DeliveryPreflight;
@@ -529,18 +573,26 @@ async function boot(){
       }
      }
      const operationId=randomUUID();external.markExternalActionExecuting(request.id,operationId);if(approved.proposal.runId.startsWith('manual:'))store.operation(approved.proposal.id,approved.proposal.runId,'external-action','executing');
+     const hostPublication=service.isHostPrototypePublication(request.id);
      try{
       let result:ExternalResult;
       if(approved.execution.kind==='document_delivery'){
        const checked=requestSchema.parse({type:'deliver',...approved.execution,dryRun:false});if(checked.type!=='deliver')throw Error('外部文档请求校验失败');
        result=await executeDelivery(checked,operationId);
       }else{
-       const checked=requestSchema.parse({type:'mcpCall',...approved.execution});if(checked.type!=='mcpCall')throw Error('MCP 请求校验失败');
-       result=await executeMcp(checked,operationId);
+       if(hostPublication){result=await service.executePrototypePublication(request.id,operationId);}
+       else{
+       const {kind,deliveryBinding,prototypeDeliveryBinding,...input}=approved.execution;
+       const checked=requestSchema.parse({type:'mcpCall',...input});if(checked.type!=='mcpCall')throw Error('MCP 请求校验失败');
+       result=await executeMcp(checked,operationId,taskDelivery.assertCurrent);
+       }
       }
       const status:Extract<OperationStatus,'succeeded'|'failed'|'outcome_unknown'>=result.status==='succeeded'||result.status==='failed'||result.status==='outcome_unknown'?result.status:'outcome_unknown';
-      const completed=external.completeExternalAction(request.id,{operationId,status,receipt:result.receipt,diagnostic:result.diagnostic});if(completed.runId.startsWith('manual:'))store.operation(completed.id,completed.runId,'external-action',status,redact(result.diagnostic));return{ok:true,data:completed};
+      const completed=hostPublication?external.listExternalActions().find(item=>item.id===request.id)!:external.completeExternalAction(request.id,{operationId,status,receipt:result.receipt,diagnostic:result.diagnostic});if(completed.runId.startsWith('manual:'))store.operation(completed.id,completed.runId,'external-action',status,redact(result.diagnostic));return{ok:true,data:completed};
      }catch(error){
+      // Host publication already owns its typed Operation. Guard rejection is
+      // not proof of failed side effects and must not overwrite that receipt.
+      if(hostPublication)throw error;
       const diagnostic=redact(error instanceof Error?error.message:String(error));store.operation(operationId,'external-action',approved.execution.kind,'failed',diagnostic);
       const completed=external.completeExternalAction(request.id,{operationId,status:'failed',diagnostic});if(completed.runId.startsWith('manual:'))store.operation(completed.id,completed.runId,'external-action','failed',diagnostic);return{ok:true,data:completed};
      }
@@ -652,7 +704,18 @@ async function boot(){
      service.state.changes.unshift(change);service.save();return{ok:true,data:change};
     }
     case 'export':{
+     if(request.format==='test_cases_markdown'||request.format==='test_cases_xlsx'||request.format==='copy'&&isTestCasePath(request.path)){
+      const extension=request.format==='test_cases_xlsx'?'.xlsx':request.format==='copy'?'_导出.testcases.json':'.md',source=await service.files.resolve(request.mountId,request.path);
+      const target=(await dialog.showSaveDialog(win,{defaultPath:source.replace(/\.testcases\.json$/i,'')+extension})).filePath;if(!target)return{ok:true,data:null};
+      const output=await writableOutputRef(target),report=await service.exportTestCases(request,output,request.format);
+      return{ok:true,data:{path:await service.files.resolve(output.mountId,output.path),report}};
+     }
      const source=await service.files.resolve(request.mountId,request.path);
+     const capturedSource=await fs.readFile(source),sourceHash=createHash('sha256').update(capturedSource).digest('hex');
+     if(request.expectedContentHash&&request.expectedContentHash!==sourceHash)throw Error('VERSION_CONFLICT: 成果已变化，请重新查看后导出');
+     const delivery=await service.prepareTaskDelivery({...request,expectedContentHash:sourceHash});
+     const assertDelivery=async(capturedHash=sourceHash)=>{if(capturedHash!==sourceHash)throw Error('VERSION_CONFLICT: 导出内容与核对成果版本不一致');await delivery.assertCurrent();if(await fileVersion(await service.files.resolve(request.mountId,request.path))!==sourceHash)throw Error('VERSION_CONFLICT: 成果已变化，请重新核对后导出');};
+     const prototypeExport=/\.html?$/i.test(request.path)&&['copy','zip'].includes(request.format)?await service.preparePrototypeExport(request.mountId,request.path):undefined;
      const extension=request.format==='docx'?'.docx':request.format==='zip'?'.zip':path.extname(source);
      const outputMount=service.state.mounts.find(item=>item.enabled&&item.write);const suggested=path.join(outputMount?.path||path.dirname(source),path.basename(source,path.extname(source))+extension);
      const target=(await dialog.showSaveDialog(win,{defaultPath:suggested})).filePath;
@@ -660,11 +723,16 @@ async function boot(){
      const acceptance=/\.html?$/i.test(request.path)&&['copy','zip'].includes(request.format)?await service.preparePrototypeAcceptanceExport(request.mountId,request.path):undefined;
      let output=await writableOutputRef(target);let report:unknown,sourceRef={mountId:request.mountId,path:request.path},processingCopy:import('../shared/types.js').ProcessingCopy|undefined;
      if(request.format==='docx'&&await service.files.isReferencePath(source)){processingCopy=await service.copyForProcessing({...sourceRef,targetMountId:output.mountId,directory:path.dirname(output.path)});sourceRef=processingCopy.copy;output={mountId:output.mountId,path:path.join(path.dirname(output.path),path.basename(output.path,path.extname(output.path))+'_转换结果_'+processingCopy.id.slice(0,8)+path.extname(output.path))};}
-     if(acceptance&&(request.format==='copy'||request.format==='zip'))report=await exportAcceptedPrototype(service.files,{...acceptance,output,format:request.format});
-     else if(request.format==='docx')report=await exportMarkdownToWord(service.files,{source:sourceRef,output,overwrite:!processingCopy,options:{title:path.basename(source,path.extname(source))}});
-     else if(request.format==='zip')report=await packageHtmlProject(service.files,{source:{mountId:request.mountId,path:path.dirname(request.path)},entryFile:path.basename(request.path),output,overwrite:true});
-     else{const destination=await service.files.resolve(output.mountId,output.path,true);await fs.copyFile(source,destination);report={output};}
-     return{ok:true,data:{path:await service.files.resolve(output.mountId,output.path),report,processingCopy}};
+     if(acceptance&&(request.format==='copy'||request.format==='zip'))report=await exportAcceptedPrototype(service.files,{...acceptance,output,format:request.format,assertCurrent:async()=>{const bytes=acceptance.snapshot.get(acceptance.entryPath)!.bytes;await acceptance.assertCurrent();await prototypeExport!.assertCurrent(bytes);await assertDelivery(createHash('sha256').update(bytes).digest('hex'));}});
+     else if(request.format==='docx'){
+      if(await fileVersion(await service.files.resolve(sourceRef.mountId,sourceRef.path))!==sourceHash)throw Error('VERSION_CONFLICT: 转换副本与核对原文件不一致');
+      const conversionHash=createHash('sha256').update(await service.files.read(sourceRef.mountId,sourceRef.path)).digest('hex');
+      report=await exportMarkdownToWord(service.files,{source:sourceRef,output,overwrite:!processingCopy,options:{title:path.basename(source,path.extname(source))},beforeWrite:async hash=>{if(hash!==conversionHash)throw Error('VERSION_CONFLICT: 转换正文已变化');await assertDelivery();}});
+     }
+     else if(request.format==='zip')report=await packageHtmlProject(service.files,{source:{mountId:request.mountId,path:path.dirname(request.path)},entryFile:path.basename(request.path),output,overwrite:true,beforeWrite:async(entries:ReadonlyMap<string,Buffer>)=>{const entry=entries.get(path.basename(request.path));if(!entry)throw Error('PROTOTYPE_ENTRY_MISSING');await prototypeExport?.assertCurrent(entry);await assertDelivery(createHash('sha256').update(entry).digest('hex'));}});
+     else if(prototypeExport){await writeAuthorizedBuffer(service.files,output,prototypeExport.bytes,true,async()=>{await prototypeExport.assertCurrent();await assertDelivery(createHash('sha256').update(prototypeExport.bytes).digest('hex'));});report={output};}
+     else{await writeAuthorizedBuffer(service.files,output,capturedSource,true,()=>assertDelivery());report={output};}
+     return{ok:true,data:{path:await service.files.resolve(output.mountId,output.path),report,processingCopy,quality:prototypeExport?.quality}};
     }
     case 'shareInvite':{
      return{ok:true,data:createNetworkShareInvitation({version:1,provider:'windows-smb',resourceId:randomUUID(),host:request.host,shareName:request.shareName,displayName:request.shareName,suggestedDrive:'P:'})};
@@ -794,15 +862,15 @@ async function boot(){
   }catch(error){return{ok:false,error:redact(error instanceof Error?error.message:String(error))};}
  });
  const hiddenTest=await isHiddenTestProfile(configuredDataDir,path.resolve(here,'../..','.test-data'),process.env.PM_SLASH_TEST_HIDDEN);
- win=new BrowserWindow({show:!hiddenTest,skipTaskbar:hiddenTest,width:1440,height:940,minWidth:1000,minHeight:680,title:'slash',icon:path.join(here,'../renderer/brand/slash.png'),backgroundColor:'#f6f7f8',titleBarStyle:'hidden',titleBarOverlay:{color:'#f6f7f8',symbolColor:'#20242b',height:36},webPreferences:{preload:path.join(here,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ win=new BrowserWindow({show:!hiddenTest,skipTaskbar:hiddenTest,width:1440,height:940,minWidth:1000,minHeight:680,title:'slash',icon:devServerUrl?path.join(app.getAppPath(),'public/brand/slash.png'):path.join(here,'../renderer/brand/slash.png'),backgroundColor:'#f6f7f8',titleBarStyle:'hidden',titleBarOverlay:{color:'#f6f7f8',symbolColor:'#20242b',height:36},webPreferences:{preload:path.join(here,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  win.setMenuBarVisibility(false);
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
- win.webContents.on('will-navigate',event=>event.preventDefault());
- if(devServerUrl)await win.loadURL(devServerUrl);
- else await win.loadFile(path.join(here,'../renderer/index.html'));
+ win.webContents.on('will-navigate',(event,url)=>{if(url!==win.webContents.getURL())event.preventDefault();});
  win.on('closed',()=>{service.dispose();cancelAllPrototypeAcceptance();});
- app.on('before-quit',()=>{service.dispose();cancelAllPrototypeAcceptance();});
+ app.on('before-quit',()=>{mcpHost?.close();service.dispose();cancelAllPrototypeAcceptance();});
  app.on('window-all-closed',()=>{service.dispose();previews.clear();server.close();store.close();app.quit();});
+ const startup=installStartupRecovery(win,{dataDir:userDataDir,redact,load:()=>devServerUrl?win.loadURL(devServerUrl):win.loadFile(path.join(here,'../renderer/index.html'))});
+ await startup.load();
 }
 
 void boot().catch(error=>{console.error(redact(String(error)));app.exit(1)});

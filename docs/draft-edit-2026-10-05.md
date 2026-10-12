@@ -23,6 +23,8 @@ Service 使用 Pi mutation queue 串行本宿主草稿事务，并保留既有 `
 
 流程源：[draft-edit.mmd](./draft-edit.mmd)。
 
+2026-10-10：read/edit 成功回执新增草稿实际 `parentRunId`，pending 读取取当前 owner，正式文件省略，合法续作编辑取提交后新 owner；不猜调用 Run 或历史 origin。输入及权限/原型身份校验未放宽，详见 [owner 回执契约与验证](draft-owner-receipt-2026-10-10.md)。
+
 ## 离线验证
 
 `tests/draft-edit.test.ts` 使用真实 Pi 编辑器与真实隔离 Files：BOM/CRLF、连续两次同卡修改、原生模糊规范化、重复/缺失/重叠拒绝、批量原文语义、分页、旧哈希/ID、write 后最新稿、原文件变化、撤权、Plan、其他 run、专用元数据、无效 UTF-8/二进制/NUL/参考原件、Pi 暂存后取消/撤权/原件变化无草稿、同文件竞争与不同文件保留。

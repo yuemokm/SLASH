@@ -10,7 +10,7 @@ export function ReplyDetails({message,run,streaming=false,state,onToggle,call,ex
  const id=useId(),[visited,setVisited]=useState({execution:false,records:false}),[checkpoint,setCheckpoint]=useState<RunCheckpoint>(),[checkpointError,setCheckpointError]=useState(''),[qualityOpen,setQualityOpen]=useState(false);
  useEffect(()=>{setVisited(previous=>({execution:previous.execution||state.execution,records:previous.records||state.records}));},[state.execution,state.records]);
  useEffect(()=>{let stopped=false;if(!run||!state.execution)return;setCheckpointError('');void call({type:'runCheckpoint',runId:run.id}).then(value=>{if(!stopped)setCheckpoint(value as RunCheckpoint);}).catch(error=>{if(!stopped)setCheckpointError(String(error.message||error));});return()=>{stopped=true;};},[call,run?.id,run?.updatedAt,run?.status,state.execution]);
- const attention=run?.mode==='plan'&&run.proposal?.status==='pending'?'方案待确认':run?.resumable?'任务可继续':run?.error?'任务需要处理':undefined;
+ const attention=run?.mode==='plan'&&run.proposal?.status==='pending'?'方案待确认':run?.status==='waiting_user'?'等待授权确认':run?.resumable?'任务可继续':run?.error?'任务需要处理':streaming&&run?.runtimeStatus?.activity==='retry_wait'?`模型重试 · 第 ${run.runtimeStatus.retry?.attempt??1} 次`:undefined;
  return <div className="reply-details" data-run-id={run?.id||''}>
   <MessageFooter message={message} run={run} streaming={streaming} actions={<>
    <button type="button" aria-expanded={state.execution} aria-controls={`${id}-execution`} onClick={()=>onToggle('execution')}><Icon name="clock" size={14}/>生成与执行</button>

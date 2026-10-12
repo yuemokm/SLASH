@@ -1,0 +1,20 @@
+flowchart LR
+  Chat[当前项目会话] --> Load[按需加载 memory 组]
+  Load --> Read[memory_read 词面查询和分页]
+  Load --> Write[Build 候选写入 / 撤回 / 恢复]
+  Read --> Gate[既有工具网关 + 当前项目 / 权限 / 取消复核]
+  Write --> Gate
+  Gate --> Sources[宿主绑定真实来源版本和用户输入身份]
+  Sources --> Queue[同项目交易串行队列]
+  Queue --> Worker[交易独立 worker 固定 pi-memory 0.4.2]
+  Worker --> Tools[官方注册 read / write / forget / restore]
+  Tools --> Disk[项目私有 MEMORY.md + recovery JSON]
+  Disk --> Verify[来源可访问性与版本复核]
+  Verify --> Candidate[工具结果：candidate / stale 明确提示]
+  Candidate --> Chat
+  Chat --> Knowledge[现有 upsert_knowledge 草稿 + 用户保存]
+  Knowledge --> Confirmed[正式产品知识]
+  Native[Pi 0.86.1 原生压缩] --> Chat
+  Worker -.丢弃五个生命周期hook.-> Hooks[无系统注入 / 无自动总结 / 无qmd]
+  Worker --> Exit[交易完成退出 / 宿主退出联动]
+  Gate --> Unknown[已派发后中断：结果未知 先核对不重试]

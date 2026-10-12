@@ -1,0 +1,10 @@
+flowchart TD
+    U["用户新要求<br/>UI仅业务内容与正常操作反馈"] --> P["新质量任务/runner提示<br/>制作与未集成说明移到Slash交付"]
+    P --> V["新明确binding v2<br/>不默认allocationNote<br/>旧note值仅metadata"]
+    V --> B["保留业务断言<br/>编码只读/格式 名称50/51<br/>正常/重复/失败 输入保留与视口"]
+    L["旧明确binding v1"] --> O["原note断言与原用例保留<br/>缺说明仍失败"]
+    F["旧冻结/reusable spec"] --> O
+    O --> H["旧回执/manifest/评分保持<br/>不自动迁移或改失败为通过"]
+    B --> T["15/15 + 类型检查<br/>无云；子代理未build"]
+    T --> D["交付说明如实记录<br/>本地数据 未真实后台/定位/MDM<br/>不推断业务或整体UI通过"]
+    H --> D

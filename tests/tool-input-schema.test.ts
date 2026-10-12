@@ -4,6 +4,7 @@ import {validateToolArguments} from '@earendil-works/pi-ai/utils/validation';
 import {toolInputSchema} from '../main/tool-input-schema.js';
 import {prototypeAcceptanceDefinitionSchema,prototypeAcceptanceGetSchema,prototypeTargetSchema} from '../shared/prototype-acceptance.js';
 import {taskAcceptanceProposalSchema} from '../shared/task-acceptance.js';
+import {taskModelViewRequestSchema} from '../shared/task-acceptance-model-view.js';
 
 const draft={changeId:'actual-change',parentRunId:'owner',expectedContentHash:'a'.repeat(64)};
 const target={mountId:'out',path:'index.html',draft};
@@ -22,4 +23,12 @@ test('任务候选输入默认不会变成Pi必填，仍拒绝模型结果字段
  const valid=validate(taskAcceptanceProposalSchema,input),parsed=taskAcceptanceProposalSchema.parse(valid);
  assert.equal(parsed.criteria![0].origin,'model_proposal');assert.equal(parsed.criteria![0].required,true);
  assert.throws(()=>validate(taskAcceptanceProposalSchema,{...input,status:'passed'}),/Validation/);
+});
+test('任务查看最小调用保留默认，空字符串与不适用过滤条件仍拒绝',()=>{
+ assert.deepEqual(taskModelViewRequestSchema.parse(validate(taskModelViewRequestSchema,{})),{section:'summary',limit:10});
+ for(const field of ['runId','sourceId','readId','reportId','itemId'])assert.throws(()=>validate(taskModelViewRequestSchema,{[field]:''}),/Validation/);
+ for(const field of ['sourceId','readId','reportId','itemId'])assert.throws(()=>taskModelViewRequestSchema.parse({section:'summary',[field]:'real-id'}),/只用于/);
+ for(const input of [{section:'sources',sourceId:'real-source'},{section:'reads',sourceId:'real-source',readId:'real-read'},{section:'report',reportId:'real-report'},{section:'requests',itemId:'real-request'}])assert(taskModelViewRequestSchema.safeParse(validate(taskModelViewRequestSchema,input)).success);
+ assert.throws(()=>validate(taskModelViewRequestSchema,{cursor:{position:0,textOffset:0,version:'invented'}}),/Validation/);
+ assert.throws(()=>validate(taskModelViewRequestSchema,{status:'passed'}),/Validation/);
 });

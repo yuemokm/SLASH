@@ -8,6 +8,7 @@ export const CORE_TOOL_NAMES=[
 ] as const;
 export const TOOL_GROUPS={
  task_acceptance:['define_task_acceptance'],
+ test_cases:['draft_test_cases'],
  prototype:['define_prototype_acceptance','get_prototype_acceptance','run_prototype_acceptance','read_prototype_screenshot'],
  business_rules:['record_business_constraints','bind_business_implementation','check_business_rules'],
  product_records:['list_product_records','record_requirement','update_requirement_evidence','transition_requirement','register_artifact','link_artifacts','query_artifact_impact','create_artifact_review','add_review_issue','transition_review_issue','complete_artifact_review','create_design_package','update_design_package','upsert_knowledge'],
@@ -16,21 +17,25 @@ export const TOOL_GROUPS={
  connections:['list_connections','discover_connections','inspect_connection','configure_connection','propose_external_action'],
  execution:['run_process','powershell'],
  skill_install:['install_skill'],
+ web_research:['web_search','fetch_content','get_search_content','source_check'],
+ delegated_research:['delegate_readonly'],
+ code_review:['check_draft_code'],
+ memory:['memory_read','memory_write','memory_forget','memory_restore'],
 } as const;
 export type ToolGroup=keyof typeof TOOL_GROUPS;
 export const TOOL_GROUP_NAMES=Object.keys(TOOL_GROUPS) as ToolGroup[];
 export const loadToolGroupSchema=z.object({group:z.enum(TOOL_GROUP_NAMES as [ToolGroup,...ToolGroup[]])}).strict();
-const purposes:Record<ToolGroup,string>={task_acceptance:'起草任务验收',prototype:'原型用例/执行/截图',business_rules:'业务约束/落实/检查',product_records:'需求/成果/评审/知识记录',templates:'模板/迁移/流程检查',workspace_maintenance:'规则草稿/历史恢复',connections:'连接/外部操作提案',execution:'进程/命令',skill_install:'安装全局技能'};
-export const TOOL_CATALOG_PROMPT='# 按需工具\n常用读写、技能、搜索与任务摘要已启用。其余能力先调用 load_tool_group({group})；等回执后的下一轮再调用该组工具，同一次响应提前调用会失败。加载只改变本Run工具可见性，不提升权限，不执行组内操作。\n'+TOOL_GROUP_NAMES.map(group=>`${group}（${purposes[group]}）：${TOOL_GROUPS[group].join(',')}`).join('\n');
+const purposes:Record<ToolGroup,string>={memory:'项目候选备忘/撤回/恢复',web_research:'搜索/网页证据/断言来源',delegated_research:'独立上下文只读研究与检查',code_review:'检查原型草稿代码',test_cases:'创建供人工执行的测试用例',task_acceptance:'起草任务验收',prototype:'原型用例/执行/截图',business_rules:'业务约束/落实/检查',product_records:'需求/成果/评审/知识记录',templates:'模板/迁移/流程检查',workspace_maintenance:'规则草稿/历史恢复',connections:'连接/外部操作提案',execution:'进程/命令',skill_install:'安装全局技能'};
+export const TOOL_CATALOG_PROMPT='# 按需工具\n常用读写、技能、搜索与任务摘要已启用。其余能力先调用 load_tool_group({group})；下一轮指同一Run收到回执后的下一次模型推理，无需用户再发“继续”。收到回执后继续调用本任务所需的组内工具，不要仅因加载就结束任务；同一次响应提前调用会失败。加载只改变本Run工具可见性，不提升权限，不执行组内操作。\n'+TOOL_GROUP_NAMES.map(group=>`${group}（${purposes[group]}）：${TOOL_GROUPS[group].join(',')}`).join('\n');
 
 /** Runtime-local visibility only. No persisted loadout or arbitrary tool names. */
 export function createToolLoadout(registeredNames:()=>string[],activate:(names:string[])=>void){
  const mapped=[...CORE_TOOL_NAMES,...Object.values(TOOL_GROUPS).flat()];
- const verify=()=>{const list=registeredNames(),names=new Set(list);if(mapped.length!==55||new Set(mapped).size!==55||list.length!==names.size||names.size!==56||!names.has('load_tool_group')||mapped.some(name=>!names.has(name)))throw Error('TOOL_CATALOG_REGISTRY_MISMATCH');};
+ const verify=()=>{const list=registeredNames(),names=new Set(list);if(new Set(mapped).size!==mapped.length||list.length!==names.size||names.size!==mapped.length+1||!names.has('load_tool_group')||mapped.some(name=>!names.has(name)))throw Error('TOOL_CATALOG_REGISTRY_MISMATCH');};
  verify();
  const loaded=new Set<ToolGroup>();
  const selected=(groups:Set<ToolGroup>)=>[...CORE_TOOL_NAMES,'load_tool_group',...TOOL_GROUP_NAMES.filter(group=>groups.has(group)).flatMap(group=>[...TOOL_GROUPS[group]])];
  const activeNames=()=>selected(loaded);
  const apply=()=>{verify();activate(activeNames());};
- return{apply,activeNames,load(input:unknown){const {group}=loadToolGroupSchema.parse(input),already=loaded.has(group);verify();const next=new Set(loaded);next.add(group);try{activate(selected(next));}catch(error){activate(activeNames());throw error;}loaded.add(group);return{group,status:already?'already_loaded':'loaded',tools:[...TOOL_GROUPS[group]],effective:'next_turn',notice:'等本调用回执后的下一轮再调用新工具；权限、预算和宿主检查仍按原规则执行。'};}};
+ return{apply,activeNames,load(input:unknown){const {group}=loadToolGroupSchema.parse(input),already=loaded.has(group);verify();const next=new Set(loaded);next.add(group);try{activate(selected(next));}catch(error){activate(activeNames());throw error;}loaded.add(group);return{group,status:already?'already_loaded':'loaded',tools:[...TOOL_GROUPS[group]],effective:'next_turn',notice:'工具已启用；next_turn 指同一Run收到本回执后的下一次模型推理，无需用户再发“继续”。请继续调用本任务所需的新工具，不要仅因加载就结束任务；权限、预算和宿主检查仍按原规则执行。'};}};
 }

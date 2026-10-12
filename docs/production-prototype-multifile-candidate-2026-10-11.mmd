@@ -1,0 +1,28 @@
+flowchart TD
+  A[现有任务 HTML 输出与已授权目录] --> B[复用 snapshotForTask
+入口父目录网页资源完整 bytes]
+  B --> C[宿主规范清单
+manifestHash 与每文件 sha256]
+  C --> D[真实 tool inputSchema 对应 codec]
+  D --> E{生产已注册适配器?}
+  E -->|无| U[unsupported
+fixture 只允许隔离构造注入]
+  E -->|有| F[完整 payload 逐字节绑定
+合同 来源 报告 人审 参数 连接]
+  F --> P[持久 pending 提案]
+  P --> H[用户 IPC 审批
+同版本有效历史人审保留]
+  H --> I[beforeDispatch 重验
+manifest 参数 schema 权限 连接 TaskDelivery]
+  I -->|变化或未知| Z[零发送
+保留记录]
+  I -->|全部当前| J[现有 Pi 或 HTTP callTool
+发送一次]
+  J -->|真实回执| K[记录结果与原产物身份]
+  J -->|失联| L[outcome_unknown
+不重试 不自动恢复]
+  C --> M[复用既有 ZIP
+同一 bytes Map]
+  N[旧单 HTML text] --> O[仅 single_file_text
+完整项目未证明]
+  O -->|明确本地加载资源| U

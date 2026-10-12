@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-11T18:52:27.150081+00:00",
+  "kind": "editable-hyperframes-architecture-segment",
+  "durationSeconds": 30,
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "frames": 900,
+  "audio": false,
+  "renderSession": 30144,
+  "renderExitCode": 0,
+  "checkSession": 50955,
+  "checkExitCode": 0,
+  "visualReview": "parent approved final overview; actual encoded 29s frame inspected",
+  "checks": {
+    "runtimeErrors": 0,
+    "layoutErrors": 0,
+    "motionErrors": 0,
+    "motionSamples": 300,
+    "contrastPassed": 119,
+    "contrastChecked": 119
+  },
+  "ownProcessesClosed": [
+    14700,
+    21732,
+    22880,
+    13768,
+    5760,
+    22188,
+    23136,
+    23252
+  ],
+  "preview": "background no-open HTTP200; stopped through official CLI",
+  "scope": "Only owned hyperframes directory and remotion/public/architecture.mp4; PPT paused; no product edits or cloud publish",
+  "sourceNotes": "ARCHITECTURE-NOTES.md",
+  "retainedFailures": [
+    "architecture-check-first.log: motion class selector ambiguous; replaced per-node IDs",
+    "architecture-history-end.log: unsupported --who on history end; corrected CLI call, no content impact"
+  ],
+  "files": [
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\index.html",
+      "bytes": 12598,
+      "sha256": "d8df578f6d93ba9627949de14578a440aa09f611b0f73f10616c04aa549ee3b2"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\index.motion.json",
+      "bytes": 1687,
+      "sha256": "a427c182fb34aeffa9e6feab4dcf2c5327ea7b44c32440f70390c96777d2114e"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\ARCHITECTURE-NOTES.md",
+      "bytes": 2481,
+      "sha256": "49563b0c81a0c22bb05b31f17f070eb53aea13a50654ffdb2cc01bb2c2d2e976"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\BRIEF.md",
+      "bytes": 1915,
+      "sha256": "f524e7c742941b62add473b757461ee99484ae9f9d1740bae0a2c3cb1160b610"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\assets\\gsap.min.js",
+      "bytes": 72779,
+      "sha256": "c174bfce53a729418d57a8ad8625e7247c793a22fef8e2851e3cfa3de9cd8280"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\architecture-check-final.json",
+      "bytes": 3442,
+      "sha256": "ac3ec105de9a63cf7e01f3a8ba40b350a76d93faaf1d3cbb42d60b101819b258"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\architecture-media.json",
+      "bytes": 465,
+      "sha256": "846bd2dc40005e0d7104edea9b3575d6be294081925cdd61d276cf051a3226a5"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\snapshots\\frame-04-at-29.0s.png",
+      "bytes": 239692,
+      "sha256": "ca3accc2418ee3806d03de993b87c24140893728b2dad1f8b5f8b1a0ca48d32e"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\hyperframes\\snapshots\\architecture-render-29s.png",
+      "bytes": 710583,
+      "sha256": "bed6738f03815870e9b036ffa6beda82b4e41fdc9b26376bb0008ecc24ba28b5"
+    },
+    {
+      "path": "E:\\code\\slash\\deliverables\\product-intro-20261012\\video-source\\remotion\\public\\architecture.mp4",
+      "bytes": 2346487,
+      "sha256": "6c1c4a19d913b3287b375dd694b37aac9037ce00868200c80332593ca096b8b8"
+    }
+  ]
+}

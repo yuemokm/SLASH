@@ -1,0 +1,19 @@
+flowchart LR
+  Register[同事主动注册与邮箱确认] --> Browser[同事登录及提问]
+  Register -.不自动授权资料.-> RLS
+  Preflight[部署配置预检禁止演示和管理密钥] --> API[Vercel受限问答API]
+  Browser --> API
+  API --> Auth[Supabase Auth实时核实]
+  Auth --> RLS[成员关系及当前发布版本RLS]
+  RLS --> Search[pgvector与中文关键词融合]
+  Search --> Model[只有证据的回答模型]
+  Model --> Check[引用身份与撤权复核]
+  Check --> Browser
+  Browser --> Source[来源API每次重新授权]
+  Source --> RLS
+  Local[桌面已授权资料快照] --> Preview[导出包校验及预览]
+  Preview -->|明确目标与成员后发送一次| Publish[离线发布事务]
+  Publish --> RLS
+  Publish --> Receipt[确认或unknown回执]
+  Receipt -->|只核对不自动重发| Publish
+  Verify[临时PostgreSQL执行原迁移与27项pgTAP] -.权限及事务证据.-> RLS

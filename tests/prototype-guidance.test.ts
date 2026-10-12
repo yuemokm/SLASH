@@ -3,7 +3,7 @@ import test from 'node:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import {Files} from '../main/files.js';
+import {Files,hash} from '../main/files.js';
 import {Store} from '../main/store.js';
 import {prepareWorkflow} from '../main/pm-workflows.js';
 import {PROTOTYPE_GUIDANCE} from '../main/prototype-guidance.js';
@@ -29,6 +29,8 @@ test('prototype workflow uses design advice without imposing it on other workflo
  const prototype=await prepareWorkflow(files,'unused',{kind:'prototype',sources:[]});
  assert.ok(prototype.prompt.includes(PROTOTYPE_GUIDANCE));
  assert.match(prototype.prompt,/用户输入保持优先/);
+ assert.match(prototype.prompt,/不能依赖运行时模板编译，使用离线可运行脚本或预编译资源/);
+ assert.match(prototype.prompt,/run_prototype_acceptance 实际验收，未验证不得宣称离线可用，不得要求放宽 CSP/);
  for(const kind of ['prd','research'] as const){
   const prepared=await prepareWorkflow(files,'unused',{kind,sources:[]});
   assert.equal(prepared.prompt.includes(PROTOTYPE_GUIDANCE),false);
@@ -95,4 +97,23 @@ test('ordinary new prototype chat receives effective default while historical pe
  assert.equal(store.get('system-prompt:run:'+pending,null),historicalDefault);
  assert.equal(service.systemPromptGet().content,DEFAULT_SYSTEM_PROMPT);
  assert.deepEqual(store.get('system-prompt:v1',null),saved);
+});
+
+test('prototype workflow sends user scope and real source versions alongside shared task guidance without replacing custom instructions',async t=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-prototype-task-guidance-')),store=new Store(path.join(dir,'profile'));
+ const calls:Array<{options:RuntimeOptions;text:string}>=[];
+ const service=new Service(store,()=> 'fixture-key',()=>{},async options=>({messages:[{role:'assistant',stopReason:'stop'}],prompt:async text=>{calls.push({options,text});options.delta('设计判断：按本次主要任务安排分区；实际界面尚未生成或验证。');},abort:async()=>{},dispose:()=>{}}) as never,{fetchModelMetadata:async()=>{throw Error('OFFLINE_FIXTURE_NO_NETWORK');}});
+ await service.workspace(path.join(dir,'workspace'));
+ t.after(async()=>{service.dispose();store.close();await fs.rm(dir,{recursive:true,force:true,maxRetries:5,retryDelay:30});});
+ const custom='沿用已有蓝色产品语言。不要新增审批。';saveSystemPrompt(store,custom);
+ const resources=service.state.mounts.find(m=>m.name==='资源')!,source={mountId:resources.id,path:'task.md'},body='用户：业务员。主任务：到店后登记；必要信息齐备后提交；选填不应打断主任务。';
+ await fs.writeFile(path.join(resources.path,source.path),body);resources.write=false;service.save();
+ const inputs=['新建业务表单，主要任务是快速登记，界面只显示产品内容。','整体改善现有工作台的任务入口与操作路径，保留业务字段。','只调整C端预约按钮的排版，保留其他布局和业务JS。'];
+ for(const text of inputs){const id=await service.send(service.conversation(),text,'build','standard',undefined,undefined,undefined,'coding',undefined,{kind:'prototype',sources:[source]});await waitFor(()=>service.state.runs.find(r=>r.id===id)?.status==='succeeded');const call=calls.at(-1)!;
+  assert.equal(call.options.systemPrompt,custom);assert.equal(store.get('system-prompt:run:'+id,''),custom);
+  assert.ok(call.text.startsWith(text+'\n\n'));assert.ok(call.text.includes(PROTOTYPE_GUIDANCE));assert.equal(call.text.split(PROTOTYPE_GUIDANCE).length-1,1);
+  assert.ok(call.text.includes(body));const run=service.state.runs.find(r=>r.id===id)!;assert.equal(run.workflow!.receipts[0].contentHash,hash(body));assert.equal(run.workflow!.receipts[0].path,source.path);assert.equal(resources.write,false);
+  const view=await service.getTaskAcceptance(id);assert.equal(view!.contract.requests[0].text,text);assert.equal(view!.contract.outputs.length,0,'guidance is transmitted, not proof of a generated usable page');
+ }
+ assert.equal(calls.length,3);assert.match(PROTOTYPE_GUIDANCE,/几句话说明使用者/);assert.match(PROTOTYPE_GUIDANCE,/业务表单.*工作台.*C端/s);assert.match(PROTOTYPE_GUIDANCE,/不新增免责声明区域/);assert.doesNotMatch(PROTOTYPE_GUIDANCE,/模拟身份简短醒目/);
 });

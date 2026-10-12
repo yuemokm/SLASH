@@ -1,0 +1,21 @@
+flowchart LR
+  Rail[最左导航] --> Cases[测试用例：当前项目]
+  Rail --> KB[知识库：当前项目]
+  Scope[项目名称 / 路径 / 原项目切换] --> Cases
+  Scope --> KB
+  Cases --> Saved[已有授权文件查询 / isTestCasePath]
+  Cases --> Drafts[pending / conflict 草稿]
+  Saved --> Open[openFile]
+  Drafts --> View[viewChange]
+  Open --> Preview[TestCasesPreview / 原导出链]
+  View --> Preview
+  Cases --> Create[创建：原会话工作流 / 资料选择]
+  Create --> Send[用户编辑并发送后生成]
+  Resource[资源旧知识库入口] --> KB
+  KB --> Existing[KnowledgeCollections / KnowledgePublication]
+  Existing --> Local[明确选择资料 / 索引 / 本机检索]
+  Existing --> Cloud[预检 / 分享 / 回执核对]
+  Switch[切换中卸载业务页 / 禁用按钮] --> Remount[按项目重新挂载 / 清理在途请求]
+  Remount --> Cases
+  Remount --> KB
+  Limit[向量未配置或云 HTTP 403：仍不可宣称问答成功] -.-> Cloud

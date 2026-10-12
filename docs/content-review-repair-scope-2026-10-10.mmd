@@ -1,0 +1,20 @@
+flowchart TD
+  R[冻结完整本次请求 成果 已读来源] --> P[wire v3 schema及prompt hash]
+  P --> T{独立只读审查正常stop且完整返回}
+  T -- 是 --> M[模型意见 scope及repairDisposition]
+  T -- 否 --> U[unverified 保留安全诊断 不分析scope]
+  D[真实v3 114秒terminated 1fetch HTTP200 14SSE 正文1字符 usage未知] --> U
+  M --> B{类型身份和已提供原句逐字绑定}
+  B -- 无效 --> U
+  B -- 有效 --> F[issues_found 原意见保持可见]
+  F --> G{in_scope candidate high 有request原句 且原候选条件满足}
+  G -- 否 --> H[repairEligible false 仅记录或人工核对]
+  G -- 是 --> C[局部候选 非新授权]
+  O[历史rich receipt 缺新增字段 保持原hash] --> V{入口 当前 正常完成 回执有效 且重复候选条件}
+  C --> V
+  V -- 否 --> H
+  V -- 是 --> S[同Pi会话 原完整请求和绑定正面证据 有限草稿修正]
+  S --> A[原权限 版本锁 原预算 最多两轮 不自动保存]
+  L[旧wire v2 input] --> X[拒绝执行 从授权snapshot重建]
+  X --> P
+  E[旧v2真实completed 两条意见独立核对成立 原回执保留] --> O

@@ -1,0 +1,29 @@
+flowchart TD
+  Draft[会话生成或修改草稿] --> Save[普通保存草稿]
+  Draft --> Contract[现有任务合同与真实来源回执]
+  Contract --> Report[宿主自动检查报告]
+  Contract --> Stopped[停止任务桌面自动重检<br/>首报缺失可显式null]
+  Stopped --> VersionGuard[当前项目 / 权限 / 合同与报告快照<br/>实际成果 / 依赖 / 来源版本复验]
+  VersionGuard -->|仅旧检查证据过期且实际版本未变| AutoRecheck[复用自动检查<br/>不启动模型或人工确认]
+  AutoRecheck --> Report
+  VersionGuard -->|版本 / 权限变化或并发新报告| Block
+  Report --> Review[桌面人工核对当前报告]
+  Review --> View[TaskDeliveryView<br/>合同 / 来源 / 成果版本绑定]
+  View --> Prepare[prepareTaskDelivery]
+  Prepare --> Recheck[实际导出写入前 assertCurrent]
+  Recheck -->|版本与权限当前且核对通过| Export[现有原子文件写入]
+  Recheck -->|未知副作用 / 冲突 / 未核对| Block[保留草稿与证据]
+  Draft --> Proposal[模型提出 MCP pending 提案]
+  Proposal --> Payload[宿主读取本 Run 真实单文件原文<br/>定位现有 args 文本叶子并完整比较]
+  Payload --> Binding[持久保存真实成果与整个 args hash]
+  Binding --> First[首次审批只为完全相同版本<br/>冻结已核对的当前报告]
+  View --> First
+  First --> Dispatch[connector 派发紧邻前再核对]
+  Dispatch -->|事实与核对均当前| External[现有 MCP 宿主实际调用]
+  Dispatch -->|旧绑定 / 参数改动 / 未知| Block
+  CheckUnknown[已保存但 unknown 的浏览器报告] --> HostReceipt[匹配执行身份的宿主检查回执]
+  HostReceipt --> Report
+  HostReceipt --> Block
+  EffectUnknown[真实写后未决副作用] --> Block
+  EffectUnknown --> ReadEvidence[允许只读质量取证<br/>保留原pending事实]
+  ReadEvidence --> Stopped

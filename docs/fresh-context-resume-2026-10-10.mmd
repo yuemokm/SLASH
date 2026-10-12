@@ -1,0 +1,14 @@
+flowchart TD
+    A[明确恢复失败或中断任务] --> B[核对父Run、项目、模式、权限和未知结果]
+    B --> C{提供freshContext摘要?}
+    C -->|否| D[原有Pi会话和根输入恢复]
+    C -->|是| E[校验短摘要schema 保留根请求哈希]
+    E --> F[继承原合同、模板、来源回执与输出]
+    F --> G[Pi SessionManager.create parentSession链接旧文件]
+    G --> H[新上下文 只注入摘要和草稿元数据]
+    D --> I[原Run父链与owner、版本、权限检查]
+    H --> I
+    I --> J[read_draft核对同稿版本后逐块编辑]
+    J --> K[独立检查与完整业务验收]
+    B -->|不可安全恢复| L[拒绝执行 保留资料和历史]
+    G -.-> M[旧Pi历史文件原样保留]

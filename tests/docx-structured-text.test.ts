@@ -28,11 +28,12 @@ test('ordered and nested lists preserve source sequence, without inferring origi
  assert.match(text,/列表编号为转换序号/);
 });
 
-test('merged, irregular and nested tables use explicit row/cell coordinates without inventing a grid',()=>{
+test('merged, irregular and nested tables keep node coordinates and prove only valid HTML layouts',()=>{
  const merged=renderDocxHtmlStructure('<table><tr><td colspan="2" rowspan="2">合并</td><td>右</td></tr><tr><td>下</td></tr></table>');
  assert.equal(merged.structure.tables[0].representation,'cell_coordinates');
  assert.match(merged.text,/行 1 \/ 格 1（横跨 2，纵跨 2）：合并/);
- assert.match(merged.text,/未推断业务列归属或展开网格/);
+ assert.equal(merged.structure.tables[0].layout?.status,'verified');
+ assert.match(merged.text,/转换HTML布局列已核对，非Word网格；业务含义仍需对照原文/);
  const nested=renderDocxHtmlStructure('<table><tr><td>外部<table><tr><td>内部</td></tr></table></td></tr></table>');
  assert.equal(nested.structure.tables.length,2);
  assert.equal(nested.structure.tables[0].representation,'cell_coordinates');

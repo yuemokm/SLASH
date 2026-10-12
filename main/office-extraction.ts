@@ -8,8 +8,8 @@ import type {SpreadsheetFieldReadInput,SpreadsheetCellEvidence} from '../shared/
 import type {SpreadsheetNavigationInput,SpreadsheetNavigationIdentity,SpreadsheetNavigationOptions,SpreadsheetNavigationResponse} from '../shared/spreadsheet-navigation.js';
 import {navigateSpreadsheetWorkbook} from './spreadsheet-navigation.js';
 
-// This module only accepts bytes already snapshotted from a registered processing
-// copy. It does not resolve paths, grant access, read originals, or write files.
+// This module accepts host snapshots of authorized originals or registered
+// processing copies. It does not resolve paths, grant access, read files, or write files.
 export const OFFICE_EXTRACTION_LIMITS = Object.freeze({
   inputBytes: 100_000_000,
   outputBytes: 2_000_000,
@@ -27,7 +27,7 @@ export const OFFICE_EXTRACTION_LIMITS = Object.freeze({
 });
 
 // Bump when the Office serializers or their parser dependencies change.
-export const OFFICE_TEXT_PARSER_VERSION = 'office-text-v4-docx-structured-compact';
+export const OFFICE_TEXT_PARSER_VERSION = 'office-text-v6-docx-html-layout-compact';
 
 export function isOfficeDocument(fileName: string): boolean {
   return /\.(docx|xlsx)$/i.test(fileName);
@@ -276,16 +276,19 @@ export async function extractSpreadsheetNavigation(bytes:Buffer,input:Spreadshee
  if(!navigation)throw Error('SPREADSHEET_NAVIGATION_UNAVAILABLE');return{text,result:navigation};
 }
 
-export async function extractOfficeText(bytes: Buffer, fileName: string): Promise<string> {
+export async function extractOfficeTextSnapshot(bytes: Buffer, fileName: string): Promise<{text:string;readingText?:string}> {
   if (!isOfficeDocument(fileName)) refuse('UNSUPPORTED', '处理副本 Office 文本提取仅支持 DOCX 和 XLSX');
   try {
     const extension = path.extname(fileName).toLowerCase();
     validatePackage(bytes, extension);
-    if (extension === '.xlsx') return await extractSpreadsheet(bytes);
-    return checkText((await extractStructuredDocxText(bytes)).text);
+    if (extension === '.xlsx') return {text:await extractSpreadsheet(bytes)};
+    const snapshot=await extractStructuredDocxText(bytes);return {text:checkText(snapshot.text),readingText:snapshot.readingText};
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('OFFICE_')) throw error;
     if ((error as NodeJS.ErrnoException)?.code === 'ERR_BUFFER_TOO_LARGE') refuse('ZIP_LIMIT', 'Office 包实际解压大小超过安全限额，已停止提取');
     refuse('PARSE_FAILED', 'Office 文本提取失败：处理副本可能损坏、加密或使用不支持的结构，请核对文件');
   }
 }
+
+/** Original Agent serializer and parser identity are unchanged. */
+export async function extractOfficeText(bytes:Buffer,fileName:string):Promise<string>{return(await extractOfficeTextSnapshot(bytes,fileName)).text;}

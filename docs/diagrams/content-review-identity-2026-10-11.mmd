@@ -1,0 +1,12 @@
+flowchart TD
+  Current[主机真实构建 inputHash 与 promptHash] --> Compare{缓存两项身份均一致}
+  Compare -->|是| Reuse[复用通过哈希核验的收据 保留既有状态]
+  Compare -->|否| Derived[旧收据仅派生 stale unverified 禁repair]
+  Derived --> Gate[真实Domain报告过期 交付version blocked]
+  Derived --> Budget{仍有审查预算与权限}
+  Budget -->|是| NewReview[新合法提示独立审查]
+  NewReview --> Await{await后两项身份仍一致}
+  Await -->|否| Reject[拒绝旧结果 stale 零finding]
+  Reject --> Refresh[Domain继续执行真实协议校验]
+  Refresh -->|协议不可验证| Hidden[unavailable 隐藏意见 交付blocked]
+  Await -->|是| Receipt[保存带结果哈希的新收据 不迁移旧历史]

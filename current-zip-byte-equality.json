@@ -1,0 +1,39 @@
+{
+  "manifestHash": "2d8a3f27e1ce46e2ba14e5654aed885514bd195dedae6615e38188bb23b0ff58",
+  "prototypeAcceptance": "checked_snapshot",
+  "files": [
+    {
+      "path": "app.js",
+      "bytes": 28,
+      "sha256": "5e1968f8aeb68613622bf3e1d23d271ac86b103f27221f9fac36aba343bfeb35",
+      "byteEqual": true
+    },
+    {
+      "path": "index.html",
+      "bytes": 850,
+      "sha256": "2d1abb45053dfbbc780a7d119424b7c33b65a62260d7f01937b27ab593b9696d",
+      "byteEqual": true
+    },
+    {
+      "path": "other.html",
+      "bytes": 62,
+      "sha256": "8cc6c8269e21519462e2763b8191e906c39a74a5cb6d465cb7a8afa731dcd5ae",
+      "byteEqual": true
+    },
+    {
+      "path": "pixel.png",
+      "bytes": 68,
+      "sha256": "a96d32119eacac102a6735ac06ed89bec9cf04b7aceef9af403698127b976835",
+      "byteEqual": true
+    },
+    {
+      "path": "style.css",
+      "bytes": 63,
+      "sha256": "f8126fa15b8bc33e226a7a65421515f8e9832d92db2853a9f4575f9b8682b843",
+      "byteEqual": true
+    }
+  ],
+  "zipPath": "E:\\code\\slash\\temp\\prototype-delivery-1415accb-bd99-4327-b8cd-3615748a6d6d\\project\\成果\\delivered.zip",
+  "browser": "fixture-only",
+  "remotePublication": false
+}

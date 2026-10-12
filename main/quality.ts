@@ -1,10 +1,11 @@
+import {isTestCasePath,parseTestCaseSuite,TEST_CASE_NOTICE} from '../shared/test-cases.js';
 import {analyseHtmlScriptBindings} from './html-script-bindings.js';
 import {processDrawio,type FlowSpec,DEFAULT_FLOW_SPEC} from './flow.js';
 import {validateMarkdownStructure} from './artifacts.js';
 import type {ArtifactRecord} from './product-records.js';
 import type {QualityAcceptanceMapping,QualityGate,QualityReportDetails} from '../shared/types.js';
 
-export const QUALITY_CHECKER_VERSION='slash-quality-4';
+export const QUALITY_CHECKER_VERSION='slash-quality-5';
 
 export type QualitySeverity='blocking'|'warning';
 export type QualityIssue={severity:QualitySeverity;code:string;message:string;line?:number;locator?:string};
@@ -54,6 +55,32 @@ function attrValue(attributes:string,name:string):string|undefined{
 function hasAttr(attributes:string,name:string){return new RegExp(`(?:^|\\s)${quoteRegExp(name)}(?:\\s*=|\\s|$)`,'i').test(attributes);}
 function quoteRegExp(value:string){return value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}
 
+/** Default HTML delivery is offline. Only declarative loading dependencies are
+ * blockers: navigation, data URLs and local paths are allowed. This bounded
+ * static scan never executes code or proves local resources/browser behavior. */
+function assetUrl(value:string){return value.replace(/&#(?:x([0-9a-f]+)|(\d+));?/gi,(_,hex:string,decimal:string)=>{const code=parseInt(hex??decimal,hex?16:10);return code<=0x10ffff?String.fromCodePoint(code):'';}).replace(/&(?:colon|sol|amp|quot|apos);/gi,entity=>({ '&colon;':':','&sol;':'/','&amp;':'&','&quot;':'"','&apos;':"'" }[entity.toLowerCase()]??entity)).trim();}
+function cssExternalAssets(css:string,add:(value:string,index:number)=>void){
+ // Consume comments and ordinary strings before looking for actual url/import
+ // syntax; content:"url(https://...)" is text, not a loading dependency.
+ const tokens=/\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\burl\(\s*(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^\s)'";]*))\s*\)|@import\s+(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)')/gi;
+ for(const match of css.matchAll(tokens)){const value=match[1]??match[2]??match[3]??match[4]??match[5];if(value!==undefined)add(value,match.index??0);}
+}
+
+/** Positive declarative resource references only: no completeness proof and no JS execution. */
+export function htmlLoadingAssets(html:string){const values:Array<{raw:string;url:string;index:number}>=[],add=(raw:string,index:number)=>values.push({raw,url:assetUrl(raw),index});
+ const assetMarkup=html.replace(/<!--[\s\S]*?-->/g,value=>value.replace(/[^\r\n]/g,' ')).replace(/(<script\b(?:[^>"']|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/script\s*>)/gi,(_,open:string,body:string,close:string)=>open+body.replace(/[^\r\n]/g,' ')+close);
+ for(const resourceTag of assetMarkup.matchAll(/<([a-z][\w:-]*)\b((?:[^>"']|"[^"]*"|'[^']*')*)>/gi)){
+  const tag=resourceTag[1].toLowerCase(),attrs=resourceTag[2],index=resourceTag.index??0;
+  if(tag==='link'&&(attrValue(attrs,'rel')??'').split(/\s+/).some(rel=>/^(?:stylesheet|preload|modulepreload|icon)$/i.test(rel))){const value=attrValue(attrs,'href');if(value)add(value,index);}
+  if(['script','img','iframe','source','video','audio','embed','input','track'].includes(tag)){const value=attrValue(attrs,'src');if(value)add(value,index);}
+  if(tag==='object'){const value=attrValue(attrs,'data');if(value)add(value,index);}
+  if(tag==='video'){const value=attrValue(attrs,'poster');if(value)add(value,index);}
+  if(tag==='img'||tag==='source')for(const candidate of (attrValue(attrs,'srcset')??'').split(',')){const value=candidate.trim().split(/\s+/,1)[0];if(value)add(value,index);}
+  const style=attrValue(attrs,'style');if(style)cssExternalAssets(assetUrl(style),(value)=>add(value,index));
+ }
+ for(const style of assetMarkup.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi))cssExternalAssets(style[1],(value,index)=>add(value,(style.index??0)+style[0].indexOf(style[1])+index));
+ return values;
+}
 function checkMarkdown(markdown:string,options:QualityMarkdownOptions={}):QualityContentReport{
  const issues:QualityIssue[]=[];
  const lines=markdown.split(/\r\n|\n|\r/);
@@ -143,8 +170,8 @@ function checkHtml(html:string):QualityContentReport{
  const formRanges=[...markup.matchAll(/<form\b([^>]*)>([\s\S]*?)<\/form\s*>/gi)];
 
  let buttons=0,forms=0,links=0,actions=0,brokenTargets=0,stateMarkers=0,externalResources=0;const externalSeen=new Set<string>();
- const addExternal=(value:string,index:number)=>{if(/^(?:https?:)?\/\//i.test(value)){externalResources++;externalSeen.add(value);issues.push({severity:'warning',code:'EXTERNAL_ASSET',message:'HTML 引用了外部资源，离线交付可能无法加载',line:lineAt(html,index),locator:value});}};
- for(const resourceTag of html.replace(/<!--[\s\S]*?-->/g,value=>value.replace(/[^\r\n]/g,' ')).matchAll(/<(script|link|img|iframe|source|video|audio)\b([^>]*)>/gi)){const tag=resourceTag[1].toLowerCase(),attrs=resourceTag[2];if(tag==='link'&&!/^(?:stylesheet|preload|modulepreload|icon)$/i.test(attrValue(attrs,'rel')??''))continue;const value=attrValue(attrs,tag==='link'?'href':'src');if(value)addExternal(value,resourceTag.index??0);}
+ const addExternal=(raw:string,index:number)=>{const value=assetUrl(raw);if(/^(?:https?:)?\/\//i.test(value)){externalResources++;externalSeen.add(value);issues.push({severity:'blocking',code:'EXTERNAL_ASSET',message:'HTML 加载资源依赖外网，不满足默认离线交付；请使用本地或内嵌资源后重新验收',line:lineAt(html,index),locator:value});}};
+ for(const asset of htmlLoadingAssets(html))addExternal(asset.raw,asset.index);
  for(const unsafe of html.matchAll(/\b(?:href|src|action)\s*=\s*(["'])javascript:[^"']*\1/gi))issues.push({severity:'blocking',code:'UNSAFE_SCRIPT_URL',message:'HTML 属性包含 javascript: 地址，交互路径不安全',line:lineAt(html,unsafe.index??0)});
  const controlScriptBinding=(attributes:string,tag:string)=>scriptBindings.forControl({tag,id:attrValue(attributes,'id'),classes:(attrValue(attributes,'class')??'').split(/\s+/).filter(Boolean)});
  const controlHasScriptBinding=(attributes:string,tag:string)=>controlScriptBinding(attributes,tag).status==='bound';
@@ -179,6 +206,7 @@ function checkFlow(xml:string,spec?:FlowSpec):QualityContentReport{
 }
 
 export function qualityCheckForArtifact(artifact:Pick<ArtifactRecord,'kind'|'relativePath'>,content:string,markdownOptions:QualityMarkdownOptions={}):QualityContentReport{
+ if(isTestCasePath(artifact.relativePath)){try{const suite=parseTestCaseSuite(content);return {...report('markdown',[],{metrics:{testCases:suite.cases.length}}),summary:'用例结构有效；'+TEST_CASE_NOTICE};}catch(error){return report('markdown',[{severity:'blocking',code:'TEST_CASE_INVALID',message:error instanceof Error?error.message:String(error)}]);}}
  if(artifact.kind==='flow')return checkFlow(content);
  if(artifact.kind==='prototype')return checkHtml(content);
  if(['document','template','knowledge','reference'].includes(artifact.kind)){const filename=artifact.relativePath.split(/[\\/]/).at(-1)??artifact.relativePath;const isPrdPath=/\.(?:md|markdown)$/i.test(filename)&&isPrdTitle(filename);return checkMarkdown(content,{...(isPrdPath?{isPrd:true}:{}),...markdownOptions});}

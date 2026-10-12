@@ -1,0 +1,206 @@
+{
+  "product": "Slash",
+  "date": "2026-10-12",
+  "runtime": {
+    "main": "a5cf4970d6d553f1278d6e8782f19f84f4559a26124e01eee378db3073446fcb",
+    "agent": "20f939f6c65fd75d13e939ea935e030055c0af68c700a92a4daef8c6d1965798",
+    "service": "89575a1ce9b1966d4a319c500d199e80830f32b1dff3b4df32c0de79291d5631"
+  },
+  "profile": "独立演示profile；用户原profile只读导入已授权模型",
+  "assets": [
+    {
+      "file": "01-slash-home.png",
+      "sha256": "bfecc7ac3fa9a9f56ceb8d0921fa18b7b29589ea780143784a02d2006a4dbf74",
+      "width": 1922,
+      "height": 1020,
+      "title": "主界面",
+      "limitations": "真实当前构建，独立合成项目",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:22:01.873Z",
+      "usable": true
+    },
+    {
+      "file": "02-model-protocols.png",
+      "sha256": "c79b605f8770da7933fc99bb9d0af6dc175d39c3df3ab758d8215db677fd0e72",
+      "width": 1922,
+      "height": 1020,
+      "title": "三种API协议配置",
+      "limitations": "三个无密钥示例通过正式IPC保存，未做联网测试；Wangshu已有授权配置不回显密钥",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:22:52.166Z",
+      "usable": true
+    },
+    {
+      "file": "03-model-connection-fields.png",
+      "sha256": "c33c89ed5ae3f36916aa315b548088032581dffeb6ec057cd9c938cc3d833e8f",
+      "width": 1922,
+      "height": 1020,
+      "title": "模型核心连接字段",
+      "limitations": "真实添加表单，未保存新密钥",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:23:03.681Z",
+      "usable": true
+    },
+    {
+      "file": "04-skills-import.png",
+      "sha256": "daed2bba83cf9943949abf7cf602936efa670b8f8b07bdd7ef35efb3314d6222",
+      "width": 1922,
+      "height": 1020,
+      "title": "Skills管理",
+      "limitations": "独立profile尚无技能，显示真实添加入口",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:24:09.323Z",
+      "usable": true
+    },
+    {
+      "file": "05-skills-local-github.png",
+      "sha256": "ea311f363e1c062398f238e9dd1859539a1212a9ac46aca43ae760820bbfc1f4",
+      "width": 1922,
+      "height": 1020,
+      "title": "Skills本地和GitHub导入",
+      "limitations": "真实添加对话框；没有自带Skill创建按钮",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:24:22.862Z",
+      "usable": true
+    },
+    {
+      "file": "06-permission-levels.png",
+      "sha256": "fee0efde5ac2cdc1dd72f0122d45a7055ac4ccdad42cd6638739199fdb0e9c04",
+      "width": 1980,
+      "height": 1114,
+      "title": "权限按钮现态",
+      "limitations": "菜单未进入截图；只可证明当前标准权限按钮，不可称菜单展开",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:28:25.263Z",
+      "usable": false
+    },
+    {
+      "file": "07-plan-build-modes.png",
+      "sha256": "c95d57412d6e8ac3b76e0e1ea54e52215845361970755d9c3e091117f3c931ae",
+      "width": 1980,
+      "height": 1114,
+      "title": "模式按钮现态",
+      "limitations": "菜单未进入截图；只可证明当前Build按钮，不可称菜单展开",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:28:36.942Z",
+      "usable": false
+    },
+    {
+      "file": "08-slash-commands.png",
+      "sha256": "d1487e76dc70790c64fda33ec93d4b0cbe545355229415b66ad0ed4d6402a574",
+      "width": 1980,
+      "height": 1114,
+      "title": "斜杠指令",
+      "limitations": "真实输入/触发当前快捷指令列表，未发送",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:28:46.719Z",
+      "usable": true
+    },
+    {
+      "file": "09-smb-sharing.png",
+      "sha256": "cd6b84714c9671fc1a3478cc4b4085d4ee33eac883487dff697674237d5f4e7c",
+      "width": 1980,
+      "height": 1114,
+      "title": "SMB共享文件夹入口",
+      "limitations": "未创建共享/网络盘；无双机验收",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:29:14.412Z",
+      "usable": true
+    },
+    {
+      "file": "10-right-files-artifacts.png",
+      "sha256": "0e228223ae10e0bfe18faf3511bc65cfa61c2a5a3794e2ed3bfa3dee5ec5e35f",
+      "width": 1980,
+      "height": 1114,
+      "title": "右侧详情与成果/文件页签",
+      "limitations": "真实任务执行中的右侧栏；不称资源产出导航名称",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:30:29.625Z",
+      "usable": true
+    },
+    {
+      "file": "11-right-source-files.png",
+      "sha256": "b4dc03a5e22f956bc2e1d41ba561d8d5834391d3f797d1fbe04f6b58d787f36a",
+      "width": 1980,
+      "height": 1114,
+      "title": "右侧项目资料",
+      "limitations": "真实合成需求文件，非私人资料",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:31:08.679Z",
+      "usable": true
+    },
+    {
+      "file": "12-prd-draft.png",
+      "sha256": "062d28e80d1e2704d686718cdd4d9daef1aca94008eee3750122058b04c65229",
+      "width": 1980,
+      "height": 1114,
+      "title": "真实PRD草稿",
+      "limitations": "Wangshu单次任务形成ChangeSet；待独立核对，不称生产级",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:31:17.762Z",
+      "usable": true
+    },
+    {
+      "file": "13-prd-preview.png",
+      "sha256": "dbbc4f0a278ec826b7147cdb87c55a04fb12eab16109eebd49fe7ab19ccba570",
+      "width": 1980,
+      "height": 1114,
+      "title": "PRD初稿阅读预览",
+      "limitations": "自动修稿前草稿，保留历史",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:31:20.900Z",
+      "usable": true
+    },
+    {
+      "file": "14-prd-final-preview.png",
+      "sha256": "bd975890159253b6b8a0f35c8d805824d47522e07afa21085ff3dfa8d54f76df",
+      "width": 1980,
+      "height": 1114,
+      "title": "PRD最终草稿阅读",
+      "limitations": "真实任务已结束，自动检查passed但businessCoverage仍unverified；草稿未应用",
+      "source": "当前已构建Slash真实Electron + 正式preload/IPC；独立profile；原像素page.screenshot，无mock/重绘",
+      "capturedAt": "2026-10-11T18:34:34.400Z",
+      "usable": true
+    }
+  ],
+  "facts": {
+    "protocols": [
+      "openai-completions",
+      "openai-responses",
+      "anthropic-messages"
+    ],
+    "officialModelSubscriptionLogin": false,
+    "builtInSkillCreator": false,
+    "skillImports": [
+      "本地文件夹",
+      "GitHub地址"
+    ],
+    "rightSidebarTabs": [
+      "详情",
+      "成果",
+      "文件"
+    ],
+    "sharing": "SMB界面，未验证双机"
+  },
+  "privacy": {
+    "apiKeysVisible": false,
+    "privateDocumentsUsed": false
+  },
+  "initialRun": {
+    "id": "359e5ed7-02a6-423e-8192-86b2c285c857",
+    "result": "succeeded但无ChangeSet；采集脚本资料mountId错误，保留原历史，不能称生成成功"
+  },
+  "correctedRun": {
+    "id": "939fad97-92ee-488a-bdc3-dbabfd0450c8",
+    "singleSend": true,
+    "status": "succeeded",
+    "startedAt": "2026-10-11T18:29:16.068Z",
+    "finishedAt": "2026-10-11T18:33:44.349Z",
+    "elapsedMs": 268281,
+    "automaticReportStatus": "passed",
+    "businessCoverage": "unverified",
+    "changeId": "f5693e6f-26fd-4e03-9afc-cdba38e45744",
+    "draftApplied": false,
+    "draftSha256": "244601fad47fa7eeb33c836eed3a31646c7498022b079d7c58dd8c5688af2441"
+  }
+}

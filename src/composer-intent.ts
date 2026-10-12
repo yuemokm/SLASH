@@ -10,11 +10,11 @@ export function resolveComposerIntent(input: { draft: string; workflowKind?: PmW
   const command = input.draft.trim().split(/\s+/)[0] || "";
   // A deliberate slash command can replace a quick-action context. Plan
   // keeps that context so its sources and later execution remain traceable.
-  const kind = commandWorkflows.get(command) || (["/review", "/help"].includes(command) ? undefined : input.workflowKind);
+  const kind = commandWorkflows.get(command) || ((["/review", "/help"].includes(command) || command.startsWith("/skill:")) ? undefined : input.workflowKind);
   const taskType: ModelTaskType = command === "/review" ? "review"
     : kind === "prototype" ? "coding"
     : kind === "research" ? "research"
-    : kind === "prd" || kind === "meeting" || kind === "prototype_to_prd" || kind === "change_summary" ? "writing"
+    : kind === "prd" || kind === "meeting" || kind === "prototype_to_prd" || kind === "change_summary" || kind === "test_cases" ? "writing"
     : input.view === "资源" ? "research"
     : input.view === "成果" ? "writing"
     : "general";

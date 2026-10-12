@@ -1,0 +1,24 @@
+flowchart TD
+  RootStatus[28文件已合根 check0 原组44/45 夹具复验13/13 未全量build] --> UI
+  Platform[Vercel优先 Netlify可选 不要求注册或云写入] -.-> UI
+  CloudLimit[管理IPC5项仅合成凭据 正向云发布未验证] -.-> Available
+  UI[现有连接设置：固定 Site ID / 密码输入] --> IPC[受信任管理 IPC]
+  IPC --> Vault[既有 safeStorage vault：加密 / 用途分离]
+  IPC --> Verify[固定官方 GET 核对站点访问]
+  Verify --> Available[有凭据 + 已核站点才可发布]
+  Available --> Proposal[现有外部 action：用户审批 / 冻结果版本]
+  Proposal --> Guard[Service 权限 / 连接 / 来源成果版本 / active lease]
+  Guard --> Operation[既有 Store Operation 事务 claim 与 CAS]
+  Operation --> Private[编译私有 stdio：白名单 ENV / ACL 快照 / 无秘密 argv]
+  Private --> Create[单次 create draft:true]
+  Create --> Upload[仅 required 已冻结 hash 原字节上传]
+  Upload --> Read[全部 ACK 后发起绑定 GET]
+  Read --> Link{ready + HTTPS 无凭据 URL?}
+  Link -->|是| Delivered[现有 delivery record：展示 / 复制链接]
+  Link -->|否| Pending[保留已知事实 / 链接未完成]
+  Pending -->|已知 ID 明确核对| Restore[GET-only 恢复：不重发 create/upload]
+  Restore --> Read
+  Operation -->|派发后丢响应 / 取消| Unknown[既有 recovery：未知 / 保留身份]
+  UI --> Scoped[scope 实例绑定：站点或会话变化即隐藏旧快照]
+  Scoped --> Drop[忽略迟到成功 / 失败 / finally / reload]
+  Private --> Cleanup[迟到 handle 仍 close / 只清理自有临时目录]

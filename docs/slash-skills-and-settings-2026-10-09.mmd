@@ -1,0 +1,15 @@
+flowchart TD
+  Slash[会话输入 /：可用skills置前] --> IPC[只读skillCommands IPC]
+  Global[启用的已安装全局skills] --> Catalogue[复用AuthorizedSkills发现 + Pi loadSkills解析]
+  Project[当前项目授权skills] --> Catalogue
+  IPC --> Catalogue
+  Catalogue --> Rules[项目同名优先 / 重复名阻断 / 停用不列]
+  Rules --> Menu[同输入框宽单行列表 / 名称说明过滤 / 键盘选择]
+  Menu --> Command[/skill:名称 + 原任务与引用]
+  Command --> Prepare[原Runtime.prepareUserInput]
+  Queue[原RunInputQueue：运行中补充] --> Prepare
+  Prepare --> Load[原授权和哈希复核 / 正文加载]
+  Load --> Pi[原Pi会话真实请求与加载回执]
+  Settings[设置：skills] --> Global
+  General[通用：交付检查] --> Preferences[保留原两个preference及后台门禁]
+  Legacy[搜索及旧policies目的地] --> General

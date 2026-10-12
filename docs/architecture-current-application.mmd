@@ -1,0 +1,21 @@
+flowchart TB
+  PM["产品经理"] --> Shell["Slash 桌面工作台"]
+  Shell --> Chat["会话与项目<br/>Plan / Build · 模型选择 · 权限"]
+  Shell --> Resource["资源<br/>Skills · 模板 · 参考资料<br/>按项目浏览 / 全局聚合"]
+  Shell --> Result["成果<br/>预览 · 版本 · 差异 · 导出"]
+  Shell --> Cases["测试用例独立入口<br/>当前项目 · 文件 / 草稿 · 创建"]
+  Cases -->|"阅读 / 导出"| Result
+  Cases -->|"选择资料后创建"| Chat
+  Shell --> Settings["设置与连接<br/>模型 · 系统提示词 · 项目结构<br/>全局技能 · MCP / CLI · 共享文件夹"]
+  Resource -->|"引用已授权资料"| Chat
+  Chat --> Work["任务处理<br/>调研 · PRD · HTML 原型 · 流程图<br/>评审修改 · 测试用例"]
+  Work --> Draft["草稿 / 变更集"]
+  Draft --> Check["质量检查与人工确认<br/>规则 · 来源 · 交互 · 交付条件"]
+  Check -->|"保存到项目"| Result
+  Check -->|"问题反馈"| Chat
+  Result --> Delivery["交付<br/>本地文件 / 外部连接发布"]
+  Resource --> Collections["资料集合<br/>保存资料清单 · 只读查看有效历史索引"]
+  Resource --> Search["已有资料检索<br/>授权目录 · 原文关键词 · 表格读取"]
+  Search --> Chat
+  Memory["项目知识与候选记忆<br/>规则 / 事实 / 来源分层"] --> Chat
+  Work --> Memory

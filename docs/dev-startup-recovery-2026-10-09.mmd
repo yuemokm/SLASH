@@ -1,0 +1,14 @@
+flowchart TD
+ BAT[双击启动开发环境.bat] --> Build[原 Vite 与 TypeScript 构建]
+ Build --> Vite[原开发服务与热更新]
+ Vite --> Shell[立即显示中文加载提示]
+ Shell --> Ready[React 工作台与 IPC 就绪]
+ Shell --> EntryError[入口加载失败提示]
+ EntryError --> Retry[用户点击重新加载]
+ Retry --> Shell
+ Vite --> LoadError[页面导航失败或界面进程退出]
+ LoadError --> Log[用户数据目录 startup.log 记录安全错误]
+ Log --> Dialog[重新加载或退出]
+ Dialog -->|重新加载| Shell
+ Ready --> ReactError[React 渲染错误边界]
+ ReactError --> Retry

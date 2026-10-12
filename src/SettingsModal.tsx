@@ -1,4 +1,5 @@
 import { Icon } from "./Icon";
+import {modelProxyUrlSchema} from "../shared/model-proxy";
 import {approvalResolutionNotice,type ApprovalResolutionResult} from "../shared/approval";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type {
@@ -19,9 +20,11 @@ import { McpExecute } from "./Delivery";
 import { ProjectStructureEditor } from "./ProjectStructureEditor";
 import { ModelLimitsSettings } from "./ModelLimitsSettings";
 import { GlobalSkillsSettings } from "./GlobalSkillsSettings";
+import { PiPackagesSettings } from "./PiPackagesSettings";
+import { runModelTextTest } from "./model-test-result";
 import type {GlobalSkillsView,GlobalSkillMutationReceipt} from '../shared/global-skills';
 import "./settings-focus.css";
-import { searchSettings, type SettingsTab, type SettingsAdvancedGroup, type SettingsItem } from "./settings-navigation";
+import { settingsDestination, searchSettings, type SettingsTab, type SettingsAdvancedGroup, type SettingsItem } from "./settings-navigation";
 
 type Call = (request: Request) => Promise<unknown>;
 export type ThemeName = "reference" | "graphite" | "sand";
@@ -30,6 +33,7 @@ type ModelDraft = {
   provider: string;
   name: string;
   baseUrl: string;
+  proxyUrl: string;
   modelId: string;
   protocol: ModelProtocol;
   supportsVision: boolean;
@@ -42,6 +46,7 @@ const emptyModel: ModelDraft = {
   provider: "",
   name: "",
   baseUrl: "https://api.openai.com/v1",
+  proxyUrl: "",
   modelId: "",
   protocol: "openai-completions",
   supportsVision: false,
@@ -186,6 +191,7 @@ function Switch({
 
 export function SettingsModal({
   open,
+  requestedTab,
   state,
   call,
   onClose,
@@ -199,6 +205,7 @@ export function SettingsModal({
   onThemeChange,
 }: {
   open: boolean;
+  requestedTab?: SettingsTab;
   state?: State;
   call: Call;
   onClose: () => void;
@@ -216,6 +223,7 @@ export function SettingsModal({
   // Discovery changes after a successful conversation installation. Ordinary
   // progress saves keep this key stable and do not reload the management list.
   const globalSkillsRefreshKey = (state?.runs??[]).filter(run=>run.skillDiscovery).map(run=>`${run.id}:${run.skillDiscovery!.discoveredAt}`).sort().join('|');
+  useEffect(()=>{if(open&&requestedTab)setTab(settingsDestination(requestedTab));},[open,requestedTab]);
   const [settingsQuery, setSettingsQuery] = useState("");
   const [advancedGroups, setAdvancedGroups] = useState<Partial<Record<SettingsAdvancedGroup, boolean>>>({});
   const [settingTarget, setSettingTarget] = useState("");
@@ -338,7 +346,7 @@ export function SettingsModal({
   };
   const selectTab = (next: SettingsTab) => {
     setFeedback(undefined);
-    setTab(next);
+    setTab(settingsDestination(next));
   };
   const closeModelDraft = () => {
     setModelDraft(undefined);
@@ -355,6 +363,7 @@ export function SettingsModal({
     const provider = modelDraft.provider.trim();
     const name = modelDraft.name.trim();
     const baseUrl = modelDraft.baseUrl.trim();
+    const proxyUrl = modelDraft.proxyUrl.trim();
     const modelId = modelDraft.modelId.trim();
     let validUrl = false;
     try {
@@ -376,6 +385,10 @@ export function SettingsModal({
       });
       return;
     }
+    if (proxyUrl && !modelProxyUrlSchema.safeParse(proxyUrl).success) {
+      setFeedback({ kind: "error", text: "代理地址须为 HTTP 或 HTTPS 主机及端口，不含凭据、路径、查询或片段。" });
+      return;
+    }
     const contextWindow = modelDraft.contextWindow.trim() ? Number(modelDraft.contextWindow) : undefined;
     const maxTokens = modelDraft.maxTokens.trim() ? Number(modelDraft.maxTokens) : undefined;
     if ([contextWindow, maxTokens].some(value => value !== undefined && (!Number.isSafeInteger(value) || value <= 0))) {
@@ -394,6 +407,7 @@ export function SettingsModal({
           provider,
           name,
           baseUrl,
+          proxyUrl: proxyUrl || null,
           modelId,
           protocol: modelDraft.protocol,
           supportsVision: modelDraft.supportsVision,
@@ -490,7 +504,7 @@ export function SettingsModal({
                 if (event.key === "Escape" && settingsQuery) { event.preventDefault(); setSettingsQuery(""); }
               }} /></label>
               {settingsQuery.trim() && <div id="settings-search-results" className="settings-search-results" aria-label="设置搜索结果">
-                {searchResults.length ? searchResults.map(item => <button key={item.id} type="button" onClick={() => openSetting(item)}><b>{item.label}</b><small>{{ general: "通用", workspace: "工作空间", models: "模型", policies: "质量检查", connections: "连接", permissions: "权限与审批", archive: "归档会话", prompt: "系统提示词", skills:"全局技能" }[item.tab]}{item.advanced ? " · 高级" : ""}</small></button>) : <p role="status">没有找到相关设置</p>}
+                {searchResults.length ? searchResults.map(item => <button key={item.id} type="button" onClick={() => openSetting(item)}><b>{item.label}</b><small>{{ general: "通用", workspace: "工作空间", models: "模型", policies: "通用", connections: "连接", permissions: "权限与审批", archive: "归档会话", prompt: "系统提示词", skills:"skills" }[item.tab]}{item.advanced ? " · 高级" : ""}</small></button>) : <p role="status">没有找到相关设置</p>}
               </div>}
             </div>
             <button className="modal-close" aria-label="关闭设置" onClick={onClose}><Icon name="close" size={16}/></button>
@@ -500,19 +514,13 @@ export function SettingsModal({
           <nav aria-label="设置分类">
             <button className={tab === "general" ? "active" : ""} onClick={() => selectTab("general")}><Icon name="settings" size={17}/>通用</button>
             <button className={tab === "prompt" ? "active" : ""} onClick={() => selectTab("prompt")}><Icon name="edit" size={17}/>系统提示词</button>
-            <button className={tab === "skills" ? "active" : ""} onClick={() => selectTab("skills")}><Icon name="book" size={17}/>全局技能</button>
+            <button className={tab === "skills" ? "active" : ""} onClick={() => selectTab("skills")}><Icon name="book" size={17}/>skills</button>
             <button className={tab === "workspace" ? "active" : ""} onClick={() => selectTab("workspace")}><Icon name="folder" size={17}/>工作空间</button>
             <button
               className={tab === "models" ? "active" : ""}
               onClick={() => selectTab("models")}
             >
               <Icon name="model" size={17}/>模型
-            </button>
-            <button
-              className={tab === "policies" ? "active" : ""}
-              onClick={() => selectTab("policies")}
-            >
-              <Icon name="shield" size={17}/>质量检查
             </button>
             <button
               className={tab === "connections" ? "active" : ""}
@@ -623,15 +631,11 @@ export function SettingsModal({
                               disabled={busy === `test-${item.id}`}
                               onClick={() =>
                                 void perform(`test-${item.id}`, async () => {
-                                  const result = await call({
-                                    type: "modelTest",
-                                    id: item.id,
-                                  });
-                                  setModelResult((value) => ({
-                                    ...value,
-                                    [item.id]: JSON.stringify(result),
-                                  }));
-                                  notify("模型连接测试已完成");
+                                  await runModelTextTest(
+                                    () => call({ type: "modelTest", id: item.id }),
+                                    (text) => setModelResult((value) => ({ ...value, [item.id]: text })),
+                                  );
+                                  notify("文字连接测试通过；工具调用和图片能力需另行验证");
                                 })
                               }
                             >
@@ -639,7 +643,7 @@ export function SettingsModal({
                             </button>
                             <button
                               onClick={() =>
-                                openModelDraft({ ...item, supportsVision: Boolean(item.supportsVision), key: "", contextWindow: item.contextWindow === undefined ? "" : String(item.contextWindow), maxTokens: item.maxTokens === undefined ? "" : String(item.maxTokens) })
+                                openModelDraft({ ...item, proxyUrl: item.proxyUrl ?? "", supportsVision: Boolean(item.supportsVision), key: "", contextWindow: item.contextWindow === undefined ? "" : String(item.contextWindow), maxTokens: item.maxTokens === undefined ? "" : String(item.maxTokens) })
                               }
                             >
                               编辑
@@ -710,22 +714,6 @@ export function SettingsModal({
               </div>
                 </div>
               </details>
-            </section>
-          )}
-          {tab === "policies" && (
-            <section className="settings-section">
-              <div className="settings-heading">
-                <div>
-                  <h1>质量检查</h1>
-                  <p>交付前检查当前成果，并提示需要人工核对的内容。</p>
-                </div>
-              </div>
-              <div className="settings-group quality-preferences" data-setting-id="quality" tabIndex={-1}>
-                <div className="settings-group-title"><div><h3>在线文档发布检查</h3><small>控制飞书与钉钉在线文档发布前的结构质量门禁。</small></div></div>
-                <div className="settings-row"><div><b>发布前强制质量检查</b><small>开启后，结构等阻断问题会阻止在线文档发布。每次发布仍会实时检查文件。</small></div><Switch checked={preferences.qualityGateEnabled && preferences.forceQualityCheckBeforeDelivery} label="在线文档发布前强制质量检查" onChange={(checked) => void updatePreferences({ qualityGateEnabled: checked, forceQualityCheckBeforeDelivery: checked })} /></div>
-                <p className="settings-quality-note">关闭后仍保留检查结果；空文件、版本冲突和未核对的外部结果始终阻止发布。原型交互和业务规则仍需要实际试用；模板迁移继续检查所选模板的必填结构。</p>
-              </div>
-
             </section>
           )}
           {tab === "permissions" && (
@@ -925,6 +913,7 @@ export function SettingsModal({
                   ))}
                 </div>
               </div>
+              <PiPackagesSettings call={call} onNotice={onNotice} onError={onError}/>
               <details className="settings-advanced" data-setting-id="share-lock" tabIndex={-1} open={Boolean(advancedGroups.sharing)} onToggle={event => toggleAdvanced("sharing", event.currentTarget.open)}>
                 <summary>高级：共享编辑保护</summary>
                 <div className="settings-advanced-body">
@@ -976,12 +965,12 @@ export function SettingsModal({
               </div>
             </section>
           )}
-          {tab === "general" && (
+          {settingsDestination(tab) === "general" && (
             <section className="settings-section">
               <div className="settings-heading">
                 <div>
                   <h1>通用</h1>
-                  <p>选择工作台的外观主题。</p>
+                  <p>选择外观和交付检查偏好。</p>
                 </div>
               </div>
               <div className="settings-group">
@@ -997,6 +986,11 @@ export function SettingsModal({
                     </button>
                   ))}
                 </div>
+              </div>
+              <div className="settings-group quality-preferences" data-setting-id="quality" tabIndex={-1}>
+                <div className="settings-group-title"><h3>交付检查</h3></div>
+                <div className="settings-row"><div><b>交付前强制检查</b><small>用于支持的文档发布和原型交付；检查未通过时阻止交付。</small></div><Switch checked={preferences.qualityGateEnabled && preferences.forceQualityCheckBeforeDelivery} label="交付前强制检查" onChange={(checked) => void updatePreferences({ qualityGateEnabled: checked, forceQualityCheckBeforeDelivery: checked })} /></div>
+                <p className="settings-quality-note">关闭后仍保留检查结果；空文件、版本冲突和未核对的发布结果始终拦截。业务规则仍需人工核对。</p>
               </div>
             </section>
           )}
@@ -1070,7 +1064,81 @@ export function SettingsModal({
                   </select>
                 </label>
               )}
-              <div className="form-grid">
+              <div className="form-grid model-connection-fields">
+                <label>
+                  API 地址
+                  <input
+                    required
+                    type="url"
+                    value={modelDraft.baseUrl}
+                    onChange={(event) =>
+                      setModelDraft((value) => ({
+                        ...value!,
+                        baseUrl: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                API 密钥
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={modelDraft.key}
+                  onChange={(event) =>
+                    setModelDraft((value) => ({
+                      ...value!,
+                      key: event.target.value,
+                    }))
+                  }
+                  placeholder={
+                    modelDraft.id ? "留空保留已保存的密钥" : "输入 API 密钥"
+                  }
+                />
+                <small>
+                  {modelDraft.id
+                    ? "留空会保留原密钥；输入新值会替换。若修改 API 地址而未填新密钥，为避免把密钥发送到其他服务，原密钥会被清除。"
+                    : "密钥只保存在本机，不会在设置中回显。"}
+                </small>
+              </label>
+                <label>
+                  模型 ID
+                  <input
+                    required
+                    value={modelDraft.modelId}
+                    onChange={(event) =>
+                      setModelDraft((value) => ({
+                        ...value!,
+                        modelId: event.target.value,
+                      }))
+                    }
+                    placeholder="选择常用配置后会自动填写"
+                  />
+                </label>
+                <label>
+                接口协议
+                <select
+                  value={modelDraft.protocol}
+                  onChange={(event) =>
+                    setModelDraft((value) => ({
+                      ...value!,
+                      protocol: event.target.value as ModelProtocol,
+                    }))
+                  }
+                >
+                  <option value="openai-completions">
+                    OpenAI 兼容 · chat/completions
+                  </option>
+                  <option value="openai-responses">
+                    OpenAI 兼容 · responses
+                  </option>
+                  <option value="anthropic-messages">
+                    Anthropic 兼容 · messages
+                  </option>
+                </select>
+              </label>
+              </div>
+              <div className="form-grid model-identity-fields">
                 <label>
                   供应商名称
                   <input
@@ -1100,59 +1168,23 @@ export function SettingsModal({
                   />
                 </label>
               </div>
-              <details className="advanced" open={modelDetailsOpen} onToggle={(event) => setModelDetailsOpen(event.currentTarget.open)}>
-                <summary>连接详情</summary>
+              <details className="advanced model-secondary-fields" open={modelDetailsOpen} onToggle={(event) => setModelDetailsOpen(event.currentTarget.open)}>
+                <summary>高级配置（可选）</summary>
                 <label>
-                  API 地址
+                  代理地址（可选）
                   <input
-                    required
                     type="url"
-                    value={modelDraft.baseUrl}
+                    value={modelDraft.proxyUrl}
                     onChange={(event) =>
                       setModelDraft((value) => ({
                         ...value!,
-                        baseUrl: event.target.value,
+                        proxyUrl: event.target.value,
                       }))
                     }
+                    placeholder="例如 http://127.0.0.1:7897"
                   />
+                  <small>留空沿用原网络连接。</small>
                 </label>
-                <label>
-                  模型 ID
-                  <input
-                    required
-                    value={modelDraft.modelId}
-                    onChange={(event) =>
-                      setModelDraft((value) => ({
-                        ...value!,
-                        modelId: event.target.value,
-                      }))
-                    }
-                    placeholder="选择常用配置后会自动填写"
-                  />
-                </label>
-              </details>
-              <label>
-                接口协议
-                <select
-                  value={modelDraft.protocol}
-                  onChange={(event) =>
-                    setModelDraft((value) => ({
-                      ...value!,
-                      protocol: event.target.value as ModelProtocol,
-                    }))
-                  }
-                >
-                  <option value="openai-completions">
-                    OpenAI 兼容 · chat/completions
-                  </option>
-                  <option value="openai-responses">
-                    OpenAI 兼容 · responses
-                  </option>
-                  <option value="anthropic-messages">
-                    Anthropic 兼容 · messages
-                  </option>
-                </select>
-              </label>
               <ModelLimitsSettings
                 call={call}
                 model={modelDraft}
@@ -1172,28 +1204,7 @@ export function SettingsModal({
                 />
                 支持图片输入（视觉模型）
               </label>
-              <label>
-                API 密钥
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={modelDraft.key}
-                  onChange={(event) =>
-                    setModelDraft((value) => ({
-                      ...value!,
-                      key: event.target.value,
-                    }))
-                  }
-                  placeholder={
-                    modelDraft.id ? "留空保留已保存的密钥" : "输入 API 密钥"
-                  }
-                />
-                <small>
-                  {modelDraft.id
-                    ? "留空会保留原密钥；输入新值会替换。若修改 API 地址而未填新密钥，为避免把密钥发送到其他服务，原密钥会被清除。"
-                    : "密钥只保存在本机，不会在设置中回显。"}
-                </small>
-              </label>
+              </details>
               </div><div className="subdialog-actions">
                 <button type="button" onClick={closeModelDraft}>
                   取消

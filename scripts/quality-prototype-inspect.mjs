@@ -1,6 +1,7 @@
 // Read actual DOM through the application's existing sandboxed preview. This
 // module never launches Electron, serves HTML, or modifies a model artifact.
 import {createHash} from 'node:crypto';
+import fs from 'node:fs/promises';
 
 export const hashBytes=bytes=>createHash('sha256').update(bytes).digest('hex');
 
@@ -19,10 +20,10 @@ function inventoryDom(requestedSelectors=[]){
  const messages=[...document.querySelectorAll('[role="alert"],[role="status"],label,small,[id],[class]')].filter(el=>visible(el)&&el.children.length<=1&&text(el)&&/(系统|模拟|演示|50|重复|失败|成功|提交|名称|编码|JHWD)/.test(text(el))).slice(0,100).map(el=>({selector:selector(el),text:text(el),valueFormat:/JHWD\d{10}(?!\d)/.test(text(el))?'JHWD_10_digits':text(el).includes('JHWD')?'JHWD_other':'other'}));
  const unique=regex=>{const found=controls.filter(c=>c.visible&&c.selector&&regex.test(c.label));return found.length===1?found[0].selector:undefined;};
  const selectorObservations=requestedSelectors.slice(0,30).map(selected=>{try{const nodes=document.querySelectorAll(selected);if(nodes.length!==1)return{selector:selected,count:nodes.length};const el=nodes[0],value='value'in el?String(el.value):text(el);return{selector:selected,count:1,tag:el.tagName.toLowerCase(),visible:visible(el),readonly:'readOnly'in el?Boolean(el.readOnly):undefined,contentEditable:Boolean(el.isContentEditable),disabled:Boolean(el.disabled),maxLength:'maxLength'in el?el.maxLength:undefined,valueFormat:/^JHWD\d{10}$/.test(value)?'JHWD_10_digits':value.includes('JHWD')?'JHWD_other':'other'};}catch{return{selector:selected,count:0,invalid:true};}});
- return{url:location.pathname,viewport:{width:innerWidth,height:innerHeight},pageOverflow:{scrollWidth:Math.max(document.documentElement.scrollWidth,document.body?.scrollWidth||0),availableWidth:document.documentElement.clientWidth},controls,messages,selectorObservations,candidates:{code:unique(/(网点|门店|机会门店)编码/),name:unique(/(网点|门店|机会门店)名称/),submit:unique(/^(提交|保存|新建)(门店|资料|信息)?$/)},notice:'Candidates identify real DOM only. They do not establish business expectations or successful interactions.'};
+ return{url:location.pathname,viewport:{width:innerWidth,height:innerHeight},visibleText:String(document.body?.innerText??'').slice(0,20000),visibleTextTruncated:String(document.body?.innerText??'').length>20000,pageOverflow:{scrollWidth:Math.max(document.documentElement.scrollWidth,document.body?.scrollWidth||0),availableWidth:document.documentElement.clientWidth},controls,messages,selectorObservations,candidates:{code:unique(/(网点|门店|机会门店)编码/),name:unique(/(网点|门店|机会门店)名称/),submit:unique(/^(提交|保存|新建)(门店|资料|信息)?$/)},notice:'Candidates identify real DOM only. They do not establish business expectations or successful interactions.'};
 }
 
-export async function inspectQualityPrototype({page,call,target,artifactHash,entrySteps=[],viewport={width:1440,height:900},selectors=[]}){
+export async function inspectQualityPrototype({page,call,target,artifactHash,entrySteps=[],viewport={width:1440,height:900},selectors=[],screenshotPath,expectedFeedback}){
  const preview=await call({type:'preview',...target}),url=new URL(preview.url);
  if(url.protocol!=='http:'||url.hostname!=='127.0.0.1')throw Error('QUALITY_PROTOTYPE_PREVIEW_ORIGIN_INVALID');
  const frameId='quality-prototype-inspection-'+Date.now(),previewPrefix=url.pathname.slice(0,url.pathname.lastIndexOf('/')+1);let blockedRequests=0;
@@ -31,6 +32,13 @@ export async function inspectQualityPrototype({page,call,target,artifactHash,ent
  try{
   const element=await page.locator('#'+frameId).elementHandle(),frame=await element.contentFrame();if(!frame)throw Error('QUALITY_PROTOTYPE_PREVIEW_FRAME_MISSING');await frame.waitForURL(current=>current.origin===url.origin&&current.pathname===url.pathname,{waitUntil:'domcontentloaded',timeout:15000});
   for(const step of entrySteps){const el=frame.locator(step.selector);if(await el.count()!==1)throw Error('QUALITY_PROTOTYPE_ENTRY_AMBIGUOUS');if(step.action==='click')await el.click();else if(step.action==='fill')await el.fill(step.value);else if(step.action==='select')await el.selectOption(step.value);else if(step.action==='press')await el.press(step.key==='Space'?' ':step.key);else throw Error('QUALITY_PROTOTYPE_ENTRY_ACTION_INVALID');}
-  const inventory=await frame.evaluate(inventoryDom,selectors);return{schemaVersion:1,artifactHash,target,entrySteps,inspectedAt:new Date().toISOString(),blockedRequests,...inventory};
+  let feedback;
+  if(expectedFeedback){
+   if(typeof expectedFeedback.selector!=='string'||!expectedFeedback.selector||expectedFeedback.selector.length>200||typeof expectedFeedback.text!=='string'||!expectedFeedback.text||expectedFeedback.text.length>200)throw Error('QUALITY_PROTOTYPE_FEEDBACK_INVALID');
+   const startedAt=new Date().toISOString();let observed=false;
+   try{await frame.waitForFunction(({selector,text})=>{const nodes=document.querySelectorAll(selector);if(nodes.length!==1)return false;const el=nodes[0],rect=el.getBoundingClientRect();return rect.width>0&&rect.height>0&&el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})&&String(el.innerText??el.textContent??'').includes(text);},expectedFeedback,{timeout:3000});observed=true;}catch(error){if(error.name!=='TimeoutError')throw error;}
+   feedback={...expectedFeedback,observed,startedAt,finishedAt:new Date().toISOString(),timeoutMs:3000,...(observed?{}:{reason:'SUCCESS_FEEDBACK_UNOBSERVED'})};
+  }
+  const inventory=await frame.evaluate(inventoryDom,selectors);let screenshot;if(screenshotPath){const bytes=await element.screenshot();await fs.writeFile(screenshotPath,bytes,{flag:'wx'});screenshot={path:screenshotPath,sha256:hashBytes(bytes)};}return{schemaVersion:1,artifactHash,target,entrySteps,inspectedAt:new Date().toISOString(),blockedRequests,...inventory,...(feedback?{feedback}:{}),...(screenshot?{screenshot}:{})};
  }finally{await page.locator('#'+frameId).evaluate(el=>el.remove()).catch(()=>{});await page.unroute('**/*',route);}
 }

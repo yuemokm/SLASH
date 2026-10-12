@@ -1,0 +1,17 @@
+flowchart TD
+  Evidence[本机隔离测试6/6通过<br/>旧exe与SMB双机未验] --> Legacy[隔离旧profile与工作区]
+  Legacy --> Upgrade[当前Store迁移及真实旧备份]
+  Upgrade --> New[写迁移后新增数据与核对证据]
+  New --> WAL[主文件复制缺WAL新行<br/>一致快照包含已提交行]
+  WAL --> Archive[停止业务写入<br/>完整v3一致快照与持久文件封存]
+  Legacy --> OldCopy[旧快照恢复到独立rollback profile]
+  OldCopy --> OldRuntime[固定commit旧Store<br/>仅操作隔离副本]
+  OldRuntime --> RollbackChanges[回退期间新增改动单独保留]
+  Archive --> Return[复制到独立return-new profile]
+  Return --> NewRuntime[当前运行时恢复新旧全集]
+  NewRuntime --> Pending[未知副作用仍核对后继续]
+  RollbackChanges --> Diff[差异清单与版本冲突]
+  Diff --> Confirm[用户确认ChangeSet后才回带]
+  Guard[路径 / schema / 文件hash检查] -->|失败| Preserve[保留快照与当前数据<br/>不切活动profile]
+  Guard --> OldCopy
+  Guard --> Return

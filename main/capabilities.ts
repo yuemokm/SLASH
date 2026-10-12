@@ -52,6 +52,7 @@ function validateWebUrl(input:string){
 }
 
 export type WebReadResult={url:string;status:number;contentType:string;title?:string;text:string;bytes:number;truncated:false};
+export async function assertPublicWebUrl(input:string,signal?:AbortSignal){const url=validateWebUrl(input);await resolvePublicAddress(url.hostname,Date.now()+WEB_TIMEOUT_MS,signal);return url.toString();}
 export async function readPublicWebPage(input:string,signal?:AbortSignal,redirects=0,deadlineAt=Date.now()+WEB_TIMEOUT_MS):Promise<WebReadResult>{
  const url=validateWebUrl(input);if(signal?.aborted)throw capabilityError('CANCELLED','网页读取已取消');const selected=await resolvePublicAddress(url.hostname,deadlineAt,signal);
  return await new Promise<WebReadResult>((resolve,reject)=>{

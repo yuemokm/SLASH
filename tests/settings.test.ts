@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type {State} from '../shared/types.js';
 import {connectionSchema,requestSchema} from '../shared/types.js';
+import {modelProxyUrlSchema} from '../shared/model-proxy.js';
 import {DEFAULT_BAISHAN_MODEL,ModelSettings,discoverInstalledClis} from '../main/settings.js';
 
 class MemoryStore {
@@ -15,6 +16,18 @@ function fixture(state=legacyState()){
  const store=new MemoryStore();let saves=0;
  return{store,state,get saves(){return saves;},settings:new ModelSettings(store,cipher,{get:()=>state,save:()=>{saves++;}})};
 }
+
+test('模型手动代理可持久化、旧调用省略保留、null清除；不会改默认模型或密钥',()=>{
+ const f=fixture();f.settings.initialize();const originalDefault=f.state.defaultModelId;const input={provider:'custom',name:'proxy',baseUrl:'https://gateway.invalid/v1',modelId:'proxy-fixture',proxyUrl:' http://127.0.0.1:7897 '};
+ const saved=f.settings.upsert(input,'fixture-original-secret');assert.equal(saved.proxyUrl,'http://127.0.0.1:7897');assert.equal(f.settings.list().flatMap(g=>g.models).find(m=>m.id===saved.id)?.proxyUrl,saved.proxyUrl);
+ const {proxyUrl:_,...withoutProxy}=saved;const retained=f.settings.upsert({...withoutProxy,name:'edited'});assert.equal(retained.proxyUrl,saved.proxyUrl);assert.equal(f.settings.credential(saved.id),'fixture-original-secret');
+ const cleared=f.settings.upsert({...withoutProxy,proxyUrl:null});assert.equal(cleared.proxyUrl,undefined);assert.equal(f.settings.credential(saved.id),'fixture-original-secret');assert.equal(f.state.defaultModelId,originalDefault);assert.doesNotMatch(JSON.stringify(f.state),/fixture-original-secret/);
+});
+
+test('非法模型代理先拒绝，保留已有配置和密钥，renderer与IPC复用同一校验',()=>{
+ const f=fixture();f.settings.initialize();const saved=f.settings.upsert({provider:'custom',name:'proxy',baseUrl:'https://gateway.invalid/v1',modelId:'proxy-fixture'},'fixture-original-secret');const before=JSON.stringify(f.state),secrets=[...f.store.values.entries()];
+ for(const proxyUrl of ['socks5://localhost:1080','http://user:password@localhost:8080','http://localhost/path','http://localhost?token=private']){assert(!modelProxyUrlSchema.safeParse(proxyUrl).success);assert(!requestSchema.safeParse({type:'modelUpsert',model:{...saved,proxyUrl}}).success);assert.throws(()=>f.settings.upsert({...saved,proxyUrl},'fixture-replacement-secret'),/代理地址/);assert.equal(JSON.stringify(f.state),before);assert.deepEqual([...f.store.values.entries()],secrets);}
+});
 
 test('旧单模型和 safeStorage 密文迁移为独立 Baishan 模型条目',()=>{
  const f=fixture();f.store.set('key',Buffer.from('protected:legacy-secret').toString('base64'));

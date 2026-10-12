@@ -40,6 +40,14 @@ async function fixture(t:test.TestContext,handler:(data:Payload,res:ServerRespon
 }
 const nativeSettings={compaction:{keepRecentTokens:200},retry:{maxRetries:2,baseDelayMs:10,provider:{maxRetries:0}}};
 
+test('new actual HTTP request clears old response before a transport failure, preserving prior numeric usage only',async t=>{
+ let entered=false;const {runtime,observed,requests}=await fixture(t,(_data,res,index)=>{if(index===1)reply(res,'FIRST-COMPLETED');else{entered=true;res.destroy();}},{settings:{retry:{enabled:false,provider:{maxRetries:0}}}});
+ await runtime.prompt('FIRST');assertRuntimeSucceeded(runtime);assert.equal(observed.at(-1)?.status.responseDiagnostics?.stopReason,'stop');
+ await runtime.prompt('SECOND');assert.equal(entered,true);assert.equal(requests.length,2);assert.throws(()=>assertRuntimeSucceeded(runtime),/MODEL_RESPONSE_ERROR/);
+ const secondRequest=observed.filter(e=>e.source==='provider_request')[1];assert.ok(secondRequest);assert.equal(secondRequest.status.responseDiagnostics,undefined);assert.ok(secondRequest.status.lastUsage);
+ assert.equal(observed.at(-1)?.status.responseDiagnostics?.stopReason,'error');assert.equal(observed.at(-1)?.status.responseDiagnostics?.textEmpty,true);
+});
+
 test('小窗应用默认8192经真实Pi agent loop产生摘要并恢复length，未写全局配置',async t=>{
  let attempts=0;
  const {runtime,requests,recovery,agentDir}=await fixture(t,(data,res)=>isSummary(data)?reply(res,'SESSION-DEFAULT-CHECKPOINT'):reply(res,++attempts===1?'PARTIAL':'RECOVERED',attempts===1?'length':'stop'),{historyTokens:20,historyRepeat:1800});

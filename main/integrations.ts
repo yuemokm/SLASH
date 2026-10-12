@@ -1,8 +1,8 @@
 import {spawn} from 'node:child_process';
-import {Client} from '@modelcontextprotocol/sdk/client/index.js';
-import {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';
-import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import {assertMcpCurrent,connectMcp,readMcpCatalog,redactMcpResult,trackMcpSession} from './mcp-client.js';
+import {safeMcpMessage} from './mcp-errors.js';
 import type {Connection,OperationStatus} from '../shared/types.js';
+import {createPiMcpSession,PiMcpCallError} from './pi-mcp-runtime.js';
 
 const MAX_OUTPUT=5_000_000;
 
@@ -63,22 +63,37 @@ function validateMcpArgs(value:unknown,depth=0):void{
  if(value&&typeof value==='object')for(const [key,item] of Object.entries(value)){if(['__proto__','prototype','constructor'].includes(key))throw new ExternalCallError('failed','MCP 参数包含不安全字段');validateMcpArgs(item,depth+1);}
 }
 
-export async function mcpCall(connection:Connection,name:string,args:Record<string,unknown>){
+export async function mcpCall(connection:Connection,name:string,args:Record<string,unknown>,beforeDispatch?:()=>void|Promise<void>){
  if(!/^[\w./:-]{1,200}$/.test(name))throw new ExternalCallError('failed','MCP 工具名称无效');
  validateMcpArgs(args);
  if(JSON.stringify(args).length>100_000)throw new ExternalCallError('failed','MCP 参数超过 100 KB');
  if(connection.url&&!/^https?:\/\//i.test(connection.url))throw new ExternalCallError('failed','MCP 仅支持 HTTP 或 HTTPS 地址');
  if(connection.command)validateExecutable(connection.command);
- const client=new Client({name:'slash',version:'0.1.0'});let invoked=false;
+ // Keep the host's rejection fact locally: the Pi adapter wraps callback errors.
+ // Never classify an arbitrary remote error by its message or expose its text.
+ let hostRejected=false;
+ const dispatchRejected=()=>new ExternalCallError('failed','MCP_PRE_DISPATCH_REJECTED：发送前安全核对未通过，请重新核对成果版本、当前授权和连接配置后再执行。');
+ const checkDispatch=async()=>{try{await beforeDispatch?.();assertMcpCurrent(connection);}catch{hostRejected=true;throw dispatchRejected();}};
+ if(!connection.url){
+  let dispatched=false;
+  const session=await createPiMcpSession({command:connection.command,args:connection.args,tools:[name],beforeDispatch:async()=>{await checkDispatch();dispatched=true;}}).catch(error=>{if(hostRejected)throw dispatchRejected();throw new ExternalCallError('failed','MCP 连接或能力检查失败：'+safeMcpMessage(error));});
+  const close=trackMcpSession(connection.id,()=>session.close());
+  try{return redactMcpResult(await session.call(name,args));}
+  catch(error){if(hostRejected)throw dispatchRejected();const unknown=dispatched&&!(error instanceof PiMcpCallError&&error.delivery==='not_sent');throw new ExternalCallError(unknown?'outcome_unknown':'failed',(unknown?'MCP 调用结果未知：':'MCP 调用未发出：')+safeMcpMessage(error));}
+  finally{await close();}
+ }
+ let session:Awaited<ReturnType<typeof connectMcp>>|undefined;let invoked=false;
  try{
-  await client.connect(connection.url?new StreamableHTTPClientTransport(new URL(connection.url)):new StdioClientTransport({command:connection.command,args:connection.args,stderr:'pipe'}));
-  const catalog=await client.listTools();
+  session=await connectMcp(connection);
+  const catalog=await readMcpCatalog(session.client);
   if(!catalog.tools.some(tool=>tool.name===name))throw new ExternalCallError('failed','工具不在服务声明的能力列表中');
+  await checkDispatch();
   invoked=true;
-  return await client.callTool({name,arguments:args},undefined,{timeout:90_000});
+  return redactMcpResult(await session.client.callTool({name,arguments:args},undefined,{timeout:90_000}));
  }catch(error){
+  if(hostRejected)throw dispatchRejected();
   if(error instanceof ExternalCallError)throw error;
-  const message=error instanceof Error?error.message:String(error);
+  const message=safeMcpMessage(error);
   throw new ExternalCallError(invoked?'outcome_unknown':'failed',(invoked?'MCP 调用结果未知：':'MCP 连接或能力检查失败：')+message);
- }finally{await client.close().catch(()=>{});}
+ }finally{await session?.close();}
 }
