@@ -4,6 +4,7 @@ import type {State} from '../shared/types.js';
 import {connectionSchema,requestSchema} from '../shared/types.js';
 import {modelProxyUrlSchema} from '../shared/model-proxy.js';
 import {DEFAULT_BAISHAN_MODEL,ModelSettings,discoverInstalledClis} from '../main/settings.js';
+import {ModelThinkingResolver} from '../main/model-thinking.js';
 
 class MemoryStore {
  values=new Map<string,unknown>();
@@ -16,6 +17,17 @@ function fixture(state=legacyState()){
  const store=new MemoryStore();let saves=0;
  return{store,state,get saves(){return saves;},settings:new ModelSettings(store,cipher,{get:()=>state,save:()=>{saves++;}})};
 }
+
+test('保存后按每个模型GET能力并缓存，普通列表不调用推理，检测失败不撤销保存',async()=>{
+ const f=fixture();f.settings.initialize();const urls:string[]=[];
+ const resolver=new ModelThinkingResolver(async(url,options)=>{assert.equal(options?.method,undefined);urls.push(String(url));const id=decodeURIComponent(new URL(String(url)).pathname.split('/').at(-1)!);return new Response(JSON.stringify({id,capabilities:{thinking:{types:{enabled:{supported:true},adaptive:{supported:false}}},effort:{low:{supported:id==='a'},high:{supported:true}}}}));},f.store);
+ const detect=async(id:string)=>{const model=f.settings.model(id);return resolver.resolve({entryId:id,baseUrl:model.baseUrl,id:model.modelId,protocol:model.protocol},{refresh:true,key:f.settings.credential(id)});};
+ const a=await f.settings.upsertWithCapabilities({provider:'same',name:'A',baseUrl:'https://fixture.invalid/v1',modelId:'a'},'fixture-a',detect);
+ const b=await f.settings.upsertWithCapabilities({provider:'same',name:'B',baseUrl:a.baseUrl,modelId:'b'},'fixture-b',detect);
+ const cached=await resolver.resolve({entryId:a.id,baseUrl:a.baseUrl,id:'a',protocol:a.protocol});assert.deepEqual(cached.capability.levels,['low','high']);
+ const other=await resolver.resolve({entryId:b.id,baseUrl:b.baseUrl,id:'b',protocol:b.protocol});assert.deepEqual(other.capability.levels,['high']);assert.deepEqual(urls,['https://fixture.invalid/v1/models/a','https://fixture.invalid/v1/models/b']);
+ const saved=await f.settings.upsertWithCapabilities({...a,name:'检测失败仍保存'},undefined,async()=>{throw Error('fixture timeout');});assert.equal(saved.name,'检测失败仍保存');assert.equal(f.settings.credential(a.id),'fixture-a');assert(f.settings.list().flatMap(g=>g.models).some(model=>model.id===b.id));
+});
 
 test('模型手动代理可持久化、旧调用省略保留、null清除；不会改默认模型或密钥',()=>{
  const f=fixture();f.settings.initialize();const originalDefault=f.state.defaultModelId;const input={provider:'custom',name:'proxy',baseUrl:'https://gateway.invalid/v1',modelId:'proxy-fixture',proxyUrl:' http://127.0.0.1:7897 '};

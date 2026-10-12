@@ -29,13 +29,14 @@ const purposes:Record<ToolGroup,string>={memory:'项目候选备忘/撤回/恢�
 export const TOOL_CATALOG_PROMPT='# 按需工具\n常用读写、技能、搜索与任务摘要已启用。其余能力先调用 load_tool_group({group})；下一轮指同一Run收到回执后的下一次模型推理，无需用户再发“继续”。收到回执后继续调用本任务所需的组内工具，不要仅因加载就结束任务；同一次响应提前调用会失败。加载只改变本Run工具可见性，不提升权限，不执行组内操作。\n'+TOOL_GROUP_NAMES.map(group=>`${group}（${purposes[group]}）：${TOOL_GROUPS[group].join(',')}`).join('\n');
 
 /** Runtime-local visibility only. No persisted loadout or arbitrary tool names. */
-export function createToolLoadout(registeredNames:()=>string[],activate:(names:string[])=>void){
- const mapped=[...CORE_TOOL_NAMES,...Object.values(TOOL_GROUPS).flat()];
+export function createToolLoadout(registeredNames:()=>string[],activate:(names:string[])=>void,disabledGroups:readonly ToolGroup[]=[]){
+ const enabledGroups=TOOL_GROUP_NAMES.filter(group=>!disabledGroups.includes(group));
+ const mapped=[...CORE_TOOL_NAMES,...enabledGroups.flatMap(group=>[...TOOL_GROUPS[group]])];
  const verify=()=>{const list=registeredNames(),names=new Set(list);if(new Set(mapped).size!==mapped.length||list.length!==names.size||names.size!==mapped.length+1||!names.has('load_tool_group')||mapped.some(name=>!names.has(name)))throw Error('TOOL_CATALOG_REGISTRY_MISMATCH');};
  verify();
  const loaded=new Set<ToolGroup>();
- const selected=(groups:Set<ToolGroup>)=>[...CORE_TOOL_NAMES,'load_tool_group',...TOOL_GROUP_NAMES.filter(group=>groups.has(group)).flatMap(group=>[...TOOL_GROUPS[group]])];
+ const selected=(groups:Set<ToolGroup>)=>[...CORE_TOOL_NAMES,'load_tool_group',...enabledGroups.filter(group=>groups.has(group)).flatMap(group=>[...TOOL_GROUPS[group]])];
  const activeNames=()=>selected(loaded);
  const apply=()=>{verify();activate(activeNames());};
- return{apply,activeNames,load(input:unknown){const {group}=loadToolGroupSchema.parse(input),already=loaded.has(group);verify();const next=new Set(loaded);next.add(group);try{activate(selected(next));}catch(error){activate(activeNames());throw error;}loaded.add(group);return{group,status:already?'already_loaded':'loaded',tools:[...TOOL_GROUPS[group]],effective:'next_turn',notice:'工具已启用；next_turn 指同一Run收到本回执后的下一次模型推理，无需用户再发“继续”。请继续调用本任务所需的新工具，不要仅因加载就结束任务；权限、预算和宿主检查仍按原规则执行。'};}};
+ return{apply,activeNames,load(input:unknown){const {group}=loadToolGroupSchema.parse(input);if(!enabledGroups.includes(group))throw Error('TOOL_GROUP_DISABLED: 此能力已在设置中关闭');const already=loaded.has(group);verify();const next=new Set(loaded);next.add(group);try{activate(selected(next));}catch(error){activate(activeNames());throw error;}loaded.add(group);return{group,status:already?'already_loaded':'loaded',tools:[...TOOL_GROUPS[group]],effective:'next_turn',notice:'工具已启用；next_turn 指同一Run收到本回执后的下一次模型推理，无需用户再发“继续”。请继续调用本任务所需的新工具，不要仅因加载就结束任务；权限、预算和宿主检查仍按原规则执行。'};}};
 }

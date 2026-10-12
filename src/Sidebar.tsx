@@ -1,10 +1,13 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "./Icon";
+import {ProjectFolderShortcut,type ProjectImportTarget} from './ProjectFolderShortcut';
+import type {Request} from '../shared/types';
 
 export type SidebarView =
   | "会话"
   | "资源"
   | "成果"
+  | "设计体系"
   | "测试用例"
   | "知识库"
   | "规则与模板"
@@ -62,7 +65,9 @@ type SidebarProps = {
   onProjectCopyPath?: (id: string) => Promise<void>;
   onConversationRename?: (id: string, title: string) => void;
   onConversationArchive?: (id: string, archived: boolean) => void;
-  onImportFiles?: (files: File[], category: ImportCategory) => void;
+  onImportFiles?: (files: File[], category: ImportCategory, target?:ProjectImportTarget) => void;
+  projectFolderRequest?: (request:Request)=>Promise<unknown>;
+  onFolderError?: (message:string)=>void;
   settingsOpen: boolean;
   projectSidebarCollapsed?: boolean;
   resourceProjectId?: string;
@@ -98,6 +103,7 @@ export function Sidebar({
   onConversationRename,
   onConversationArchive,
   onImportFiles,
+  projectFolderRequest, onFolderError,
   settingsOpen,
   projectSidebarCollapsed = false,
   resourceProjectId,
@@ -189,6 +195,7 @@ export function Sidebar({
         <div className="rail-divider" />
         <button className={(view === "知识库" || view === "资源" && !resourceProjectId) && !settingsOpen ? "rail-item active" : "rail-item"} aria-label="资源" title="所有项目资源" onClick={() => onView("资源")}><span className="rail-icon"><Icon name="book" /></span><span className="rail-label">资源</span></button>
         <button className={view === "成果" && !resourceProjectId && !settingsOpen ? "rail-item active" : "rail-item"} aria-label="成果" title="所有项目成果" onClick={() => onView("成果")}><span className="rail-icon"><Icon name="file" /></span><span className="rail-label">成果</span></button>
+        <button className={view === "设计体系" && !settingsOpen ? "rail-item active" : "rail-item"} aria-label="设计体系" title="设计体系" onClick={() => onView("设计体系")}><span className="rail-icon"><Icon name="panel" /></span><span className="rail-label">设计体系</span></button>
         <button className={view === "测试用例" && !settingsOpen ? "rail-item active" : "rail-item"} aria-label="测试用例" title="测试用例" onClick={() => onView("测试用例")}><span className="rail-icon"><Icon name="check" /></span><span className="rail-label">测试用例</span></button>
         <div className="rail-spacer" /><button className="rail-item rail-collapse" aria-label={projectSidebarCollapsed ? "展开项目侧栏" : "收起项目侧栏"} title={projectSidebarCollapsed ? "展开项目侧栏" : "收起项目侧栏"} aria-expanded={!projectSidebarCollapsed} onClick={onToggleProjectSidebar}><Icon name="panel" size={17}/></button>
         <button className={settingsOpen ? "rail-item active" : "rail-item"} aria-label="设置" title="设置" onClick={onSettings}><span className="rail-icon"><Icon name="settings" /></span><span className="rail-label">设置</span></button>
@@ -284,14 +291,10 @@ export function Sidebar({
                 </button>
                 {isOpen && (
                   <div className="project-conversations">
-                    {isCurrent && (
-                      <div className="project-tools" aria-label="当前项目资源">
-                        <button className={view === "资源" && resourceProjectId === item.id ? "active" : ""} onClick={() => onProjectView?.("resource")}>
-                          <Icon name="folder" size={14}/>资源{resources.length ? <small>{resources.length}</small> : null}
-                        </button>
-                        <button className={view === "成果" && resourceProjectId === item.id ? "active" : ""} onClick={() => onProjectView?.("artifact")}>
-                          <Icon name="file" size={14}/>成果{artifacts.length ? <small>{artifacts.length}</small> : null}
-                        </button>
+                    {projectFolderRequest && (
+                      <div className="project-tools" aria-label={`${item.name}项目文件夹`}>
+                        <ProjectFolderShortcut projectId={item.id} projectName={item.name} kind="resource" count={isCurrent?resources.length:undefined} busy={importBusy} call={projectFolderRequest} onError={onFolderError||(()=>{})} onDrop={(files,target)=>onImportFiles?.(files,'resource',target)}/>
+                        <ProjectFolderShortcut projectId={item.id} projectName={item.name} kind="output" count={isCurrent?artifacts.length:undefined} busy={importBusy} call={projectFolderRequest} onError={onFolderError||(()=>{})} onDrop={(files,target)=>onImportFiles?.(files,'output',target)}/>
                       </div>
                     )}
                     {items.map((conversation) => (

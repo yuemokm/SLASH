@@ -1,0 +1,10 @@
+OpenDesign design reference materials
+Copyright nexu-io/open-design contributors.
+Repository: https://github.com/nexu-io/open-design
+Pinned revision: 0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7
+License: Apache License, Version 2.0 (see LICENSE.txt).
+Slash adaptations: metadata categorization, Chinese template labels, source-bound static previews and bounded design-reference context.
+DESIGN.md, tokens.css and selected SKILL.md texts are preserved in main/data/open-design-catalog.json.
+Static preview images include screenshots of the pinned components.html source fixtures and official template poster images from repo-assets.open-design.ai.
+Source URLs and SHA-256 hashes are recorded in main/data/open-design-previews.json. Source HTML and scripts are not executed by the application.
+Brand names and any marks visible in upstream reference images identify the source; they do not imply brand authorization.

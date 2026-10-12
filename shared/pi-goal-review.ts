@@ -1,0 +1,3 @@
+import {z} from 'zod';
+export const goalReviewReceiptSchema=z.object({schemaVersion:z.literal(1),package:z.literal('pi-goal-x@0.32.3'),id:z.string().uuid(),runId:z.string().min(1),contractHash:z.string().regex(/^[a-f0-9]{64}$/),inputHash:z.string().regex(/^[a-f0-9]{64}$/),status:z.enum(['approved','disapproved','unverified']),versionState:z.enum(['current','stale','unavailable']),checkedAt:z.string().datetime({offset:true}),output:z.string().max(16000),error:z.string().max(2000).optional(),model:z.string().min(1),thinkingLevel:z.string(),usage:z.array(z.unknown()).max(30),durationMs:z.number().nonnegative(),toolLimit:z.literal(12)}).strict();
+export type GoalReviewReceipt=z.infer<typeof goalReviewReceiptSchema>;

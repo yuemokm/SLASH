@@ -1,0 +1,12 @@
+.project-folder-drop-menu{position:fixed;z-index:1200;width:280px;max-height:320px;display:flex;flex-direction:column;background:var(--theme-card,#fff);color:var(--theme-text,#222);border:1px solid var(--line,#ddd);border-radius:10px;box-shadow:0 12px 32px #0002;overflow:hidden}
+.project-folder-drop-heading{padding:12px 14px;border-bottom:1px solid var(--line,#ddd);display:grid;gap:4px}
+.project-folder-drop-heading b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-folder-drop-heading small,.project-folder-drop-menu p,.project-folder-drop-option small{font-size:12px;color:var(--muted,#777)}
+.project-folder-drop-menu p{padding:10px 14px;margin:0}
+.project-folder-drop-list{overflow:auto;padding:5px;min-height:0}
+.project-folder-drop-option{display:flex;align-items:center;gap:9px;padding:9px;border-radius:6px;min-height:40px;font-size:14px;border:1px solid transparent}
+.project-folder-drop-option span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-folder-drop-option small{float:right;margin-left:8px}
+.project-folder-drop-option.hovered,.project-folder-shortcut.dragging{background:var(--accent-soft,#f0edff);border-color:var(--accent,#7862bf);color:var(--accent,#7862bf)}
+.app[data-theme] .project-tools .project-folder-shortcut.dragging{background:var(--accent-soft);color:var(--theme-text);outline:1px solid var(--theme-border)}
+.project-folder-drop-menu .project-folder-drop-error{color:var(--danger,#be3d3d)}

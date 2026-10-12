@@ -113,6 +113,13 @@ export class ModelSettings {
   this.syncLegacy(state);this.state.save();
   return{...model};
  }
+ async upsertWithCapabilities(input:Parameters<ModelSettings['upsert']>[0],key:string|undefined,detect:(id:string)=>Promise<unknown>){
+  const model=this.upsert(input,key);
+  // Saving is complete before the bounded, read-only metadata lookup. A
+  // failed lookup must not turn a saved entry into an apparent failed write.
+  try{await detect(model.id);}catch{}
+  return model;
+ }
  remove(id:string){
   const state=this.state.get(),models=state.models??[];
   if(!models.some(item=>item.id===id))throw Error('VALIDATION_FAILED: 模型条目不存在');

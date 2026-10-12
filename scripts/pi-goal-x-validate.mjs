@@ -1,0 +1,24 @@
+// Explicit, isolated candidate verification. No npm install or real provider calls.
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {createHash} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+const root=path.resolve('.test-data/pi-goal-x-validation');
+await fs.mkdir(root,{recursive:true});
+const manifest=await (await fetch('https://registry.npmjs.org/pi-goal-x/0.32.3')).json();
+if(manifest.version!=='0.32.3'||manifest.license!=='MIT'||manifest.pi.extensions.join()!=='extensions/goal.ts')throw Error('Unexpected candidate manifest');
+const bytes=Buffer.from(await (await fetch(manifest.dist.tarball)).arrayBuffer());
+const integrity='sha512-'+createHash('sha512').update(bytes).digest('base64');
+if(integrity!==manifest.dist.integrity)throw Error('Tarball integrity mismatch');
+await fs.writeFile(path.join(root,'pi-goal-x-0.32.3.tgz'),bytes);
+await fs.writeFile(path.join(root,'manifest.json'),JSON.stringify(manifest,null,2));
+const extract=spawnSync('tar',['-xzf',path.join(root,'pi-goal-x-0.32.3.tgz'),'-C',root],{encoding:'utf8'});
+if(extract.status!==0)throw Error(extract.stderr||'Extraction failed');
+const license=await fs.readFile(path.join(root,'package','LICENSE'),'utf8');
+if(!license.includes('MIT License')||!license.includes('Permission is hereby granted'))throw Error('Unexpected license');
+const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('PI_GOAL_')&&!key.startsWith('PI_SUBAGENT_')));
+const run=spawnSync(process.execPath,['--experimental-strip-types','scripts/pi-goal-x-fixture.mjs',root],{env,encoding:'utf8',timeout:90_000});
+process.stdout.write(run.stdout??'');process.stderr.write(run.stderr??'');
+await fs.writeFile(path.join(root,'validation.txt'),`package=${manifest.name}@${manifest.version}\nlicense=${manifest.license}\nintegrity=${integrity}\nPi=0.86.1\nrealProviderCalls=0\n${run.stdout??''}${run.stderr??''}`);
+if(run.error)throw run.error;
+process.exitCode=run.status??1;

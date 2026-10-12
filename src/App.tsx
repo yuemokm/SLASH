@@ -8,10 +8,13 @@ import {McpElicitationPanel} from './McpElicitationPanel';
 import {runOperationViews} from './run-operation-view';
 import {RunRecoveryPanel} from './RunRecoveryPanel';
 import { Icon, FileIcon } from "./Icon";
+import {DesignSystemsPanel,DesignReferenceCollection} from './DesignSystemsPanel';
+import type {DesignCatalogItem} from '../shared/design-systems';
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./composer-select.css";
+import {ComposerSubagentToggle} from './ComposerSubagentToggle';
 import "./reference-picker.css";
 import { DecryptedStream } from "./DecryptedStream";
 import { ReplyDetails, type ReplyPanelState } from "./ReplyDetails";
@@ -23,7 +26,7 @@ import { ComposerModelMenu, ComposerModeMenu, ComposerPermissionMenu, ComposerPo
 import {applySlashCommand,matchingSlashCommands as filterSlashCommands} from "./slash-commands";
 import type {SkillDiscoveryReceipt} from "../shared/skills";
 import { appendComposerPreset, resolveComposerIntent } from "./composer-intent";
-import { planThinkingOverride } from "./composer-thinking";
+import { planThinkingOverride, availableThinkingLevel } from "./composer-thinking";
 import { ReferencePicker } from "./ReferencePicker";
 import { WorkIssues, type ProductRecordsView } from "./WorkIssues";
 import { TestCasesPreview } from "./TestCasesPreview";
@@ -65,6 +68,7 @@ import { KnowledgeCollections } from "./KnowledgeCollections";
 import { TestCasesPage } from "./TestCasesPage";
 import { FeatureProjectScope } from "./FeatureProjectScope";
 import type { ProjectFileRef } from "../shared/project-catalog";
+import type {ProjectImportTarget} from './ProjectFolderShortcut';
 import { isApprovalActionable, approvalResolutionNotice, type ApprovalResolutionResult } from "../shared/approval";
 import {
   Sidebar,
@@ -78,6 +82,7 @@ type View =
   | "会话"
   | "资源"
   | "成果"
+  | "设计体系"
   | "测试用例"
   | "知识库"
   | "规则与模板"
@@ -1073,17 +1078,18 @@ export function App() {
   const [workflowKind, setWorkflowKind] = useState<PmWorkflowKind>();
   const [workflowSources, setWorkflowSources] = useState<PmWorkflowSource[]>();
   const [prdTemplate, setPrdTemplate] = useState<FileRef & PmWorkflowSource>();
+  const [designReferences,setDesignReferences]=useState<DesignCatalogItem[]>([]);
   const templateScope = useRef({ root: state?.root, conversationId });
   useEffect(() => {
     if (templateScope.current.root !== state?.root || templateScope.current.conversationId !== conversationId) {
       setPrdTemplate(undefined);
+      setDesignReferences([]);
       setReferencePickerOpen(false);
     }
     templateScope.current = { root: state?.root, conversationId };
   }, [state?.root, conversationId]);
   const [visionBusy, setVisionBusy] = useState(false);
   const [agentMode, setAgentMode] = useState<"plan"|"build">("build");
-  const [inputDelivery,setInputDelivery]=useState<'steer'|'follow_up'>('follow_up');
   const [permissionUpdating,setPermissionUpdating]=useState(false);
   const inputRequest=useRef<{runId:string;text:string;delivery:'steer'|'follow_up';requestId:string}|undefined>(undefined);
   const [permissionMode, setPermissionMode] = useState<"standard"|"accept_edits"|"full_access">("standard");
@@ -1335,7 +1341,8 @@ export function App() {
   }, [state?.root]);
   const openDetailsTab = (tab: "details" | "artifacts" | "files") => {
     setDetailsTab(tab);
-    if (tab !== "details") void act(() => loadFiles(""));
+    setDetailsOpen(true);
+    if (tab === "artifacts" || tab === "files") void act(() => loadFiles(""));
   };
   useEffect(() => {
     if (
@@ -1642,7 +1649,7 @@ export function App() {
     setConversationId(id);
     return id;
   };
-  const importProjectFiles = async (items: File[], category: ImportCategory = "resource") => {
+  const importProjectFiles = async (items: File[], category: ImportCategory = "resource", explicitTarget?:ProjectImportTarget) => {
     if (!items.length) return;
     setImportBusy(true);
     try {
@@ -1671,7 +1678,7 @@ export function App() {
         grouped.set(target, [...(grouped.get(target) || []), filePath]);
       });
       let imported = 0;
-      const importTarget = ["资源", "成果"].includes(view) ? folderMountId ? { mountId: folderMountId, path: folderPath } : browserScope ? { mountId: browserScope.mountId, path: browserScope.prefix } : undefined : undefined;
+      const importTarget = explicitTarget ? {projectId:explicitTarget.projectId,mountId:explicitTarget.mountId,path:explicitTarget.path} : ["资源", "成果"].includes(view) ? folderMountId ? { mountId: folderMountId, path: folderPath } : browserScope ? { mountId: browserScope.mountId, path: browserScope.prefix } : undefined : undefined;
       for (const [target, targetPaths] of grouped) {
         const result = await futureRequest({
           type: "importFiles",
@@ -1683,13 +1690,13 @@ export function App() {
           setNotice("导入接口暂不可用，请先检查当前项目目录权限。");
           return;
         }
-        imported += targetPaths.length;
+        imported += Array.isArray(result) ? result.length : 0;
       }
       if (!imported) {
         setNotice("导入接口暂不可用，请先添加参考目录。");
         return;
       }
-      setNotice(`已将 ${imported} 个文件加入当前项目`);
+      setNotice(`已复制 ${imported} 个文件到${explicitTarget?.label||'当前项目'}，原文件保留`);
       await loadProjects();
       await loadFiles();
     } catch (reason) {
@@ -1756,11 +1763,11 @@ export function App() {
   const send = async () => {
     if(active){
       if(busy||!draft.trim())return;
-      if(imageAttachment||referenceAttachments.length||workflowKind||prdTemplate){setNotice('本轮补充仅支持文字；请移除新附件或任务上下文，或等待本轮结束后另发任务。');return;}
+      if(imageAttachment||referenceAttachments.length||workflowKind||prdTemplate||designReferences.length){setNotice('本轮补充仅支持文字；请移除新附件或任务上下文，或等待本轮结束后另发任务。');return;}
       if(!['queued','running','waiting_user'].includes(active.status)){setNotice('本轮正在收尾或取消，请等待结束后另发任务。');return;}
       setBusy(true);setError('');
       const previous=inputRequest.current;
-      const request=previous&&previous.runId===active.id&&previous.text===draft.trim()&&previous.delivery===inputDelivery?previous:{runId:active.id,text:draft.trim(),delivery:inputDelivery,requestId:crypto.randomUUID()};inputRequest.current=request;
+      const request=previous&&previous.runId===active.id&&previous.text===draft.trim()&&previous.delivery==='follow_up'?previous:{runId:active.id,text:draft.trim(),delivery:'follow_up' as const,requestId:crypto.randomUUID()};inputRequest.current=request;
       const submittedDraft=draft,scope=composerScope;
       try{await call({type:'runInputEnqueue',...request});inputRequest.current=undefined;if(scope===composerScopeRef.current){setDraft(value=>value===submittedDraft?'':value);setNotice('');}await refresh();}
       catch(reason){if(scope===composerScopeRef.current)setError(reason instanceof Error?reason.message:String(reason));}finally{setBusy(false);}return;
@@ -1770,7 +1777,7 @@ export function App() {
     if (thinkingLoading && (thinkingDirty || thinkingLevel)) { setNotice("正在确认思考档位，请稍后发送。");return; }
     const parts = draft.trim().split(/\s+/);
     const { command, kind, taskType } = composerIntent;
-    const commandText: Record<string, string> = { "/plan": "请先研究相关资料并生成可确认的执行方案。", "/research": "请检索已授权资料并整理证据。", "/prd": "请按当前 PRD 模板生成结构化产品需求文档。", "/prototype": "请生成或修改 HTML 交互原型。", "/review": "请对当前成果执行质量检查并发起评审。", "/help": "请说明当前会话可用的 Slash 命令和操作方式。" };
+    const commandText: Record<string, string> = { "/plan": "请先研究相关资料并生成可确认的执行方案。", "/help": "请说明当前会话可用的 Slash 命令和操作方式。" };
     if (command === "/plan") setAgentMode("plan");
     const requestText = commandText[command] ? `${commandText[command]}${parts.slice(1).join(" ") ? `\n补充要求：${parts.slice(1).join(" ")}` : ""}` : draft.trim() || pmWorkflows.prd.intent;
     const sources = (workflowSources || referenceAttachments.map(({ mountId, path }) => ({ mountId, path }))).filter(source => !prdTemplate || source.mountId !== prdTemplate.mountId || source.path !== prdTemplate.path);
@@ -1790,11 +1797,12 @@ export function App() {
         const attachment = await call({ type: "visionAttach", path: imageAttachment.path }) as { id: string };
         attachmentIds = [attachment.id];
       }
-      await call({ type: "send", id, text: finalText, mode: command === "/plan" ? "plan" : agentMode, permissionMode:current?.permissionMode??permissionMode, modelEntryId: modelEntryId || undefined, thinkingLevel: thinkingLoading ? undefined : thinkingLevel, taskType, attachmentIds, workflow: kind ? { kind, sources, template: prdTemplate ? { mountId: prdTemplate.mountId, path: prdTemplate.path, versionId: prdTemplate.versionId, contentHash: prdTemplate.contentHash } : undefined } : undefined });
+      await call({ type: "send", id, text: finalText, mode: command === "/plan" ? "plan" : agentMode, permissionMode:current?.permissionMode??permissionMode, modelEntryId: modelEntryId || undefined, thinkingLevel: availableThinkingLevel(thinkingCapability,thinkingLoading,thinkingLevel), taskType, attachmentIds, workflow: kind ? { kind, sources, template: prdTemplate ? { mountId: prdTemplate.mountId, path: prdTemplate.path, versionId: prdTemplate.versionId, contentHash: prdTemplate.contentHash } : undefined } : undefined,designReferences:designReferences.length?designReferences.map(({id,contentHash})=>({id,contentHash})):undefined });
       setDraft("");
       setImageAttachment(undefined);
       setReferenceAttachments([]);
       setPrdTemplate(undefined);
+      setDesignReferences([]);
       setReferencePickerOpen(false);
       setWorkflowKind(undefined);
       setWorkflowSources(undefined);
@@ -1816,7 +1824,7 @@ export function App() {
     setDraft(previous=>applySlashCommand(previous,command));setSlashOpen(false);composerInputRef.current?.focus();
   };
   const savePlanDraft = async (runId:string, ids:string[], customText:string) => { try { await call({type:"planDraft",id:runId,selectedOptionIds:ids,customText}); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); } };
-  const confirmPlan = async (runId:string, ids:string[], customText:string) => { if(thinkingLoading && (thinkingDirty || thinkingLevel)){setNotice("正在确认思考档位，请稍后确认方案。");return;} setBusy(true); setError(""); try { await call({type:"planConfirm",id:runId,selectedOptionIds:ids,customText,permissionMode,modelEntryId:modelEntryId || undefined,thinkingLevel:planThinkingOverride(thinkingLevel,thinkingDirty)}); setAgentMode("build"); await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); } finally { setBusy(false); } };
+  const confirmPlan = async (runId:string, ids:string[], customText:string) => { if(thinkingLoading && (thinkingDirty || thinkingLevel)){setNotice("正在确认思考档位，请稍后确认方案。");return;} setBusy(true); setError(""); try { await call({type:"planConfirm",id:runId,selectedOptionIds:ids,customText,permissionMode,modelEntryId:modelEntryId || undefined,thinkingLevel:planThinkingOverride(availableThinkingLevel(thinkingCapability,thinkingLoading,thinkingLevel),thinkingDirty)}); setAgentMode("build"); await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); } finally { setBusy(false); } };
   const resumeRun = async (runId: string) => {
     setBusy(true);
     setError("");
@@ -2348,12 +2356,14 @@ export function App() {
           if (id === projectId) { setConversationId("");setDraft("");setWorkflowKind(undefined);setWorkflowSources(undefined);setReferenceAttachments([]);setImageAttachment(undefined);setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);setProductRecords(undefined);setDecisionCenter(undefined);setView("会话"); }
           await refresh();await loadProjects();setNotice("项目已从列表移除，本地文件、会话和版本已保留。");
         }}
-        onImportFiles={(items, category) => void act(() => importProjectFiles(items, category))}
+        onImportFiles={(items, category, target) => void act(() => importProjectFiles(items, category, target))}
+        projectFolderRequest={call}
+        onFolderError={setError}
         projectSidebarCollapsed={projectSidebarCollapsed}
         onToggleProjectSidebar={() => setProjectSidebarCollapsed(value => !value)}
         settingsOpen={settingsOpen}
       />
-      <main className={view === "会话" ? "conversation-main" : ""}>
+      <main className={view === "会话" ? "conversation-main" : view === "设计体系" ? "design-systems-main" : ""}>
         <header>
           <div className="header-title">
             <span className="breadcrumb">slash / </span>
@@ -2420,16 +2430,16 @@ export function App() {
         {error && (
           <div role="alert" className="alert">
             {error}
-            <button onClick={() => setError("")}><Icon name="close" size={15}/></button>
+            <button aria-label="关闭错误提示" onClick={() => setError("")}><Icon name="close" size={15}/></button>
           </div>
         )}
         {notice && (
           <div role="status" className="notice">
             {notice}
-            <button onClick={() => setNotice("")}><Icon name="close" size={15}/></button>
+            <button aria-label="关闭提示" onClick={() => setNotice("")}><Icon name="close" size={15}/></button>
           </div>
         )}
-        {view === "会话" ? (
+        {view === "设计体系" ? <DesignSystemsPanel call={call} selected={designReferences} onBack={()=>{setView("会话");requestAnimationFrame(()=>composerInputRef.current?.focus());}} onSelect={item=>{const alreadySelected=designReferences.some(value=>value.id===item.id);setDesignReferences(previous=>alreadySelected?previous.filter(value=>value.id!==item.id):[...previous.filter(value=>value.kind!==item.kind),item]);if(!alreadySelected){setView("会话");setNotice('已加入设计参考，发送任务时会一起引用。');requestAnimationFrame(()=>composerInputRef.current?.focus());}}}/> : view === "会话" ? (
           <div className={`work ${selected ? "has-stage" : ""} ${detailsOpen ? "details-open" : "details-collapsed"}`}>
             <section className="conversation">
               <div className="conversation-head">
@@ -2440,6 +2450,7 @@ export function App() {
                   <button ref={detailsToggleRef} className={`header-icon-button details-toggle ${detailsOpen ? "active" : ""}`} aria-label={detailsOpen ? "收起详情" : "展开详情"} aria-expanded={detailsOpen} aria-controls="conversation-details" title={detailsOpen ? "收起详情" : "展开详情"} onClick={() => detailsOpen ? closeDetails() : setDetailsOpen(true)}><Icon name="panel"/></button>
                 </div>
               </div>
+              {(active||runs[0])&&<RunInputQueuePanel key={`${composerScope}:${(active||runs[0]).id}`} run={active||runs[0]} active={Boolean(active&&['queued','running','waiting_user'].includes(active.status))} onMutate={async input=>{await call({type:'runInputMutate',...input});await refresh();}} onRestore={text=>{if(composerScope!==composerScopeRef.current)return;setDraft(value=>value.trim()?`${value}\n\n${text}`:text);setNotice('原文已带回输入框，请核对后再发送；不会自动重发。');composerInputRef.current?.focus();}}/>}
               <div
                 ref={messagesRef}
                 className="messages"
@@ -2509,6 +2520,7 @@ export function App() {
                             </time>}
                           </div>
                           {message.attachmentIds?.length ? <div className="message-attachment-ref">图片附件 · {message.attachmentIds.length} 个 · 已保存为工作空间快照</div> : null}
+                          {message.role==='user'&&message.runId&&<DesignReferenceCollection items={runs.find(run=>run.id===message.runId)?.designReferenceReceipts??[]}/>}
                           <Markdown className="prose">{message.text}</Markdown>
                           {message.role === "assistant" && replyDetails(message,runs.find(run => run.id === message.runId),replyKey(message,index))}
                           {message.runId && outputMessageIndices.get(message.runId) === index && runChanges(message.runId)}
@@ -2634,7 +2646,6 @@ export function App() {
 
               </div>
               <div className="composer-wrap">
-                {(active||runs[0])&&<RunInputQueuePanel key={`${composerScope}:${(active||runs[0]).id}`} run={active||runs[0]} active={Boolean(active&&['queued','running','waiting_user'].includes(active.status))} onMutate={async input=>{await call({type:'runInputMutate',...input});await refresh();}} onRestore={text=>{if(composerScope!==composerScopeRef.current)return;setDraft(value=>value.trim()?`${value}\n\n${text}`:text);setNotice('原文已带回输入框，请核对后再发送；不会自动重发。');composerInputRef.current?.focus();}}/>}
                 <div className="composer" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); attachImage(event.dataTransfer.files?.[0]); }}>
                   <ReferencePicker
                     open={referencePickerOpen}
@@ -2659,7 +2670,7 @@ export function App() {
                     aria-label="描述你的任务"
                     placeholder={workflowKind ? pmWorkflows[workflowKind].hint : "描述任务，或加入文件、段落与原型元素…"}
                     value={draft}
-                    onChange={(event) => { const value = event.target.value; setDraft(value);if(/^\/(?:prototype|prd|research|review|help)(?:\s|$)|^\/skill:/.test(value.trimStart())) { if(value.trimStart().startsWith("/skill:"))clearSkillWorkflow();else{setWorkflowKind(undefined);setWorkflowSources(undefined);} }setSlashIndex(0);if(!slashOpen&&/^\/[^\s]*$/.test(value.trimStart())){setSlashSkills(undefined);setSlashSkillsError("");} setSlashOpen(/^\/[^\s]*$/.test(value.trimStart())); }}
+                    onChange={(event) => { const value = event.target.value; setDraft(value);if(/^\/help(?:\s|$)|^\/skill:/.test(value.trimStart())) { if(value.trimStart().startsWith("/skill:"))clearSkillWorkflow();else{setWorkflowKind(undefined);setWorkflowSources(undefined);} }setSlashIndex(0);if(!slashOpen&&/^\/[^\s]*$/.test(value.trimStart())){setSlashSkills(undefined);setSlashSkillsError("");} setSlashOpen(/^\/[^\s]*$/.test(value.trimStart())); }}
                     onPaste={(event) => { const image = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/")); if (image) { event.preventDefault(); attachImage(image); } }}
                     onDrop={(event) => { event.preventDefault(); attachImage(event.dataTransfer.files?.[0]); }}
                     onKeyDown={(event) => {
@@ -2689,7 +2700,7 @@ export function App() {
                   />
                   {slashOpen && <div className="slash-command-menu" ref={slashMenuRef}>
                     <div role="listbox" id="slash-command-list" aria-label="命令建议">
-                      {matchingSlashCommands.map(({command,description,scope},index)=><button id={`slash-option-${index}`} key={command} type="button" role="option" aria-label={`${command} ${description}`} title={description} aria-selected={index===slashIndex} className={index===slashIndex?"chosen":""} onMouseEnter={()=>setSlashIndex(index)} onMouseDown={event=>event.preventDefault()} onClick={()=>selectSlashCommand(command)}><Icon name={scope?"book":command==="/plan"?"flow":command==="/research"?"search":command==="/prototype"?"code":command==="/review"?"shield":"file"} size={16}/><b>{scope?command.slice("/skill:".length):command}</b><small className="slash-command-description">{description}</small>{scope&&<small className="slash-command-scope">{scope==='global'?'全局':'项目'}</small>}</button>)}
+                      {matchingSlashCommands.map(({command,description,scope},index)=><button id={`slash-option-${index}`} key={command} type="button" role="option" aria-label={`${command} ${description}`} title={description} aria-selected={index===slashIndex} className={index===slashIndex?"chosen":""} onMouseEnter={()=>setSlashIndex(index)} onMouseDown={event=>event.preventDefault()} onClick={()=>selectSlashCommand(command)}><Icon name={scope?"book":command==="/plan"?"flow":"file"} size={16}/><b>{scope?command.slice("/skill:".length):command}</b><small className="slash-command-description">{description}</small>{scope&&<small className="slash-command-scope">{scope==='global'?'全局':'项目'}</small>}</button>)}
                     </div>
                     {!matchingSlashCommands.length&&<p role="status">没有匹配的命令或 skill</p>}
                     {!slashSkills&&!slashSkillsError&&<p role="status">正在读取可用 skills…</p>}
@@ -2698,7 +2709,8 @@ export function App() {
                     {slashSkills?.diagnostics.length? <details><summary>技能检查提示（{slashSkills.diagnostics.length}）</summary>{slashSkills.diagnostics.map((issue,index)=><p key={index}>{issue.message}</p>)}</details>:null}
                     <button type="button" className="slash-manage-skills" onClick={()=>{setSlashOpen(false);setRequestedSettingsTab("skills");setSettingsOpen(true);}}>管理 skills</button>
                   </div>}
-                  {(workflowKind || prdTemplate || referenceAttachments.length > 0 || imageAttachment) && <div className="composer-context">
+                  {(workflowKind || prdTemplate || referenceAttachments.length > 0 || imageAttachment || designReferences.length > 0) && <div className="composer-context">
+                    <DesignReferenceCollection items={designReferences} onRemove={id=>setDesignReferences(previous=>previous.filter(item=>item.id!==id))}/>
                     {workflowKind && <span className="composer-task-chip" aria-label="任务上下文" title={pmWorkflows[workflowKind].hint}><Icon name={workflowKind === "prototype" ? "code" : "file"} size={14}/><span>{pmWorkflows[workflowKind].label}{workflowKind === "change_summary" ? ` · ${workflowSources?.[0]?.versionId || "旧版"} → 当前版` : ""}</span><button type="button" aria-label="移除任务上下文" onClick={() => { setWorkflowKind(undefined);setWorkflowSources(undefined);setPrdTemplate(undefined);setNotice("已移除任务上下文，输入内容与引用资料保留。"); }}><Icon name="close" size={13}/></button></span>}
                     {prdTemplate && <span className="reference-attachment prd-template-chip" aria-label="已选择的 PRD 模板" title={prdTemplate.path}><FileIcon path={prdTemplate.path} size={14}/><span>PRD 模板 · {prdTemplate.path.split(/[\\/]/).pop()}</span><button type="button" aria-label="移除 PRD 模板" onClick={() => setPrdTemplate(undefined)}><Icon name="close" size={15}/></button></span>}
                     {workflowSources?.some(source => source.contentHash) && workflowKind !== "change_summary" && <button className="workflow-clear" type="button" onClick={() => { setWorkflowSources(undefined); setNotice("发送时会读取所选资料的当前版本。"); }}>改用当前版本</button>}
@@ -2718,16 +2730,23 @@ export function App() {
                     )}
                     {imageAttachment && <span className="image-attachment" title={imageAttachment.path}><Icon name="image" size={14}/> {imageAttachment.name}<button type="button" aria-label="移除图片" onClick={() => setImageAttachment(undefined)}><Icon name="close" size={15}/></button></span>}
                   </div>}
-                  {templateCommandConflict && <div className="template-command-conflict" role="status"><span>当前命令与 PRD 模板冲突。</span><button type="button" onClick={() => { setDraft(value => value.replace(/^\s*\/\S+/, "/prd"));setWorkflowKind("prd"); }}>改用 PRD</button><button type="button" onClick={() => { setPrdTemplate(undefined);setWorkflowKind(undefined);setWorkflowSources(undefined); }}>移除模板</button></div>}
+                  {templateCommandConflict && <div className="template-command-conflict" role="status"><span>当前命令与 PRD 模板冲突。</span><button type="button" onClick={() => { setDraft(value => value.replace(/^\s*\/\S+\s*/, ""));setWorkflowKind("prd"); }}>使用 PRD 模板</button><button type="button" onClick={() => { setPrdTemplate(undefined);setWorkflowKind(undefined);setWorkflowSources(undefined); }}>移除模板</button></div>}
                   <div className="composer-bottom">
+                    <div className="composer-toolbar-controls">
+                    <div className="composer-source-controls">
                     <ComposerPopover label="添加" icon="plus">{close => <><div className="composer-popover-heading">加入资料</div><button className="composer-action" type="button" onClick={() => { close();void openReferencePicker(); }}><Icon name="attach" size={17}/><span>引用资料</span></button><label className="composer-action composer-image-action"><Icon name="image" size={17}/><span>添加图片</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="添加图片" onChange={event => { attachImage(event.target.files?.[0]);event.target.value="";close(); }}/></label><div className="composer-popover-heading composer-popover-divider">快捷动作</div>{starterActions.map(action => <button className="composer-action" type="button" key={action.kind} onClick={() => { close();chooseWorkflow(action.kind); }}><Icon name={action.kind === "prototype" ? "code" : action.kind === "research" ? "search" : action.kind === "meeting" ? "chat" : "file"} size={17}/><span><b>{action.label}</b><small>插入可编辑的提示词</small></span></button>)}</>}</ComposerPopover>
                     <ComposerModelMenu value={modelEntryId} models={state?.models || []} capability={thinkingCapability} loading={thinkingLoading} thinkingLevel={thinkingLevel} onThinkingChange={level => { setThinkingDirty(true);setThinkingLevel(level); }} onRefreshCapability={() => void refreshThinkingCapability()} onChange={id => { if (id !== modelEntryId) { if (thinkingLevel) setNotice("已切换模型，思考强度恢复模型默认。");thinkingRequestId.current+=1;setThinkingCapability(undefined);setThinkingLoading(true);setThinkingLevel(undefined);setThinkingDirty(true);setModelEntryId(id); } }}/>
+                    </div>
+                    <div className="composer-task-controls">
                     <ComposerModeMenu value={agentMode} onChange={setAgentMode}/>
                     <ComposerPermissionMenu value={active?.permissionMode??current?.permissionMode??permissionMode} busy={permissionUpdating} onChange={value=>void changePermissionMode(value)}/>
+                    <ComposerSubagentToggle call={call} onNotice={setNotice}/>
+                    </div>
+                    {active && <div className="composer-runtime-controls">
+                      <button aria-label="加入队列" title="当前一轮结束后按顺序处理；沿用本轮模式、权限与模型" className="composer-supplement" disabled={busy||!draft.trim()||!['queued','running','waiting_user'].includes(active.status)} onClick={()=>void send()}>加入队列</button>
+                    </div>}
+                    </div>
                     {active ? (
-                      <>
-                      <ComposerPopover label={inputDelivery==='steer'?'立即补充':'排队发送'} icon="chat">{close=><><button className="composer-action" type="button" aria-pressed={inputDelivery==='follow_up'} onClick={()=>{setInputDelivery('follow_up');close();}}>排队发送<small>当前工具链结束后处理，可编辑和取消</small></button><button className="composer-action" type="button" aria-pressed={inputDelivery==='steer'} onClick={()=>{setInputDelivery('steer');close();}}>立即补充<small>当前工具结束后处理，不中止任务</small></button></>}</ComposerPopover>
-                      <button aria-label={inputDelivery==='steer'?'立即发出':'加入队列'} title="沿用本轮模式、权限与模型" className="composer-supplement" disabled={busy||!draft.trim()||!['queued','running','waiting_user'].includes(active.status)} onClick={()=>void send()}>{inputDelivery==='steer'?'立即发出':'加入队列'}</button>
                       <button
                         className="send stop" aria-label="停止任务" title="停止任务" disabled={active.status === "cancelling"}
                         onClick={() =>
@@ -2737,7 +2756,7 @@ export function App() {
                         }
                       >
                         <Icon name="stop" size={16}/>
-                      </button></>
+                      </button>
                     ) : (
                       <button
                         aria-label="发送"
@@ -2751,7 +2770,7 @@ export function App() {
                   </div>
                 </div>
                 <div className="footnote">
-                  {active ? `Enter ${inputDelivery==='steer'?'立即补充':'加入队列'} · Shift+Enter 换行` : "Enter 发送 · Shift+Enter 换行"}
+                  {active ? "Enter 加入队列 · Shift+Enter 换行" : "Enter 发送 · Shift+Enter 换行"}
                 </div>
               </div>
             </section>
@@ -2798,12 +2817,12 @@ export function App() {
         ) : (
           <div className={`content-work ${selected ? "with-preview" : ""}`}>
             <div className="page">
-              {["资源", "知识库"].includes(view) && <div className="knowledge-resource-tabs" aria-label="资源视图">{view === "资源" ? <><span className="muted">项目文件</span><button onClick={()=>{setView("知识库");setNotice("");setSelected(undefined);updateBrowserDirectory(undefined);}}>资料集合 →</button></> : <><button onClick={()=>{setView("资源");setNotice("");setSelected(undefined);updateBrowserDirectory(undefined);}}>← 项目文件</button><span className="muted">资料集合</span></>}</div>}
+              {view === "知识库" && <div className="knowledge-resource-tabs" aria-label="资源视图"><button onClick={()=>{setView("资源");setNotice("");setSelected(undefined);updateBrowserDirectory(undefined);}}>← 项目文件</button><span className="muted">资料集合</span></div>}
               {["测试用例", "知识库"].includes(view) && state && (state.root?<>
-                <FeatureProjectScope project={activeProject} projects={projects} root={state.root} disabled={featureProjectSwitching} onChange={id=>void openProject(id,view)}/>
-                {featureProjectSwitching?<p role="status">正在切换项目…</p>:view==="知识库"?<KnowledgeCollections key={state.root} call={call} projectRoot={state.root} onError={setError}/>:<TestCasesPage key={state.root} projectName={activeProject.name} mounts={state.mounts} changes={state.changes} call={call} onError={setError} onOpen={file=>void act(()=>openFile(file))} onDraft={viewChange} onCreate={()=>chooseWorkflow("test_cases")}/>}
+                {view==="知识库"&&<FeatureProjectScope project={activeProject} projects={projects} root={state.root} disabled={featureProjectSwitching} onChange={id=>void openProject(id,view)}/>}
+                {featureProjectSwitching?<p role="status">正在切换项目…</p>:view==="知识库"?<KnowledgeCollections key={state.root} call={call} projectRoot={state.root} onError={setError}/>:<TestCasesPage key={state.root} projectName={activeProject.name} projectScope={<FeatureProjectScope project={activeProject} projects={projects} root={state.root} disabled={featureProjectSwitching} onChange={id=>void openProject(id,view)}/>} mounts={state.mounts} changes={state.changes} call={call} onError={setError} onOpen={file=>void act(()=>openFile(file))} onDraft={viewChange} onCreate={()=>chooseWorkflow("test_cases")}/>}
               </>:<div className="page-heading"><div><h1>{view === "知识库" ? "资料集合" : view}</h1><p className="muted">先选择项目，再查看该项目的{view === "知识库" ? "资料集合" : view}。</p></div><button disabled={featureProjectSwitching} onClick={()=>void openProject("__choose__",view)}>选择项目</button></div>)}
-              {["成果", "资源"].includes(view) && <ProjectResourcesBrowser kind={view === "成果" ? "output" : "resource"} initialProjectId={browserProjectId} navigationKey={browserNavigationKey} call={call} onOpen={file=>act(()=>openFile(file))} onReference={referenceProjectFile} onError={setError} onDirectory={updateBrowserDirectory} onContextMenu={openFolderMenu}/>}
+              {["成果", "资源"].includes(view) && <ProjectResourcesBrowser kind={view === "成果" ? "output" : "resource"} initialProjectId={browserProjectId} navigationKey={browserNavigationKey} call={call} onCollections={view==="资源"?()=>{setView("知识库");setNotice("");setSelected(undefined);updateBrowserDirectory(undefined);}:undefined} onOpen={file=>act(()=>openFile(file))} onReference={referenceProjectFile} onError={setError} onDirectory={updateBrowserDirectory} onContextMenu={openFolderMenu}/>}
               {!["资源", "成果", "测试用例", "知识库"].includes(view) && <div className="page-heading">
                 <div>
                   <span className="eyebrow">项目 · {activeProject.name}</span>

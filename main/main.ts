@@ -25,6 +25,7 @@ import {isHiddenTestProfile} from './test-profile.js';
 import {deterministicDiff} from './pm-workflows.js';
 import {classifyReceipt,ExternalCallError,mcpCall,runCli,validateExecutable} from './integrations.js';
 import {selectionBridge} from './preview.js';
+import {designCatalog,designSourceUrl} from './design-systems.js';
 import {exportMarkdownToWord,listFileVersions,packageHtmlProject,prepareRestoreDraft,readFileVersion,writeAuthorizedBuffer,type ArtifactFileRef} from './artifacts.js';
 import {ProductRecordsRepository,productRecordsWorkspaceIdentity} from './product-records.js';
 import {DecisionRepository,decisionRepositoryKey} from './decision-center.js';
@@ -70,6 +71,7 @@ type ExternalService=Service&{
 };
 
 let win:BrowserWindow;
+let windowClosing=false;
 let service:Service;
 let store:Store;
 let deliveryGate:DeliveryGate;
@@ -342,7 +344,12 @@ async function boot(){
  const devServerUrl=process.env.PM_SLASH_DEV_SERVER_URL?.trim();
  store=new Store(userDataDir);
  attachmentRepository=new AttachmentRepository(userDataDir);
-  service=new Service(store,()=>modelSettings?.defaultCredential()??'',event=>win?.webContents.send('pm:event',event),undefined,{
+  service=new Service(store,()=>modelSettings?.defaultCredential()??'',event=>{
+   // Queue cleanup still persists and journals state after the renderer closes.
+   // Only delivery to a destroyed/closing UI is skipped.
+   if(windowClosing||!win||win.isDestroyed()||win.webContents.isDestroyed())return;
+   win.webContents.send('pm:event',event);
+  },undefined,{
   runReferenceScript,
   runPrototypeAcceptance,
   expectedPrototypeRunnerVersion:PROTOTYPE_BROWSER_VERSION,
@@ -409,6 +416,18 @@ async function boot(){
     case 'knowledgeRevealSource':shell.showItemInFolder(await service.knowledgeSource(request.id,request.chunkId));return{ok:true,data:{revealed:true}};
     case 'knowledgeRemove':return{ok:true,data:await service.knowledgeRemove(request.id)};
     case 'piPackages':return{ok:true,data:{packages:piPackageStatus(),observability:piPackageSettings.view()}};
+    case 'subagentSettingsGet':return{ok:true,data:piPackageSettings.subagents()};
+    case 'subagentSettingsSetEnabled':{
+     const config=piPackageSettings.subagents();
+     const invalid=request.enabled?config.profiles.find(profile=>profile.modelEntryId&&!service.state.models?.some(model=>model.id===profile.modelEntryId&&model.hasKey)):undefined;
+     if(invalid)throw Error(`SUBAGENT_MODEL_UNAVAILABLE: ${invalid.name} 的模型不可用，请在设置中重新选择`);
+     return{ok:true,data:piPackageSettings.setSubagentsEnabled(request.enabled)};
+    }
+    case 'subagentSettingsSave':{
+     const invalid=request.config.enabled?request.config.profiles.find(profile=>profile.modelEntryId&&!service.state.models?.some(model=>model.id===profile.modelEntryId&&model.hasKey)):undefined;
+     if(invalid)throw Error(`SUBAGENT_MODEL_UNAVAILABLE: ${invalid.name} 的模型不可用，请先重新选择或配置密钥`);
+     return{ok:true,data:piPackageSettings.saveSubagents(request.config)};
+    }
     case 'piPlanReviewCancel':return{ok:true,data:await service.cancelPiPlanReview(request.runId)};
     case 'piPlanReviewOpen':return{ok:true,data:await service.openPiPlanReview(request.runId)};
     case 'piObservabilitySave':{
@@ -448,6 +467,7 @@ async function boot(){
     case 'projectBrowse':return{ok:true,data:await service.projectCatalog().browse(request.projectId,request.mountId,request.path)};
     case 'projectReadDocument':return{ok:true,data:await service.projectCatalog().read(request.projectId,request.mountId,request.path)};
     case 'projectRevealFile':shell.showItemInFolder(await service.projectCatalog().resolve(request.projectId,request.mountId,request.path));return{ok:true,data:null};
+    case 'projectOpenDirectory':{const target=await service.projectCatalog().resolveDirectory(request.projectId,request.mountId,request.path),error=await shell.openPath(target);if(error)throw Error(`DIRECTORY_OPEN_FAILED: ${error}`);return{ok:true,data:null};}
      case 'project':{
       let folder=request.path;
       if(!folder&&!request.id)folder=(await dialog.showOpenDialog(win,{title:'选择项目文件夹',properties:['openDirectory','createDirectory']})).filePaths[0];
@@ -466,7 +486,9 @@ async function boot(){
     }
     case 'conversation':return{ok:true,data:service.conversation(request.id,request.title,request.archived)};
     case 'conversationDelete':return{ok:true,data:service.deleteConversation(request.id)};
-    case 'send':return{ok:true,data:await service.send(request.id,request.text,request.mode,request.permissionMode,request.modelEntryId,undefined,undefined,request.taskType,request.attachmentIds,request.workflow,request.thinkingLevel)};
+    case 'designCatalog':return{ok:true,data:designCatalog()};
+    case 'designSourceOpen':await shell.openExternal(designSourceUrl(request.id,request.target));return{ok:true,data:true};
+    case 'send':return{ok:true,data:await service.send(request.id,request.text,request.mode,request.permissionMode,request.modelEntryId,undefined,undefined,request.taskType,request.attachmentIds,request.workflow,request.thinkingLevel,undefined,undefined,request.designReferences)};
     case 'runInputEnqueue':{const{type,...input}=request;return{ok:true,data:service.enqueueRunInput(input)};}
     case 'runInputMutate':{const{type,...input}=request;return{ok:true,data:service.mutateRunInput(input)};}
     case 'runPermissionModeSet':return{ok:true,data:service.setRunPermissionMode(request.conversationId,request.runId,request.permissionMode)};
@@ -515,7 +537,7 @@ async function boot(){
      if(!service.state.defaultModelId)throw Error('未配置默认模型');return{ok:true,data:await testConfiguredModel(service.state.defaultModelId)};
     }
     case 'models':return{ok:true,data:{groups:modelSettings.list(),defaultModelId:service.state.defaultModelId}};
-    case 'modelUpsert':return{ok:true,data:modelSettings.upsert(request.model,request.key)};
+    case 'modelUpsert':return{ok:true,data:await modelSettings.upsertWithCapabilities(request.model,request.key,id=>service.modelThinkingCapability({modelEntryId:id,refresh:true}))};
     case 'modelRemove':return{ok:true,data:{groups:modelSettings.remove(request.id),defaultModelId:service.state.defaultModelId}};
     case 'modelDefault':return{ok:true,data:{defaultModelId:modelSettings.setDefault(request.id)}};
     case 'modelTest':return{ok:true,data:await testConfiguredModel(request.id)};
@@ -866,8 +888,8 @@ async function boot(){
  win.setMenuBarVisibility(false);
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
  win.webContents.on('will-navigate',(event,url)=>{if(url!==win.webContents.getURL())event.preventDefault();});
- win.on('closed',()=>{service.dispose();cancelAllPrototypeAcceptance();});
- app.on('before-quit',()=>{mcpHost?.close();service.dispose();cancelAllPrototypeAcceptance();});
+ win.on('closed',()=>{windowClosing=true;service.dispose();cancelAllPrototypeAcceptance();});
+ app.on('before-quit',()=>{windowClosing=true;mcpHost?.close();service.dispose();cancelAllPrototypeAcceptance();});
  app.on('window-all-closed',()=>{service.dispose();previews.clear();server.close();store.close();app.quit();});
  const startup=installStartupRecovery(win,{dataDir:userDataDir,redact,load:()=>devServerUrl?win.loadURL(devServerUrl):win.loadFile(path.join(here,'../renderer/index.html'))});
  await startup.load();

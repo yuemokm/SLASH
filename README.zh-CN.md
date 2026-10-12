@@ -23,7 +23,6 @@
 - Windows
 - Node.js 24 和 npm
 - Git，用于克隆仓库
-- 本私有仓库的访问权限
 - 执行 AI 任务所需的模型接口和 API 密钥
 
 ```powershell

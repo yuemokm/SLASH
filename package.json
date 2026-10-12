@@ -52,6 +52,7 @@
     "jiti": "2.7.0",
     "mammoth": "^1.12.3",
     "pdf-parse": "2.4.5",
+    "pi-goal-x": "0.32.3",
     "pi-lens": "4.4.0",
     "pi-mcp-adapter": "5.1.0",
     "pi-memory": "0.4.2",

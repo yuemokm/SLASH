@@ -1,0 +1,26 @@
+flowchart TD
+    Req["F02/F03/F10 · PF03/PF05/PF09/PF10"] --> List["Subagent列表 / 全局开关 / 折叠共享预算"]
+    List --> Form["新增或编辑：名称 / 用途 / 模型 / 思考 / 工作指令"]
+    Form --> Dirty{"未保存修改？"}
+    Dirty -->|返回| Choice["继续编辑 或 放弃并返回"]
+    Dirty -->|保存| Schema["稳定ID / 唯一名称 / 指令≤6000 / 受控预算"]
+    Schema --> Failed["失败保留草稿；页头原因与重试"]
+    Schema --> KV["原SettingsStore KV；旧单配置无损迁移通用助手"]
+    Composer["输入底部Subagent开关"] --> Patch["仅改enabled；保留profiles/预算"]
+    Patch --> KV
+    KV --> Run["新Run固定完整快照；在途不变"]
+    Run --> Enabled{"全局启用？"}
+    Enabled -->|否| Disabled["Build/Plan不注册委派工具"]
+    Enabled -->|是| Catalog["工具描述列名称 / 用途 / ID"]
+    Catalog --> Select["可选agentId；省略选默认项"]
+    Select -->|未知ID| Error["明确拒绝，不静默回退"]
+    Select --> Resolve["所选profile模型 / 凭据 / 思考"]
+    Resolve -->|失效| Error
+    Resolve --> Child["固定包真实child；runtime.agent=稳定ID"]
+    Run --> Budget["同Run共享任务 / 并行 / 父总预算"]
+    Budget --> Child
+    Child --> Prompt["宿主规则后追加该项指令；不进入父/其他项"]
+    Prompt --> Gateway["原父网关实时权限 / 来源 / 停止 / 工具预算"]
+    Gateway --> Receipt["agentId / agentName / 实际模型 / 强度 / 状态"]
+    Receipt --> Parent["主任务核对建议；经ChangeSet修改"]
+

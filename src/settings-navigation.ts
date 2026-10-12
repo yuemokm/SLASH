@@ -1,10 +1,11 @@
-export type SettingsTab = "models" | "policies" | "connections" | "permissions" | "workspace" | "archive" | "general" | "prompt" | "skills";
+export type SettingsTab = "models" | "policies" | "connections" | "permissions" | "workspace" | "archive" | "general" | "prompt" | "skills" | "subagents";
 export type SettingsAdvancedGroup = "routing" | "assistance" | "sharing" | "manual";
 export type SettingsItem = { id: string; label: string; tab: SettingsTab; keywords: string; advanced?: SettingsAdvancedGroup };
 
 // Search describes actual controls. Each result also owns its destination so
 // moving a setting does not leave a second, category-only search inventory.
 export const settingsItems: SettingsItem[] = [
+  { id: "subagents", label: "Subagent 配置", tab: "subagents", keywords: "子代理 子agent subagent 委派 模型 思考 并行 研究 检查 提示词 工作指令" },
   { id: "appearance", label: "界面主题", tab: "general", keywords: "通用 外观 经典瓷白 石墨深色 柔和米色" },
   { id: "system-prompt", label: "系统提示词与回答规范", tab: "prompt", keywords: "默认 提示词 格式规范 中文 编辑 保存 恢复默认 任务" },
   { id: "global-skills", label: "skills", tab: "skills", keywords: "全局技能 skill skills SKILL.md 安装 导入 GitHub 更新 启用 禁用 卸载 设计 方法" },

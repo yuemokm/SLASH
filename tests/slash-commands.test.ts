@@ -4,9 +4,10 @@ import {applySlashCommand,matchingSlashCommands} from '../src/slash-commands.js'
 import {resolveComposerIntent} from '../src/composer-intent.js';
 import {searchSettings,settingsDestination} from '../src/settings-navigation.js';
 
-test('slash skill names remain distinct from builtins; name/description filtering includes explicit-only skills',()=>{
+test('slash menu keeps real skills and system commands without PM prompt shortcuts',()=>{
  const skill={name:'review',description:'手动核对资料',scope:'global' as const,mountId:'g',path:'SKILL.md',contentHash:'hash',disableModelInvocation:true};
- const all=matchingSlashCommands('/',[skill]);assert.equal(all[0].command,'/skill:review');assert.ok(all.some(item=>item.command==='/review'));assert.ok(all.some(item=>item.command==='/skill:review'));
+ const all=matchingSlashCommands('/',[skill]);assert.deepEqual(all.map(item=>item.command),['/skill:review','/plan','/help']);assert.deepEqual(matchingSlashCommands('/review',[skill]).map(item=>item.command),['/skill:review']);
+ for(const command of ['/prd','/prototype','/research'])assert.deepEqual(matchingSlashCommands(command,[skill]),[]);
  assert.deepEqual(matchingSlashCommands('/手动',[skill]).map(item=>item.command),['/skill:review']);assert.equal(matchingSlashCommands('/nothing',[skill]).length,0);
  assert.equal(applySlashCommand('/','/skill:review'),'/skill:review ');assert.equal(applySlashCommand(' /rev 保留任务\n与资料','/skill:review'),'/skill:review 保留任务\n与资料');
  assert.equal(resolveComposerIntent({draft:'/skill:review 核对',workflowKind:'meeting',view:'会话'}).kind,undefined);

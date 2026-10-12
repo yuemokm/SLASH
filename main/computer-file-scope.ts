@@ -1,4 +1,10 @@
 import path from 'node:path';
+import type {Mount,PermissionMode} from '../shared/types.js';
+
+/** Instructions for fresh readonly contexts, not an authorization token. */
+export function computerReadContext(scope:string|undefined,mode:PermissionMode|undefined,mounts:Mount[]){
+ return `宿主当前权限：${mode??'standard'}；电脑文件scope=${scope??'不可用'}。当前完全访问可通过search_files的精确绝对directory访问项目外目录，省略mountId时宿主绑定此scope；shallow=true只列直接子文件与子目录（entryType=directory仅路径元数据，正文0字符），query为空列举。read_file用此scope与绝对path，或原样复用search_files返回的规范化mountId/path。标准/自动接受仍限授权目录。明确deny/禁用、只读及参考原件保护仍生效；本段只说明调用方式，实际授权逐次实时核对，不能沿用已撤销权限。当前已登记目录：${JSON.stringify(mounts.filter(m=>m.enabled).map(({id,name,path})=>({id,name,path})))}。`;
+}
 
 /** Conversation-bound virtual references. They are never persisted as indexed mounts. */
 export function computerScopeId(conversationId:string){

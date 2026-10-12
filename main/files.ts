@@ -75,10 +75,12 @@ export class Files {
  }
  /** Import may add a new file to references, never edit an existing file. */
  async importDirectory(id:string,relative:string){const target=await this.resolve(id,relative,'import');if(!(await fs.stat(target)).isDirectory())throw Error('IMPORT_TARGET_UNAVAILABLE: 导入目标不是目录');return target;}
- private async listWithCoverage(query='',mountId?:string,directory?:string){
+ private async listWithCoverage(query='',mountId?:string,directory?:string,shallow=false){
   const out:FileRef[]=[],limitations:EvidenceSearchLimitation[]=[];let truncated=false,limitationCount=0;
   const warn=(code:string,message:string)=>{limitationCount++;if(limitations.length<50)limitations.push({code,message});};
   const computer=mountId?.startsWith('computer:');
+  if(directory&&!mountId)throw Error('SEARCH_DIRECTORY_SCOPE_REQUIRED: 指定directory必须绑定当前目录身份');
+  if(shallow&&!directory)throw Error('SEARCH_DIRECTORY_REQUIRED: 浅层浏览必须指定directory');
   if(computer&&!directory)throw Error('COMPUTER_DIRECTORY_REQUIRED: 电脑检索必须指定精确directory，不自动扫描全盘');
   if(mountId&&!computer&&!this.mounts().some(mount=>mount.id===mountId&&mount.enabled))throw Error('PERMISSION_DENIED: 检索目录未授权');
   const mounts:Mount[]=computer?[{id:computerScopeId(computerReference(mountId!,directory!)!.conversationId),path:await this.resolve(mountId!,directory!),name:'电脑指定目录',enabled:true,write:false}]:this.mounts().filter(mount=>mount.enabled&&(!mountId||mount.id===mountId)).slice().sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0);
@@ -92,18 +94,18 @@ export class Files {
      if(out.length>=3000){truncated=true;return;}
      if(e.isSymbolicLink()||skipped.has(e.name))continue;
      const p=path.join(dir,e.name);
-     if(e.isDirectory())await walk(p,depth+1);
+     if(e.isDirectory()&&!shallow)await walk(p,depth+1);
      else{
       const rel=computer?p:path.relative(m.path,p);
-      try{const resolved=await this.resolve(m.id,rel);const s=await fs.stat(p);if(!query||rel.toLowerCase().includes(query.toLowerCase())){const ref=this.reference(m.id,rel);out.push({...ref,size:s.size,referenceProtected:await this.isReferencePath(p)});versions.push({...ref,size:s.size,mtimeMs:s.mtimeMs,ctimeMs:s.ctimeMs,ino:s.ino,resolved});}}
+      try{const resolved=await this.resolve(m.id,rel);const s=await fs.stat(p);if(!query||rel.toLowerCase().includes(query.toLowerCase())){const ref=this.reference(m.id,rel);out.push({...ref,size:s.size,referenceProtected:await this.isReferencePath(p),...(shallow?{entryType:e.isDirectory()?'directory' as const:'file' as const}:{})});versions.push({...ref,size:s.size,mtimeMs:s.mtimeMs,ctimeMs:s.ctimeMs,ino:s.ino,resolved});}}
       catch{warn('SEARCH_FILE_UNAVAILABLE','有文件已变化或当前不可授权读取，未纳入检索');}
      }
     }
    };
-   if(out.length>=3000){truncated=true;break;}await walk(m.path,0);
+   if(out.length>=3000){truncated=true;break;}await walk(!computer&&directory?await this.resolve(m.id,directory):m.path,0);
   }
-  if(truncated&&out.length>=3000)warn('SEARCH_LIST_LIMIT','目录扫描达到 3000 文件上限，其余资料尚未列出');
-  const version=hash(JSON.stringify({mounts:mounts.map(({id,path,enabled,write})=>({id,path,enabled,write})),versions}));
+  if(truncated&&out.length>=3000)warn('SEARCH_LIST_LIMIT',`目录扫描达到 3000 ${shallow?'条目':'文件'}上限，其余资料尚未列出`);
+  const version=hash(JSON.stringify({mounts:mounts.map(({id,path,enabled,write})=>({id,path,enabled,write})),directory,shallow,versions}));
   return{files:out,truncated,limitations,limitationCount,version};
  }
  async list(query='',scope?:{mountId:string;directory:string}){return(await this.listWithCoverage(query,scope?.mountId,scope?.directory)).files;}
@@ -153,7 +155,7 @@ export class Files {
   const computer=options?.mountId?.startsWith('computer:');
   if(options?.mountId)await this.resolve(options.mountId,computer?options.directory??'':'.');
   const initialMounts=this.mounts().filter(mount=>mount.enabled&&(!options?.mountId||mount.id===options.mountId)).map(mount=>({...mount}));
-  const listing=await this.listWithCoverage('',options?.mountId,options?.directory);
+  const listing=await this.listWithCoverage('',options?.mountId,options?.directory,options?.shallow);
   const authorized=async(file:FileRef)=>{if(!computer){const before=initialMounts.find(mount=>mount.id===file.mountId),current=this.mounts().find(mount=>mount.id===file.mountId&&mount.enabled);if(!before||!current||before.path!==current.path||before.write!==current.write)throw Error('SEARCH_ACCESS_CHANGED: 检索目录授权已变化');}await this.resolve(file.mountId,file.path);};
   const searchOptions=computer?{...options,mountId:this.reference(options!.mountId!,options!.directory!).mountId}:options;
   return searchEvidenceFiles(listing.files,query,{read:file=>this.read(file.mountId,file.path),authorized},searchOptions,{truncated:listing.truncated,limitations:listing.limitations,limitationCount:listing.limitationCount,version:listing.version});

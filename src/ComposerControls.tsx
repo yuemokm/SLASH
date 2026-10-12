@@ -2,6 +2,7 @@ import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "reac
 import { createPortal } from "react-dom";
 import { Icon, type IconName } from "./Icon";
 import type { ModelEntry, ModelThinkingCapability, ThinkingLevel as SharedThinkingLevel } from "../shared/types";
+import { adjustableThinking } from "./composer-thinking";
 
 export type ThinkingLevel = SharedThinkingLevel;
 export type ThinkingCapability = ModelThinkingCapability;
@@ -23,7 +24,7 @@ export function ComposerPermissionMenu({ value, onChange, busy = false }: { valu
  return <ComposerPopover label="权限" text={options.find(option => option.value === value)?.label} icon="shield">{close => <><div className="composer-popover-heading">权限</div><div role="radiogroup" aria-label="权限">{options.map(option => <button type="button" role="radio" aria-checked={value === option.value} className="composer-choice" key={option.value} disabled={busy} onClick={() => { onChange(option.value);close(); }}><span><b>{option.label}</b><small>{option.description}</small></span>{value === option.value && <Icon name="check" size={15}/>}</button>)}</div><p className="composer-permission-note">可访问电脑文件，不限项目目录；不会提升 Windows 身份。明确禁止始终优先。</p></>}</ComposerPopover>;
 }
 
-export function ComposerPopover({ label, text, icon, className = "", children }: { label: string; text?: string; icon: IconName; className?: string; children: (close: () => void) => React.ReactNode }) {
+export function ComposerPopover({ label, text, icon, className = "", children, onOpen }: { label: string; text?: string; icon: IconName; className?: string; children: (close: () => void) => React.ReactNode; onOpen?: () => void }) {
  const [open, setOpen] = useState(false);
  const [position, setPosition] = useState({ top: 0, left: 12, width: 340, maxHeight: 320 });
  const root = useRef<HTMLSpanElement>(null), trigger = useRef<HTMLButtonElement>(null), popup = useRef<HTMLDivElement>(null), id = useId();
@@ -48,7 +49,7 @@ export function ComposerPopover({ label, text, icon, className = "", children }:
   document.addEventListener("pointerdown", outside);return () => document.removeEventListener("pointerdown", outside);
  }, [open]);
  return <span className={`composer-popover-root ${className}`} ref={root} onKeyDown={event => { if (open && event.key === "Escape") { event.preventDefault();event.stopPropagation();close(); } }}>
-  <button ref={trigger} className={`composer-light-trigger ${open ? "open" : ""}`} type="button" aria-label={label} title={label} aria-expanded={open} aria-haspopup="dialog" aria-controls={id} onClick={() => setOpen(value => !value)}><Icon name={icon} size={16}/>{text && <span>{text}</span>}{text && <Icon name="chevronDown" size={12}/>}</button>
+  <button ref={trigger} className={`composer-light-trigger ${open ? "open" : ""}`} type="button" aria-label={label} title={label} aria-expanded={open} aria-haspopup="dialog" aria-controls={id} onClick={() => {if(!open)onOpen?.();setOpen(value => !value);}}><Icon name={icon} size={16}/>{text && <span>{text}</span>}{text && <Icon name="chevronDown" size={12}/>}</button>
   {open && createPortal(<div ref={popup} id={id} role="dialog" aria-label={label} className="composer-control-popover" style={position} onKeyDown={event => {
    if (event.key === "Escape") { event.preventDefault();event.stopPropagation();close(); }
    if ((event.key === "ArrowDown" || event.key === "ArrowUp") && (event.target as HTMLElement).tagName !== "INPUT") {
@@ -60,24 +61,31 @@ export function ComposerPopover({ label, text, icon, className = "", children }:
 }
 
 export function ComposerModelMenu({ value, models, onChange, capability, thinkingLevel, onThinkingChange, loading, onRefreshCapability }: { value: string; models: ModelEntry[]; onChange: (id: string) => void; capability?: ThinkingCapability; thinkingLevel?: ThinkingLevel; onThinkingChange: (level?: ThinkingLevel) => void; loading: boolean; onRefreshCapability: () => void }) {
+ const [query,setQuery]=useState("");
  const selected = models.find(model => model.id === value), resolved = models.find(model => model.id === capability?.modelEntryId);
- const supported = !loading && capability?.status === "supported" && capability.levels.length > 1;
- const levels = supported ? capability.levels : [], effective = thinkingLevel || capability?.defaultLevel || levels[0], index = Math.max(0, levels.indexOf(effective));
- return <ComposerPopover label="选择模型" text={`${selected?.name || "自动"}${thinkingLevel && !loading ? ` · ${thinkingLabels[thinkingLevel]}` : ""}`} icon="model" className="composer-model-select">{() => <>
-  <div className="composer-popover-heading">模型</div>
-  <div role="listbox" aria-label="选择模型" className="composer-model-list">
-   <button type="button" role="option" aria-selected={!value} onClick={() => onChange("")}><span><b>自动 · 按设置选择</b><small>{resolved ? `当前：${resolved.provider} · ${resolved.name}` : "使用模型分工设置或默认模型"}</small></span>{!value && <Icon name="check" size={15}/>}</button>
-   {Array.from(new Set(models.map(model => model.provider))).map(provider => <React.Fragment key={provider}><div className="composer-select-group" role="presentation">{provider}</div>{models.filter(model => model.provider === provider).map(model => <button type="button" key={model.id} role="option" aria-selected={value === model.id} onClick={() => onChange(model.id)}><span><b>{model.name}</b><small>{model.modelId}</small></span>{value === model.id && <Icon name="check" size={15}/>}</button>)}</React.Fragment>)}
+ const supported = adjustableThinking(capability,loading);
+ const levels = supported ? capability?.levels || [] : [], effective = thinkingLevel || capability?.defaultLevel || levels[0], index = Math.max(0, levels.indexOf(effective));
+ const matches=models.filter(model=>[model.provider,model.name,model.modelId].some(text=>text.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())));
+ const choose=(id:string,close:()=>void)=>{onChange(id);setQuery("");close();};
+ return <span className="composer-model-controls"><ComposerPopover label="选择模型" text={selected?.name || "自动"} icon="model" className="composer-model-select" onOpen={()=>setQuery("")}>{close => <>
+  <div className="composer-popover-heading">模型 · 已添加 {models.length} 个</div>
+  <input className="composer-model-search" type="search" aria-label="搜索已添加模型" placeholder="搜索模型或供应商" value={query} onChange={event=>setQuery(event.target.value)}/>
+  <div role="listbox" aria-label="选择模型" className="composer-model-list composer-model-catalog">
+   <button type="button" role="option" aria-selected={!value} onClick={() => choose("",close)}><span><b>自动 · 按设置选择</b><small>{resolved ? `当前：${resolved.provider} · ${resolved.name}` : "使用模型分工设置或默认模型"}</small></span>{!value && <Icon name="check" size={15}/>}</button>
+   {Array.from(new Set(matches.map(model => model.provider))).map(provider => <React.Fragment key={provider}><div className="composer-select-group" role="presentation">{provider}</div>{matches.filter(model => model.provider === provider).map(model => <button type="button" key={model.id} role="option" aria-selected={value === model.id} onClick={() => choose(model.id,close)}><span><b>{model.name}</b><small>{model.modelId}</small></span>{value === model.id && <Icon name="check" size={15}/>}</button>)}</React.Fragment>)}
+   {!matches.length&&<p className="composer-model-empty">{models.length?"没有匹配的模型":"还没有添加模型，请在设置中添加。"}</p>}
   </div>
+ </>}</ComposerPopover>{supported&&<ComposerPopover label="思考强度" text={thinkingLevel?thinkingLabels[effective]:"思考强度"} icon="settings">
+ {()=><>
   <section className="composer-thinking" aria-label="模型思考强度">
    <div className="composer-thinking-heading"><b>思考强度</b>{supported && <span aria-live="polite">{thinkingLevel ? thinkingLabels[effective] : capability?.defaultLevel ? `默认 · ${thinkingLabels[capability.defaultLevel]}` : "模型默认"}</span>}</div>
-   {loading ? <p role="status">正在读取模型支持的档位…</p> : supported ? <>
+   <>
     <div className="thinking-slider-wrap"><div className="thinking-slider-track"><i style={{ transform: `scaleX(${levels.length > 1 ? index / (levels.length - 1) : 0})` }}/>{levels.map((level, stop) => <span key={level} style={{ left: `${stop / (levels.length - 1) * 100}%` }}/>)}</div><input type="range" aria-label="思考强度" aria-valuetext={thinkingLabels[levels[index]]} min={0} max={levels.length - 1} step={1} value={index} onChange={event => onThinkingChange(levels[Number(event.target.value)])}/></div>
     <div className="thinking-slider-labels"><span>{thinkingLabels[levels[0]]}</span><span>{thinkingLabels[levels[levels.length - 1]]}</span></div>
     <p>更深入的思考可能需要更长时间。<button type="button" aria-pressed={!thinkingLevel} onClick={() => onThinkingChange(undefined)}>默认</button></p>
-   </> : <p>{capability?.status === "supported" && capability.levels.length === 1 ? `固定档位：${thinkingLabels[capability.levels[0]]}（不可调整）` : capability?.status === "unsupported" ? "这个模型不提供可调整的思考档位。" : "上游未提供可识别的思考档位"}</p>}
+   </>
    <p className="thinking-capability-source">{capability?.source === "provider-model-metadata" ? "供应商信息" : capability?.source.startsWith("pi-catalog") ? "内置能力信息" : "待确认"}{capability?.stale && " · 信息可更新"}<button type="button" disabled={loading} onClick={onRefreshCapability}>重新检测</button></p>
    {!loading && capability?.reason && <details className="thinking-capability-detail"><summary>能力说明</summary><p>{capability.reason}</p></details>}
   </section>
- </>}</ComposerPopover>;
+ </>}</ComposerPopover>}</span>;
 }

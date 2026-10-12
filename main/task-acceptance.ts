@@ -11,6 +11,8 @@ import {verifyContentReviewReceipt} from './content-review.js';
 import type {TaskPrdTemplate} from '../shared/prd-template.js';
 import {checkPrdTemplate,prdTemplateSnapshotValid,PRD_TEMPLATE_STRUCTURE_VERSION,eligiblePrdTemplateOutputs} from './prd-template.js';
 import {taskAcceptanceOptionalSchema,type TaskAcceptanceOptionalInput} from '../shared/task-acceptance.js';
+import {goalReviewReceiptSchema,type GoalReviewReceipt} from '../shared/pi-goal-review.js';
+import {goalReviewInputHash,refreshGoalReview} from './pi-goal-review.js';
 
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 const clone=<T>(value:T):T=>structuredClone(value);
@@ -97,6 +99,13 @@ export class TaskAcceptanceDomain {
   const report=clone(original);report.id=randomUUID();report.automaticStatus=original.automaticStatus??original.status;report.visualReview=receipt?clone(receipt):undefined;report.visualReviewRequired=true;report.visualReviewNotice=reason;report.checkedAt=this.now();this.visualStatus(report);const current=await this.refresh(report);this.guard(contract.workspaceId,true);const reports=this.storedReports(runId);reports.unshift(current);this.deps.store.set(reportKey(contract.workspaceId,runId),reports.slice(0,TASK_ACCEPTANCE_LIMITS.reports));return clone(current);
  }
  private visualStatus(report:TaskAcceptanceReport){if(!report.visualReviewRequired||report.status==='failed')return;const review=report.visualReview;report.status=review?.versionState==='current'&&review.findings.length?'needs_human':'unverified';report.summary=report.status==='needs_human'?'截图视觉审查提出局部UI候选，仍需核对':'自动检查已记录；截图视觉只覆盖局部或尚未验证';}
+ /** Host-only supplementary completion review. It cannot upgrade a business verdict. */
+ async attachGoalReview(runId:string,reportId:string,value:GoalReviewReceipt){
+  const receipt=goalReviewReceiptSchema.parse(value),original=this.storedReports(runId).find(report=>report.id===reportId);if(!original)throw Error('TASK_ACCEPTANCE_REPORT_NOT_FOUND');const contract=this.read(runId);
+  if(receipt.runId!==runId||receipt.contractHash!==contract.contractHash||receipt.inputHash!==goalReviewInputHash(contract,original))throw Error('PI_GOAL_REVIEW_BINDING_MISMATCH');
+  const report=clone(original);report.id=randomUUID();report.goalReview=clone(receipt);report.checkedAt=this.now();const current=await this.refresh(report);this.guard(contract.workspaceId,true);const reports=this.storedReports(runId);reports.unshift(current);this.deps.store.set(reportKey(contract.workspaceId,runId),reports.slice(0,TASK_ACCEPTANCE_LIMITS.reports));return clone(current);
+ }
+ private goalReviewStatus(report:TaskAcceptanceReport){const review=report.goalReview;if(!review||report.status==='failed')return;if(review.versionState!=='current'||review.status==='unverified'){if(report.status==='passed')report.status='unverified';report.summary='已有检查已记录；目标完成核对尚未验证';}else if(review.status==='disapproved'){report.status='needs_human';report.summary='目标完成核对提出待确认问题，仍需人工核对';}else if(!report.summary.includes('目标完成核对未发现具体缺项'))report.summary+='；目标完成核对未发现具体缺项';}
  private storedReports(runId:string){const contract=this.read(runId);return clone(this.deps.store.get<TaskAcceptanceReport[]>(reportKey(contract.workspaceId,runId),[]));}
  listReports(runId:string){return this.storedReports(runId);}
  /** Separate immutable anchor survives the bounded report history. Legacy missing anchors are unknown. */
@@ -170,7 +179,7 @@ export class TaskAcceptanceDomain {
   if(view.contentReview){try{if(!this.deps.refreshContentReview)throw Error('CONTENT_REVIEW_REFRESH_UNAVAILABLE');view.contentReview=await this.deps.refreshContentReview(clone(view.contentReview));this.guard(workspaceId,false,signal);if(view.contentReview.versionState==='unavailable')state='unavailable';else if(view.contentReview.versionState==='stale'&&state!=='unavailable')state='stale';}catch{this.guard(workspaceId,false,signal);state='unavailable';view.contentReviewNotice='当前内容审查的成果或来源绑定无法核对，旧引文与意见已隐藏';const {resultHash:_,...body}=clone(view.contentReview);body.versionState='unavailable';body.status='unverified';delete body.isolatedRepair;body.findings=[];body.invalidFindings=[];body.coverage=undefined;body.coverageLimits=['当前成果或来源无法授权读取，历史内容审查引文已隐藏'];body.diagnostics=['当前绑定无法核对，不能使用旧审查意见'];body.sources=[];view.contentReview={...body,resultHash:digest(JSON.stringify(body))};}this.reviewStatus(view);}
   if(view.visualReview){try{if(!verifyVisualReview(view.visualReview)||!this.deps.refreshVisualReview)throw Error('VISUAL_REVIEW_REFRESH_UNAVAILABLE');view.visualReview=await this.deps.refreshVisualReview(clone(view.visualReview));this.guard(workspaceId,false,signal);if(view.visualReview.versionState==='unavailable')state='unavailable';else if(view.visualReview.versionState==='stale'&&state!=='unavailable')state='stale';}catch{this.guard(workspaceId,false,signal);state='unavailable';view.visualReview=hideVisualReview(view.visualReview,'unavailable','当前授权、截图或成果无法核对，旧视觉意见已隐藏');}if(state!=='current')view.visualReview=hideVisualReview(view.visualReview,state,'成果、依赖、输入或截图已变化/不可用，旧视觉意见已隐藏');}
   this.visualStatus(view);
-  this.guard(workspaceId,false,signal);view.versionState=state;view.versionReasons=[...reasons];if(state!=='current'&&view.status==='passed'){view.status='unverified';view.summary=state==='stale'?'检查记录已过期，当前版本尚未验证':'当前成果或依据无法核对，尚未验证';}return view;
+  this.guard(workspaceId,false,signal);view.versionState=state;view.versionReasons=[...reasons];if(view.goalReview){view.goalReview=refreshGoalReview(view.goalReview,contract,view);this.goalReviewStatus(view);}if(state!=='current'&&view.status==='passed'){view.status='unverified';view.summary=state==='stale'?'检查记录已过期，当前版本尚未验证':'当前成果或依据无法核对，尚未验证';}return view;
  }
  async getReport(runId:string,reportId?:string){const report=this.storedReports(runId).find(r=>!reportId||r.id===reportId);return report?this.refresh(report):undefined;}
  async get(runId:string):Promise<TaskAcceptanceView>{const contract=this.read(runId),reports=this.storedReports(runId);return{contract,latestReport:reports[0]?await this.refresh(reports[0]):undefined,reports:reports.map(r=>({id:r.id,status:r.status,checkedAt:r.checkedAt})),optionalScope:this.optionalScope(runId),notice:TASK_ACCEPTANCE_NOTICE};}

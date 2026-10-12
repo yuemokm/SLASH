@@ -7,6 +7,18 @@ import {TaskAcceptanceRecheck} from './TaskAcceptanceRecheck';
 
 const visualCategories={overlap:'遮挡',clipping:'裁切',legibility:'可读性',spacing:'间距',alignment:'对齐',hierarchy:'视觉层级'} as const;
 
+export function TaskGoalReviewStatus({report}:{report:Pick<TaskAcceptanceReport,'goalReview'|'versionState'>}){
+ const review=report.goalReview;if(!review)return null;
+ const current=report.versionState==='current'&&review.versionState==='current';
+ const label=!current?'当前版本已失效':review.status==='approved'?'未提出完成缺口':review.status==='disapproved'?'有待核对的完成缺口':'尚未完整完成';
+ const tokens=review.usage.reduce<number>((sum,value)=>sum+(typeof value==='object'&&value!==null&&'totalTokens' in value&&typeof value.totalTokens==='number'?value.totalTokens:0),0);
+ return <details className="task-visual-review"><summary>目标完成核对 · {label}</summary>
+  <p className="muted">完成意见仍需核对，不能代替业务验收或交付确认。</p>
+  <p className="muted">{review.model} · {(review.durationMs/1000).toFixed(1)} 秒{tokens?` · 已记录 ${tokens} tokens`:''}</p>
+  {current?<>{review.output&&<p style={{whiteSpace:'pre-wrap'}}>{review.output}</p>}{review.error&&<p className="muted" role="status">{review.error}</p>}</>:<p className="muted">成果、资料或任务要求已变化，旧核对意见已隐藏，需要重新检查当前版本。</p>}
+ </details>;
+}
+
 /** Historical or inaccessible evidence must never look like a current visual verdict. */
 export function TaskVisualReviewStatus({report}:{report:Pick<TaskAcceptanceReport,'versionState'|'visualReview'|'visualReviewRequired'|'visualReviewNotice'|'targets'>}){
  const review=report.visualReview;
@@ -53,6 +65,7 @@ export function TaskAcceptanceStatus({run,call}:{run:Run;call:(request:Request)=
     {report.contentReviewNotice&&report.contentReview&&<p className="muted">{report.contentReviewNotice}</p>}
    </details>}
    <TaskVisualReviewStatus report={report}/>
+   <TaskGoalReviewStatus report={report}/>
    <details open={failures.length>0}><summary>具体问题与未验证项 · {failures.length}</summary>{failures.length?<ul>{failures.map((item,index)=><li key={`${item.criterionId}-${index}`}><b>{({failed:'未通过',unverified:'未验证',needs_human:'需人工判断',passed:'通过'} as Record<string,string>)[item.status]}</b> · {item.reason}{item.baselineId&&<small> · 原有用例回归</small>}{item.evidence.flatMap(e=>e.quality?.issues.filter(i=>i.severity==='blocking')??[]).map((issue,i)=><p className="muted" key={i}>{issue.line?`第 ${issue.line} 行：`:''}{issue.message}</p>)}</li>)}</ul>:<p className="muted">已执行的具体检查未发现失败；完整业务和视觉质量仍需核对。</p>}</details>
    <details><summary>成果与来源版本 · {report.targets.length} 份成果 · {report.sources.length} 份来源</summary><ul>{report.targets.map(o=><li key={o.id}>{o.target.path} · {o.target.source==='draft'?'尚未保存草稿':'正式成果'}<small> · {o.target.contentHash.slice(0,12)}</small></li>)}{report.sources.map((s,index)=><li key={index}>{s.path} · {s.truncated?'部分正文':'来源回执'}<small> · {s.contentHash.slice(0,12)}</small></li>)}</ul></details>
    <details><summary>原有用例回归 · {report.regression.length}</summary>{report.regression.length?<ul>{report.regression.map((r,index)=><li key={index}>{r.reason} · {r.status==='passed'?'具体断言通过':r.status==='failed'?'未通过':'尚未完整验证'}</li>)}</ul>:<p className="muted">本任务没有可冻结的已有关键用例；不表示旧流程已验证。</p>}</details>

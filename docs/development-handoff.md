@@ -1,5 +1,19 @@
 # slash AI 开发交付规范
 
+2026-10-13 F02/F03/F10、PF03/PF08/PF09/PF10：输入工具栏分组、固定发送/停止和顶部队列已接原真实 RunInputQueue；默认 follow_up，立即单条不污染后续发送方式。修复已销毁窗口仍收队列清理通知及重复 dispose，真实活动队列关窗自然退出0、原文持久化通过。检查、实际 Electron/Pi 证据及夹具失败记录见[本轮交付](composer-toolbar-and-queue-2026-10-13.md)与同名 Mermaid；主进程修复需重启，未打包。
+
+2026-10-13 F02/F10、PF01/PF03/PF08/PF09：四个浏览页与会话/设置紧凑字号已实现；只读本机Codex CSS参照，UI14/辅助12/聊天14/页题20。真实Electron、首行CSS y对照、17项定向和检查边界见[本轮记录](compact-workspace-typography-2026-10-13.md)及同名Mermaid。保留未提交功能与用户数据，未打包。
+
+2026-10-13 F02/F10、PF01/PF08/PF09：图片按可信ID绑定固定来源：152原组件截图、33官方poster，3项明确无图；本地静态资源、哈希验收、大图/来源入口见[本轮记录](design-preview-source-images-2026-10-13.md)及同名Mermaid。原正文/hash未变；主进程更新需重启。
+
+2026-10-12 Subagent 最新交接：列表与独立新增/编辑页、工作指令和 composer 总开关已接真实配置；profiles/defaultAgentId schema 兼容无损迁移旧单配置，delegate_readonly 可选 agentId，未知项拒绝，共享 Run 预算与启动快照。enabled-only IPC 不覆盖配置；所有启用项模型须有效。代码、检查、失败排错及截图在[Subagent 交付记录](subagent-settings-2026-10-12.md)/同名 Mermaid，覆盖旧单配置设计；主进程/IPC修改需重启开发应用，未打包。
+
+2026-10-12 最新导航收口：设计体系为左侧同级主导航和独立宽页，右上/右栏设计入口删除；应用返回原会话且未发文字/引用保留。Slash四项PM提示词预设及同链隐藏解析移除，真实skills、plan/help、业务工作流和历史保留。check/build、12项定向、隔离Electron设计/命令11组、真实Service/IPC skills UI六组通过；桌面主审截图通过，390px页面响应验证不代表隐藏侧栏可访问。交付与Mermaid见[设计导航与命令收减](design-navigation-and-command-cleanup-2026-10-12.md)。本轮仅renderer变化，无新云质量验收、无便携打包，既有未提交工作保留。
+
+2026-10-12 完全访问目录浏览修复：绝对directory省略mountId由宿主绑定原电脑scope；shallow列直接子文件/空目录，已登记子directory实际限定范围；文件/目录类型及coverage分开，目录不登记正文。真实Pi父/子Agent及旧IPC子任务复用原Files/网关，标准/自动拒绝、Plan只读、模式切换/撤权/deny/禁用及原件/版本/锁保留。60/60定向、check/build通过，16次本机Pi协议请求、无云模型/永久挂载/用户资料读取，未打包。详细证据、夹具失败及未验边界见[说明](full-access-directory-browsing-2026-10-12.md)/[mmd](full-access-directory-browsing-2026-10-12.mmd)；重启开发应用生效。
+
+2026-10-12 增量交接：已实现[子 Agent 设置](subagent-settings-2026-10-12.md)与[右侧设计体系](design-systems-delivery-2026-10-12.md)，对应契约、代码、定向验收、截图和 Mermaid 见两份交付文档。子模型凭据由宿主解析，模型失效不静默回退；保持受控只读子任务与既有 Pi 底座。设计库按选定ID/hash加载，聊天只展示有色描边集合小卡，不平铺模板全文，Plan/恢复继承引用并拒绝过期版本。真实云模型设计质量与外部渠道仍未验证；未打包、未改用户数据，重启开发应用后查看。本条不登记最终集成检查结果，待统一构建负责人单独回报。
+
 2026-10-12 PF10：开发 BAT 原生退出 `0xC0000409` 未重现、具体原因未证实；启动器补同步阶段/PID/退出码及本地有界日志，BAT失败指向诊断文件。21/21定向与check通过，用户最新默认5173双击确认窗口可用；旧隔离截图仅加载壳，不作视觉通过。见[事实与边界](dev-startup-native-diagnostics-2026-10-12.md)及[mmd](dev-startup-native-diagnostics-2026-10-12.mmd)。未打包。
 
 2026-10-12 用户明确目录读取修复：fresh 完全访问请求中的精确资料文件夹沿既有工作空间目录路径登记只读范围，显式禁止/禁用、Plan只读、真实根身份、恢复不重新授权保留；权限与恢复组合29/29、新目录与索引12/12、既有索引4/4，真实Service在独立profile列举用户指定7文件并核原字节不变，未调用付费模型或重跑原PRD任务。npm run check/build均0，未打包；新增回复Markdown呈现指导仅作用于聊天。最终证据与失败日志区分见 [说明](full-access-explicit-read-directory-2026-10-12.md) / [mmd](full-access-explicit-read-directory-2026-10-12.mmd)。主进程修改后需重启根BAT。

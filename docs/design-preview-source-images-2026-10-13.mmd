@@ -1,0 +1,16 @@
+flowchart LR
+  Source[固定commit的OpenDesign来源] --> Components[152个实际components HTML]
+  Source --> Manifest[官方预览manifest]
+  Components --> Capture[维护脚本<br/>禁脚本 禁网络<br/>离线首屏截图]
+  Manifest --> Posters[33个对应官方poster原字节]
+  Capture --> Registry[图片路径 类型 来源URL 源哈希 图片哈希]
+  Posters --> Registry
+  Missing[3个无官方对应poster] --> Empty[明确无图<br/>保留来源入口]
+  Registry --> Public[本地静态图片]
+  Public --> Page[设计体系列表<br/>懒加载 完整比例 失败反馈]
+  Page --> Large[原生dialog大图<br/>Escape与关闭按钮]
+  Page --> ID[注册ID与来源类型]
+  ID --> Host[宿主固定URL解析与打开]
+  Host --> Origin[原始目录 原图 或组件源码]
+  Empty --> ID
+  Page --> Chat[原会话应用<br/>原正文hash和历史兼容]

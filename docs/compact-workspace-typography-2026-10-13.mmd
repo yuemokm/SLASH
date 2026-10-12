@@ -1,0 +1,11 @@
+flowchart TD
+    Reference["只读本机 Codex 基础 CSS<br/>UI 14 / 辅助12 / desktop nav31"] --> Tokens["Slash 统一字号<br/>聊天14/22 页题20/28"]
+    Tokens --> Resource["资源与成果<br/>标题/项目同行 · 路径和搜索紧凑"]
+    Tokens --> Design["设计体系<br/>分类+筛选同行 · 保留真实预览"]
+    Tokens --> Cases["测试用例<br/>项目切换并工具行 · 范围说明可展开"]
+    Tokens --> Chat["会话与设置<br/>清楚的正文与控件层级"]
+    Resource --> Evidence["实际 Electron / IPC<br/>1366与1920 CSS viewport<br/>首行y + 截图 + 关键功能"]
+    Design --> Evidence
+    Cases --> Evidence
+    Chat --> Evidence
+    Boundary["保留文档16/26与原型iframe<br/>不改DPI/zoom · 不改数据/权限"] --> Evidence

@@ -1,0 +1,24 @@
+flowchart TB
+    Input[输入任务文字] --> Running{当前有活动 Run?}
+    Running -->|无| Send[右侧发送按钮发起任务]
+    Running -->|有| Queue[Enter / 加入队列固定 follow_up]
+    Queue --> Panel[会话标题下待处理队列]
+    Panel --> Edit[编辑 / 取消 / 长文展开]
+    Panel --> Now[单条立即发出切 steer]
+    Panel --> Boundary[Pi 当前工具链正常 stop 边界]
+    Boundary --> Follow[同 Run 按原顺序接续]
+    Now --> Steer[当前操作结束后接收该单条]
+    Steer --> Default[下一条仍默认 follow_up]
+    Follow --> Receipt[真实 native 用户消息回执后进入聊天记录]
+    Stop[右侧固定停止按钮] --> Clear[原 clearQueue + abort]
+    Clear --> Retain[未发送 / 未知原文保留，不自动重发]
+    WindowClose[关闭窗口] --> Dispose[幂等 Service.dispose / Queue.finish]
+    Dispose --> Persist[继续保存队列状态与原文]
+    Persist --> Notify{窗口与 webContents 仍存活且未关闭?}
+    Notify -->|是| Event[发送界面通知]
+    Notify -->|否| Exit[跳过 UI 投递，自然退出]
+    subgraph Toolbar[输入底部：左侧换行，右侧固定发送或停止]
+      Sources[附件 · 模型 · 支持时思考强度]
+      Task[Build/Plan · 权限 · 子 Agent 开关]
+      Primary[发送 / 停止]
+    end

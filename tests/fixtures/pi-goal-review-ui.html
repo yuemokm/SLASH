@@ -1,0 +1,8 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><title>Goal review component fixture</title></head><body><div id="root"></div><script type="module">
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {TaskGoalReviewStatus} from '/src/TaskAcceptanceStatus.tsx';
+const root=createRoot(document.getElementById('root'));
+window.renderGoal=(state='current',status='disapproved')=>root.render(React.createElement(TaskGoalReviewStatus,{report:{versionState:state,goalReview:{versionState:state,status,output:'保存顺序需要核对',error:'诊断说明',model:'fixture',durationMs:25,usage:[{totalTokens:50}]}}}));
+window.renderGoal();
+</script></body></html>

@@ -1,0 +1,13 @@
+flowchart TD
+  Frozen[同一真实PRD 来源全文 限定请求哈希] --> Import[隔离Service导入历史稿 不调用生成模型]
+  Oracle[预先冻结独立判据 工具不可访问] --> Judge[审后逐条独立核对]
+  Import --> Input[生产taskContentReviewInput 有界选段]
+  Input --> Baseline[生产finishTaskContentReview wire4一次审查]
+  Input --> Candidate[生产reviewGoalCompletion手动对照]
+  Candidate --> Gateway[原Service只读工具 网关 版本 权限 12次上限]
+  Gateway --> Candidate
+  Baseline --> Receipts[保留真实回执 耗时 用量 失败]
+  Candidate --> Receipts
+  Receipts --> Judge
+  Judge --> Outcomes[准确发现 假阴性 误报 范围越界 未验证]
+  Outcomes --> Record[限定结论 不改原稿 不冒称默认路径升级]

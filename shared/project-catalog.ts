@@ -14,4 +14,5 @@ export const projectCatalogRequestSchemas=[
  z.object({type:z.literal('projectBrowse'),projectId:id,mountId:id,path:relative.default('')}).strict(),
  z.object({type:z.literal('projectReadDocument'),projectId:id,mountId:id,path:relative.min(1)}).strict(),
  z.object({type:z.literal('projectRevealFile'),projectId:id,mountId:id,path:relative}).strict(),
+ z.object({type:z.literal('projectOpenDirectory'),projectId:id,mountId:id,path:relative.default('')}).strict(),
 ] as const;

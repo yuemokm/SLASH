@@ -114,5 +114,5 @@ export class RunInputQueue{
   try{const result=runtime?.clearQueue();if(result)cleared=new Set([...result.steering,...result.followUp].map(digest));}catch{}
   this.save(this.records().map(record=>record.status==='unknown'&&record.wireHash&&cleared?.has(record.wireHash)?{...record,status:'cancelled',reason:safeReason}:record.status!=='queued'?record:!record.submittedAt||Boolean(record.wireHash&&cleared?.has(record.wireHash))?{...record,status:'cancelled',reason:safeReason}:{...record,status:'unknown',reason:'RUN_INPUT_CLEAR_UNCONFIRMED'}));
  }
- finish(){this.finished=true;this.clearQueued('RUN_INPUT_RUN_ENDED');this.runtime=undefined;}
+ finish(){if(this.finished)return;this.finished=true;this.clearQueued('RUN_INPUT_RUN_ENDED');this.runtime=undefined;}
 }

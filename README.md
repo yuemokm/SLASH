@@ -23,7 +23,6 @@ Editing starts in conversation. Resource and output views help you browse, previ
 - Windows
 - Node.js 24 and npm
 - Git, to clone this repository
-- Access to this private repository
 - A configured model endpoint and API key for AI tasks
 
 ```powershell

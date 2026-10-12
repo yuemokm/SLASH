@@ -1,13 +1,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type {Mount,ProjectRegistry,State} from '../shared/types.js';
+import type {ImportedFile,ImportCategory,Mount,ProjectRegistry,State} from '../shared/types.js';
 import type {CatalogProject,ProjectCatalogView,ProjectDirectoryView,ProjectDocumentView} from '../shared/project-catalog.js';
 import {Files,hash} from './files.js';
 import {ProjectTreeManager,projectIdentity} from './project-tree.js';
 import type {Store} from './store.js';
 
-/** Read-only project browsing: never opens a workspace, creates directories,
- * updates project ordering, or exchanges the active conversation partition. */
+/** Project scoped browsing and explicit create-only file imports; never switches
+ * the active conversation partition or updates project ordering. */
 export class ProjectCatalog{
  constructor(private store:Store,private current:()=>State){}
  private assertReadAllowed(){if(this.current().permissions?.workspace_read==='deny')throw Error('PERMISSION_DENIED: 资料读取权限已禁用');}
@@ -20,7 +20,7 @@ export class ProjectCatalog{
   if(!partition||rootKey(partition.root)!==rootKey(project.root))throw Error('PROJECT_UNAVAILABLE: 项目目录授权信息不可用，请显式打开项目');
   return partition.mounts;
  }
- private files(id:string){const tree=new ProjectTreeManager(this.store);return new Files(()=>this.mounts(id),()=>tree.applied(this.project(id).root).flatMap(root=>{const refs:string[]=[];const walk=(node:typeof root)=>{if(/^(参考资料|项目资料)$/.test(node.name)&&node.path)refs.push(path.join(this.project(id).root,node.path));node.children.forEach(walk);};walk(root);return refs;}));}
+ private files(id:string){const tree=new ProjectTreeManager(this.store);return new Files(()=>{this.assertReadAllowed();return this.mounts(id);},()=>tree.applied(this.project(id).root).flatMap(root=>{const refs:string[]=[];const walk=(node:typeof root)=>{if(/^(参考资料|项目资料)$/.test(node.name)&&node.path)refs.push(path.join(this.project(id).root,node.path));node.children.forEach(walk);};walk(root);return refs;}));}
  private signature(id:string){this.assertReadAllowed();return JSON.stringify(this.mounts(id));}
  private assertUnchanged(id:string,before:string){if(this.signature(id)!==before)throw Error('PERMISSION_CHANGED: 项目目录授权已变化，请重新加载');}
  list():ProjectCatalogView{
@@ -55,4 +55,18 @@ export class ProjectCatalog{
   return{projectId,projectName:this.project(projectId).name,path:relative,content,version,format:/\.md$/i.test(file)?'markdown':/\.docx$/i.test(file)?'word':'text',...(/\.docx$/i.test(file)?{notice:'已提取 Word 正文；复杂样式、批注或文本框可能未完整保留。'}:{})};
  }
  async resolve(projectId:string,mountId:string,relative:string){const before=this.signature(projectId),files=this.files(projectId),target=await files.resolve(mountId,relative||'.');this.assertUnchanged(projectId,before);return target;}
+ async resolveDirectory(projectId:string,mountId:string,relative:string){const target=await this.resolve(projectId,mountId,relative);if(!(await fs.stat(target)).isDirectory())throw Error('DIRECTORY_REQUIRED: 请选择文件夹');return this.resolve(projectId,mountId,relative);}
+ async importFiles(projectId:string,mountId:string,directory:string,sources:string[],category:ImportCategory):Promise<ImportedFile[]>{
+  const before=this.signature(projectId),files=this.files(projectId),imported:ImportedFile[]=[],seen=new Set<string>();
+  await files.importDirectory(mountId,directory);
+  for(const raw of sources){
+   const source=path.resolve(raw),key=process.platform==='win32'?source.toLowerCase():source;if(seen.has(key))continue;seen.add(key);
+   const extension=path.extname(source),stem=path.basename(source,extension);let suffix=0;
+   while(true){this.assertUnchanged(projectId,before);await files.importDirectory(mountId,directory);const relative=path.join(directory,suffix?`${stem} (${suffix})${extension}`:path.basename(source));
+    try{imported.push(await files.copyFrom(source,mountId,relative,category));this.assertUnchanged(projectId,before);break;}
+    catch(error){if((error as NodeJS.ErrnoException).code==='EEXIST'||String(error).includes('OUTPUT_EXISTS:')){suffix++;continue;}throw error;}
+   }
+  }
+  return imported;
+ }
 }

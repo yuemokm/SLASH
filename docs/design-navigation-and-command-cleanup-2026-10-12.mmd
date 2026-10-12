@@ -1,0 +1,13 @@
+flowchart LR
+  Nav[左侧主导航 设计体系] --> Page[独立完整主页面<br/>152风格 36网页模板<br/>搜索 用途 摘要 真实来源预览]
+  Page -->|返回会话| Chat[原会话与未发输入<br/>资料 图片 模板保留]
+  Page -->|应用风格或页面| Select[同类替换 不同类组合]
+  Select --> Chat
+  Chat --> Card[输入集合卡与历史集合卡]
+  Chat --> Gateway[原Pi与权限/版本网关]
+  Slash[输入斜杠] --> Skills[真实授权skills<br/>plan与help系统命令]
+  Skills --> Gateway
+  Former[手输旧PM预设] --> Plain[普通原文<br/>无提示替换或隐式工作流]
+  Plain --> Gateway
+  Existing[首页起点与成果业务入口] --> Workflow[既有来源与版本绑定工作流]
+  Workflow --> Gateway

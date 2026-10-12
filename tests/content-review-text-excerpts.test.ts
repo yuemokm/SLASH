@@ -72,3 +72,43 @@ test('heading limitations and source partial are present in the actual bounded m
  assert(input.sourceContexts[0].excerpts.some(e=>e.text.includes('TARGET FACT requires confirmation.')));
  for(const e of input.sourceContexts[0].excerpts)assert.equal(text.slice(e.start,e.end),e.text);
 });
+
+test('a long paragraph retains its matched tail together with literal section background',()=>{
+ const text='# POLICY\n\n## IMPORT\n\n'+('unrelated intro '.repeat(500))+'TARGET FACT requires confirmation.\n\n## NEXT\n\n'+('unused '.repeat(1000));
+ const result=selected(text,240,['target fact']);
+ for(const literal of ['# POLICY','## IMPORT','TARGET FACT requires confirmation.','## NEXT'])assert(result.text.includes(literal));
+ assert(result.limitations.includes('BODY_EXCERPT_LIMIT'));
+ const anchor=text.indexOf('TARGET FACT');assert(result.ranges.some(r=>r.start<anchor&&r.end>=anchor+34));
+});
+
+test('heading-free long lines use the same literal match window and original CRLF/UTF16 offsets',()=>{
+ const text=('İ😀不相关内容 '.repeat(1200))+'目标规则：后续新增只能手工录入。\r\n后文不能作为全文已读证明。';
+ const result=selected(text,100,['目标规则']);
+ assert(result.text.includes('目标规则：后续新增只能手工录入。'));assert(result.text.includes('\r\n后文不能作为全文已读证明。'));
+ assert(result.limitations.includes('BODY_EXCERPT_LIMIT'));
+ const anchor=text.indexOf('目标规则');assert(result.ranges.some(r=>r.start<=anchor&&r.end>anchor));
+});
+
+test('match windows retain a leading match and deterministic earliest-match behavior',()=>{
+ const prefix='FIRST FACT stays here. ';const text=prefix+('unrelated '.repeat(1000))+'LATE FACT also exists.';
+ const result=selected(text,100,['late fact','first fact','']);assert(result.text.startsWith(prefix));
+ assert.deepEqual(result.ranges,selectTextRanges(text,100,new Set(['first fact','late fact'])).ranges);
+ // One excerpt cannot claim to cover all distant matches.
+ assert(!result.text.includes('LATE FACT also exists.'));
+});
+
+test('long paragraphs with no literal keyword retain the prior prefix fallback',()=>{
+ const text='# OWNER\n\n'+('unrelated detail '.repeat(500))+'\n\n## NEXT\n\n'+'other '.repeat(500);
+ const result=selected(text,90,['missing keyword']);assert(result.text.includes('unrelated detail'));
+ assert(!result.text.includes('unrelated detail '.repeat(500)));
+});
+
+test('bounded prompt exposes exact long-source tail quotes while full snapshot hash is unchanged',()=>{
+ const source='# POLICY\n\n'+('unrelated intro '.repeat(5000))+'TARGET FACT requires confirmation.\n\n## NEXT\n\n'+'unused '.repeat(8000);
+ const doc=(id:string,text:string)=>({id,text,sha256:contentReviewTextHash(text)});
+ const input=buildContentReviewInput({requests:[{id:'r',text:'Review TARGET FACT.'}],artifacts:[doc('a','TARGET FACT is certain.')],sources:[doc('s',source)]},{promptCharacters:9000});
+ assert(input.prompt.length<=9000);assert.equal(input.snapshot.sources[0].text,source);assert.equal(input.snapshot.sources[0].sha256,contentReviewTextHash(source));
+ assert.equal(input.sourceContexts[0].coverage,'partial');assert(input.sourceContexts[0].excerpts.some(e=>e.text.includes('TARGET FACT requires confirmation.')));
+ for(const e of input.sourceContexts[0].excerpts)assert.equal(source.slice(e.start,e.end),e.text);
+ assert(input.prompt.includes('文本选段: ref:S1 BODY_EXCERPT_LIMIT'));assert(input.prompt.includes('未覆盖内容不得宣称已经审查'));
+});

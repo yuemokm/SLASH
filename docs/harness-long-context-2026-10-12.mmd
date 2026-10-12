@@ -1,0 +1,17 @@
+flowchart TD
+  Read[现有授权读取与来源版本] --> Frozen[冻结全文及真实哈希]
+  Frozen --> Fits{全文是否容纳}
+  Fits -->|是| Full[完整原文]
+  Fits -->|否| Candidate[既有关键词与段落候选]
+  Candidate --> Long{关键词超出预留段首窗口}
+  Long -->|是| Window[关键词附近原文与有界前文]
+  Long -->|否| Prefix[保持既有段首回退]
+  Window --> Headings[既有标题链与分节边界]
+  Prefix --> Headings
+  Headings --> Budget[同字符预算和最多8段 原偏移原行号]
+  Budget --> Partial[partial和遗漏限制 未给内容未审查]
+  Full --> Review[独立内容审查]
+  Partial --> Review
+  Read --> ReRead[现有read_file行分页和字符分页]
+  ReRead --> Gate[当前授权 取消 版本哈希复核]
+  Gate --> Read

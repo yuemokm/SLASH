@@ -48,7 +48,7 @@ export async function searchEvidenceFiles(files:FileRef[],query:string,reader:Ev
  let limitationCount=listing.limitationCount??listing.limitations?.length??0;
  const warn=(value:EvidenceSearchLimitation)=>{limitationCount++;if(limitations.length<EVIDENCE_SEARCH_LIMITS.maxLimitations)limitations.push(value);};
  const scopedFiles=options.mountId?files.filter(file=>file.mountId===options.mountId):files;
- const coverage:EvidenceSearchResult['coverage']={listedFiles:scopedFiles.length,scannedFiles:0,bodyReadFiles:0,partialBodyFiles:0,skippedFiles:0,limitationCount:0,matchedFiles:0,listTruncated:listing.truncated??false,resultTruncated:false,status:'complete'};
+ const coverage:EvidenceSearchResult['coverage']={listedFiles:scopedFiles.filter(file=>file.entryType!=='directory').length,...(options.shallow?{listedDirectories:scopedFiles.filter(file=>file.entryType==='directory').length,matchedDirectories:0}:{}),scannedFiles:0,bodyReadFiles:0,partialBodyFiles:0,skippedFiles:0,limitationCount:0,matchedFiles:0,listTruncated:listing.truncated??false,resultTruncated:false,status:'complete'};
  const skipped=new Set<string>();
  const markSkipped=(file:FileRef)=>{skipped.add(`${file.mountId}\0${file.path}`);coverage.skippedFiles=skipped.size;};
  let totalCharacters=0;
@@ -63,8 +63,9 @@ export async function searchEvidenceFiles(files:FileRef[],query:string,reader:Ev
   try{await reader.authorized(file);}catch{markSkipped(file);warn({code:'SEARCH_ACCESS_CHANGED',message:'有文件的当前授权不可用，未返回其路径或正文命中'});continue;}
   const normalizedPath=normalize(file.path),pathTerms=terms.filter(term=>normalizedPath.includes(term));
   const pathPhrase=Boolean(normalized&&normalizedPath.includes(normalized));
-  if(!normalized){
-   hits.push({...file,score:0,matchKind:'path',matchedTerms:[]});
+  if(!normalized||file.entryType==='directory'){
+   if(normalized&&!pathPhrase&&!pathTerms.length)continue;
+   hits.push({...file,score:normalized?pathScore(file.path,normalized,terms):0,matchKind:'path',matchedTerms:pathTerms});
    continue;
   }
   let text:string|undefined,readFailure:EvidenceSearchLimitation|undefined;
@@ -115,7 +116,8 @@ export async function searchEvidenceFiles(files:FileRef[],query:string,reader:Ev
  for(const hit of hits){try{await reader.authorized(hit);visible.push(hit);}catch{markSkipped(hit);warn({code:'SEARCH_ACCESS_CHANGED',message:'检索完成前目录授权已改变，相关路径和命中已移除'});}}
  for(let index=limitations.length-1;index>=0;index--){const limitation=limitations[index];if(limitation.mountId&&limitation.path)try{await reader.authorized({mountId:limitation.mountId,path:limitation.path,size:0});}catch{limitations[index]={code:'SEARCH_ACCESS_CHANGED',message:'目录授权已改变，相关文件路径与诊断已移除'};}}
  visible.sort((a,b)=>b.score-a.score||ordered(a,b));
- coverage.matchedFiles=visible.length;
+ coverage.matchedFiles=visible.filter(file=>file.entryType!=='directory').length;
+ if(options.shallow)coverage.matchedDirectories=visible.filter(file=>file.entryType==='directory').length;
  coverage.limitationCount=limitationCount;
  if(limitationCount>EVIDENCE_SEARCH_LIMITS.maxLimitations)limitations[limitations.length-1]={code:'SEARCH_LIMITATIONS_TRUNCATED',message:`共有 ${limitationCount} 项检索限制，仅展示前 ${EVIDENCE_SEARCH_LIMITS.maxLimitations-1} 项`};
  if(coverage.listTruncated||coverage.skippedFiles||limitationCount)coverage.status='partial';

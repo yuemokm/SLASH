@@ -1,0 +1,21 @@
+flowchart LR
+  Source[OpenDesign 固定commit<br/>152风格与36网页模板] --> Catalog[本地原文与SHA256目录<br/>Apache2许可与归属]
+  Catalog --> Metadata[宿主IPC仅返回元数据]
+  Metadata --> Panel[独立主区域设计体系<br/>分组 搜索 用途 安全示意]
+  Header[左侧主功能导航<br/>设计体系] -->|进入完整页面| Panel
+  Panel --> Apply[应用：一项风格与一项页面]
+  Apply --> Card[输入区有色集合小卡<br/>仅名称和类型 可移除]
+  Apply --> Return[回原会话<br/>未发送文字和资料保留]
+  Panel -->|返回会话| Return
+  Card --> Send[会话发送业务要求<br/>参考仅id与hash]
+  Send --> Validate[宿主限定目录与版本校验]
+  Validate -->|未知或过期| Reject[拒绝创建任务<br/>原记录与用户输入保留]
+  Validate --> Context[有界untrusted设计资料<br/>tokens优先 明确partial]
+  Context --> Pi[既有Pi与工具网关<br/>业务和权限规则优先]
+  Validate --> Run[Run持久化引用和字符回执]
+  Run --> History[用户消息集合小卡<br/>仅名称和类型 不可修改]
+  Run --> Resume[Plan确认 普通继续 短上下文继续]
+  Resume --> Validate
+  Pi --> Draft[原有草稿与ChangeSet]
+  Draft --> Acceptance[业务回归 实际体验 独立图审]
+  Acceptance --> Delivery[原有保存与交付]

@@ -35,6 +35,6 @@ export function RunInputQueuePanel({run,active,onMutate,onRestore}:{run:Run;acti
    </li>;
   })}</ol>
   {error&&<p className="queue-message-error" role="alert">{error}</p>}
-  <small>任务结束后按顺序处理；立即发出将在当前操作结束后送达。</small>
+  <small>当前一轮结束后按顺序处理；立即发出将在当前操作结束后送达。</small>
  </section>;
 }

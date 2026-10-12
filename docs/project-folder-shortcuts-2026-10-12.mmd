@@ -1,0 +1,14 @@
+flowchart TD
+    Shortcut[项目下资源或成果快捷入口] -->|点击| Catalog[按 projectId 获取登记项目真实挂载]
+    Catalog --> Resolve[宿主验证已授权目录与实际目录类型]
+    Resolve --> Explorer[shell.openPath 打开对应根文件夹]
+    Shortcut -->|拖入文件悬浮| Browse[现 projectBrowse 读取根目录直接子文件夹]
+    Browse --> List[悬浮列表含根目录与实际子目录]
+    List -->|离开或取消| Close[关闭列表]
+    List -->|松开所选目录| Target[importFiles 明确 projectId / mountId / path]
+    Target --> Guard[宿主复核登记 / 实时挂载 / 目录存在 / 写权限 / 链接]
+    Guard -->|拒绝| Error[显示错误 不切项目 不重建目录]
+    Guard -->|允许| Copy[现 Files.copyFrom 排他复制]
+    Copy -->|重名| Rename[追加数字并创建副本]
+    Copy --> Receipt[显示复制位置 保留原件及当前会话]
+    Rename --> Receipt

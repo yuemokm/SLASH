@@ -1,0 +1,17 @@
+flowchart TD
+    Request[父 Run 调用 delegate_readonly] --> Admission[严格 task / purpose 与数量并发预算]
+    Admission --> Version[每次核对锁定 0.76.1]
+    Version --> Factory[保留已验证包 child-session factory]
+    Factory --> Inject[注入父 ModelRuntime / 受控工具闭包 / 隔离 loader]
+    Inject --> Verify{实际模型与工具对象身份一致?}
+    Verify -->|否或取消| Dispose[回收会话并失败]
+    Verify -->|是| Prompt[独立 fresh 子任务]
+    Prompt --> Gateway[父网关逐次校验权限 来源与共享预算]
+    Gateway --> Receipt[父 Run 状态与有界研究检查回执]
+    Stop[父停止或截止] --> Dispose
+    Experiment[隔离真实公开 delegation executor] --> Runtime[新 ModelRuntime 仅复制 provider 注册]
+    Runtime --> Credential[父临时凭据未继承: failed]
+    Runtime --> Tool[父 customTools 未注册: failed]
+    Experiment --> Zero[隔离配置凭据与零工具 leaf 完成 / 精确取消]
+    Credential --> Keep[不替换默认路径]
+    Tool --> Keep

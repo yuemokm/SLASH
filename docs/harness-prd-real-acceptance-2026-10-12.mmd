@@ -1,0 +1,14 @@
+flowchart TD
+  Frozen[真实PRD与来源 原限定请求 独立判据先冻结] --> Baseline[wire4基线唯一请求]
+  Baseline --> CrossBuild[跨最终build 引用绑定invalid 原正文未保存]
+  CrossBuild --> Preserve[保留原证据 语义未验证 不重跑 不作公平A/B]
+  Frozen --> Snapshot[当前完整dist复制到独立runtime快照]
+  Snapshot --> Candidate[生产Runtime候选唯一会话]
+  Candidate --> Reads[10次原网关只读工具 5个真实HTTP终态]
+  Reads --> MissingChain[准确识别隔离fixture缺原XLSX证据链]
+  MissingChain --> Verdict[原包disapproved 不应用unknown建议到原稿]
+  Verdict --> Judge[独立审读最终原文与冻结证据]
+  Judge --> Miss[范围内合并格说明漏检1项]
+  Judge --> Scope[范围外编码旧问题未提及 不扣为任务失败]
+  Miss --> Conclusion[未证明PRD语义质量提升 默认路径保留]
+  Scope --> Conclusion

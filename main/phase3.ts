@@ -30,21 +30,22 @@ function sameResource(a:ShareResourceRef,b:ShareResourceRef){
 export class ControlledSubAgentBroker {
  constructor(private readonly now:()=>number=Date.now,private readonly maxDepth=1){}
  authorize(request:SubAgentCallRequest,parent:SubAgentPermissionContext,depth=0):SubAgentCallDecision{
-  if(depth>this.maxDepth)return{allowed:false,code:'SUB_AGENT_TOOL_DENIED',reason:'子 Agent 嵌套层级超过安全上限'};
-  if(!subAgentToolWhitelist.includes(request.tool as (typeof subAgentToolWhitelist)[number]))return{allowed:false,code:'SUB_AGENT_TOOL_DENIED',reason:`工具不在子 Agent 白名单：${request.tool}`};
-  if(request.parentRunId!==parent.parentRunId)return{allowed:false,code:'SUB_AGENT_PERMISSION_DENIED',reason:'子 Agent 未继承当前父 Run'};
+  if(depth>this.maxDepth)return{allowed:false,code:'SUB_AGENT_TOOL_DENIED',reason:'Subagent 嵌套层级超过安全上限'};
+  if(!subAgentToolWhitelist.includes(request.tool as (typeof subAgentToolWhitelist)[number]))return{allowed:false,code:'SUB_AGENT_TOOL_DENIED',reason:`工具不在Subagent 白名单：${request.tool}`};
+  if(request.parentRunId!==parent.parentRunId)return{allowed:false,code:'SUB_AGENT_PERMISSION_DENIED',reason:'Subagent 未继承当前父 Run'};
   if(parent.mode==='plan' && (WRITE_CAPABILITIES.has(request.capability)||request.capability==='workspace_read'&&request.tool==='read_file')){
    // Plan can read workspace files; writes and process/network configuration are disallowed.
-   if(WRITE_CAPABILITIES.has(request.capability))return{allowed:false,code:'PLAN_TOOL_DENIED',reason:'Plan 模式的子 Agent 只能使用只读工具'};
+   if(WRITE_CAPABILITIES.has(request.capability))return{allowed:false,code:'PLAN_TOOL_DENIED',reason:'Plan 模式的Subagent 只能使用只读工具'};
   }
-  if(request.mountId && parent.mountIds && !parent.mountIds.includes(request.mountId))return{allowed:false,code:'SUB_AGENT_SCOPE_DENIED',reason:'子 Agent 请求超出父 Run 的目录范围'};
+  const inheritedComputerRead=parent.permissionMode==='full_access'&&request.capability==='workspace_read'&&['read_file','search_files'].includes(request.tool)&&Boolean(parent.computerScope)&&Boolean(request.mountId&&(request.mountId===parent.computerScope||request.mountId.startsWith(parent.computerScope+':root:')));
+  if(request.mountId && parent.mountIds && !parent.mountIds.includes(request.mountId)&&!inheritedComputerRead)return{allowed:false,code:'SUB_AGENT_SCOPE_DENIED',reason:'Subagent 请求超出父 Run 的目录范围'};
   const decision:PermissionDecision=parent.capabilities[request.capability]??'deny';
   if(decision==='deny')return{allowed:false,code:'SUB_AGENT_PERMISSION_DENIED',reason:`父 Run 禁止能力：${request.capability}`};
   // `ask` belongs to the parent run. A child cannot turn an outstanding
   // approval into an automatic allow; full access may only inherit it after
   // the host has applied its normal approval semantics.
   if(decision==='ask' && parent.permissionMode!=='full_access' && !(parent.permissionMode==='accept_edits'&&request.capability==='artifact_write'))return{allowed:false,code:'SUB_AGENT_PERMISSION_DENIED',reason:`父 Run 尚未授权能力：${request.capability}`};
-  return{allowed:true,code:'ALLOWED',reason:'调用通过子 Agent 白名单和父 Run 权限继承',inheritedFrom:parent.parentRunId};
+  return{allowed:true,code:'ALLOWED',reason:'调用通过Subagent 白名单和父 Run 权限继承',inheritedFrom:parent.parentRunId};
  }
  async call<T>(request:SubAgentCallRequest,parent:SubAgentPermissionContext,handler:(request:SubAgentCallRequest,signal:AbortSignal)=>Promise<T>,options:{signal?:AbortSignal;depth?:number}={}):Promise<T>{
   const decision=this.authorize(request,parent,options.depth??0);if(!decision.allowed)throw Error(`${decision.code}: ${decision.reason}`);

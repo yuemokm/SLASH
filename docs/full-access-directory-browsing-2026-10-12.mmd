@@ -1,0 +1,26 @@
+flowchart TD
+  U[用户选择权限并指定目录] --> R[当前会话及活动 Run]
+  R --> S[search_files executable schema]
+  S --> A{绝对 directory 且省略 mountId}
+  A -->|是| C[绑定宿主当前会话电脑 scope]
+  A -->|否| M[已登记 mountId 与相对子目录]
+  C --> G[父工具网关及 Files 实时授权]
+  M --> G
+  G --> P{full access 或授权挂载内}
+  P -->|拒绝或撤权| D[不给路径与正文]
+  P -->|有效| B{shallow}
+  B -->|true| L[直接子文件与目录 空文件夹可见]
+  B -->|false| E[默认递归文件检索]
+  L --> T[entryType 区分 文件与目录 coverage 分开计数]
+  T --> V[路径元数据 不登记目录正文回执]
+  E --> F[规范化 mountId 与 path]
+  T --> F
+  F --> Q[read_file 再核授权与版本]
+  Q --> H[真实文件正文及去重来源回执]
+  R --> I[独立只读子 Agent]
+  I --> J[宿主当前 scope 模式 挂载说明]
+  J --> G
+  R --> O[旧 IPC 子任务父 Run 及 revision 绑定]
+  O --> G
+  G --> W[deny 禁用 只读 参考原件保护始终优先]
+  H --> N[修改仍需原草稿 ChangeSet 冲突与资源锁]

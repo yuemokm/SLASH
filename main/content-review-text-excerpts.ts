@@ -55,31 +55,43 @@ function headingBackground(headers:Heading[]){
   const boundary=nearest&&boundaries.get(nearest);if(boundary)background.push(boundary);return background;
  };
 }
+/** A scored long paragraph must not lose the literal match by always taking its
+ * prefix. Keep preceding source context in the same budget; no summary is made. */
+function windowStart(part:Range,length:number,anchor:number|undefined){
+ if(anchor===undefined||anchor<part.start+length)return part.start;
+ return Math.max(part.start,anchor-Math.min(128,Math.floor(length/4)));
+}
+function originalOffset(text:string,lowerOffset:number){
+ let source=0,lower=0;
+ for(const character of text){const length=character.toLowerCase().length;if(lower+length>lowerOffset)return source;source+=character.length;lower+=length;}
+ return source;
+}
 /** Same document character budget and eight merged excerpts. Heading-free text
  * retains the old paragraph/neighbor selection. Reserve body before background. */
 export function selectTextRanges(text:string,budget:number,relevance:Set<string>):TextExcerptSelection{
  if(!Number.isInteger(budget)||budget<1)throw Error('CONTENT_REVIEW_TEXT_BUDGET');
  if(text.length<=budget)return{ranges:text.length?[{start:0,end:text.length}]:[],limitations:[]};
- const headers=headings(text),body=units(text,headers),scored=body.map((part,index)=>{const lower=text.slice(part.start,part.end).toLowerCase();return{part,index,score:[...relevance].reduce((n,term)=>n+(lower.includes(term)?1:0),0)};}).sort((a,b)=>b.score-a.score||a.index-b.index);
+ const headers=headings(text),body=units(text,headers),scored=body.map((part,index)=>{const original=text.slice(part.start,part.end),lower=original.toLowerCase();let score=0,anchor:number|undefined;for(const term of relevance){if(!term)continue;const offset=lower.indexOf(term);if(offset>=0){score++;anchor=Math.min(anchor??Infinity,offset);}}if(anchor!==undefined)anchor=part.start+(lower.length===original.length?anchor:originalOffset(original,anchor));return{part,index,score,anchor};}).sort((a,b)=>b.score-a.score||a.index-b.index);
+ const anchors=new Map(scored.map(item=>[item.index,item.anchor]));
  let ranges:Range[]=[];const selected=new Set<number>(),limitations=new Set<TextExcerptSelection['limitations'][number]>(),neededHeaders=new Set<Heading>();
  if(!body.length){const h=[...headers].sort((a,b)=>{const score=(r:Range)=>[...relevance].filter(term=>text.slice(r.start,r.end).toLowerCase().includes(term)).length;return score(b)-score(a)||a.start-b.start;})[0];return{ranges:h?[{start:h.start,end:h.start+Math.min(h.end-h.start,budget)}]:[],limitations:['BODY_EXCERPT_LIMIT']};}
  if(!headers.length){
   let used=0;const legacy:Range[]=[];
-  for(const item of scored){if(used>=budget||legacy.length>=MAX_RANGES)break;for(const index of [item.index,item.index-1,item.index+1]){const part=body[index];if(!part||selected.has(index))continue;if(legacy.length>=MAX_RANGES)break;const length=Math.min(budget-used,part.end-part.start);if(length<=0)break;legacy.push({start:part.start,end:part.start+length});selected.add(index);used+=length;}}
-  const merged=merge(text,legacy);return{ranges:size(merged)<=budget?merged:legacy.sort((a,b)=>a.start-b.start),limitations:[]};
+  for(const item of scored){if(used>=budget||legacy.length>=MAX_RANGES)break;for(const index of [item.index,item.index-1,item.index+1]){const part=body[index];if(!part||selected.has(index))continue;if(legacy.length>=MAX_RANGES)break;const length=Math.min(budget-used,part.end-part.start);if(length<=0)break;const start=windowStart(part,length,anchors.get(index)),end=Math.min(part.end,start+length);legacy.push({start,end});if(start>part.start)limitations.add('BODY_EXCERPT_LIMIT');selected.add(index);used+=end-start;}}
+  const merged=merge(text,legacy);return{ranges:size(merged)<=budget?merged:legacy.sort((a,b)=>a.start-b.start),limitations:[...limitations]};
  }
  const background=headingBackground(headers),neighbors=new Map<number,number[]>();body.forEach((part,index)=>neighbors.set(part.paragraph,[...(neighbors.get(part.paragraph)??[]),index]));
  const fits=(next:Range[])=>next.length<=MAX_RANGES&&size(next)<=budget;
  const pick=(index:number)=>{
   const part=body[index];if(!part||selected.has(index))return;
   const left=budget-size(ranges);if(left<=0)return;
-  const reserveEnd=part.start+Math.min(part.end-part.start,Math.max(1,Math.ceil(left/2))),reserve={start:part.start,end:reserveEnd};
+  const reserveLength=Math.min(part.end-part.start,Math.max(1,Math.ceil(left/2))),start=windowStart(part,reserveLength,anchors.get(index)),reserveEnd=Math.min(part.end,start+reserveLength),reserve={start,end:reserveEnd};
   if(!fits(merge(text,[...ranges,reserve]))){limitations.add('BODY_EXCERPT_LIMIT');return;}
   let proposed=ranges;
   for(const h of background(part)){neededHeaders.add(h);const withHeading=merge(text,[...proposed,{start:h.start,end:h.end}]);if(fits(merge(text,[...withHeading,reserve])))proposed=withHeading;}
   let low=reserveEnd,high=part.end;
-  while(low<high){const mid=Math.ceil((low+high)/2);if(fits(merge(text,[...proposed,{start:part.start,end:mid}])))low=mid;else high=mid-1;}
-  ranges=merge(text,[...proposed,{start:part.start,end:low}]);selected.add(index);if(low<part.end)limitations.add('BODY_EXCERPT_LIMIT');
+  while(low<high){const mid=Math.ceil((low+high)/2);if(fits(merge(text,[...proposed,{start,end:mid}])))low=mid;else high=mid-1;}
+  ranges=merge(text,[...proposed,{start,end:low}]);selected.add(index);if(start>part.start||low<part.end)limitations.add('BODY_EXCERPT_LIMIT');
  };
  for(const item of scored){
   if(size(ranges)>=budget)break;pick(item.index);

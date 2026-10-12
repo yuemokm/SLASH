@@ -1,7 +1,7 @@
 .global-skills-settings{min-width:0;color:var(--theme-text)}
 .global-skills-heading{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}
 .global-skills-heading>div:first-child{flex:1 1 260px;min-width:0}
-.global-skills-heading h1{margin:0 0 7px;font-size:22px;font-weight:600}
+.global-skills-heading h1{margin:0 0 7px;font-size:var(--font-title);line-height:var(--line-title);font-weight:600}
 .global-skills-heading p{max-width:58ch;margin:0;color:var(--theme-muted);font-size:13px;line-height:1.7}
 .global-skills-heading-actions{display:flex;align-items:center;gap:8px}
 .global-skills-heading-actions>button:first-child{display:grid;place-items:center;width:34px;height:34px;padding:0}

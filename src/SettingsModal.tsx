@@ -21,6 +21,7 @@ import { ProjectStructureEditor } from "./ProjectStructureEditor";
 import { ModelLimitsSettings } from "./ModelLimitsSettings";
 import { GlobalSkillsSettings } from "./GlobalSkillsSettings";
 import { PiPackagesSettings } from "./PiPackagesSettings";
+import { SubagentSettings } from "./SubagentSettings";
 import { runModelTextTest } from "./model-test-result";
 import type {GlobalSkillsView,GlobalSkillMutationReceipt} from '../shared/global-skills';
 import "./settings-focus.css";
@@ -504,7 +505,7 @@ export function SettingsModal({
                 if (event.key === "Escape" && settingsQuery) { event.preventDefault(); setSettingsQuery(""); }
               }} /></label>
               {settingsQuery.trim() && <div id="settings-search-results" className="settings-search-results" aria-label="设置搜索结果">
-                {searchResults.length ? searchResults.map(item => <button key={item.id} type="button" onClick={() => openSetting(item)}><b>{item.label}</b><small>{{ general: "通用", workspace: "工作空间", models: "模型", policies: "通用", connections: "连接", permissions: "权限与审批", archive: "归档会话", prompt: "系统提示词", skills:"skills" }[item.tab]}{item.advanced ? " · 高级" : ""}</small></button>) : <p role="status">没有找到相关设置</p>}
+                {searchResults.length ? searchResults.map(item => <button key={item.id} type="button" onClick={() => openSetting(item)}><b>{item.label}</b><small>{{ general: "通用", workspace: "工作空间", models: "模型", policies: "通用", connections: "连接", permissions: "权限与审批", archive: "归档会话", prompt: "系统提示词", skills:"skills",subagents:"Subagent" }[item.tab]}{item.advanced ? " · 高级" : ""}</small></button>) : <p role="status">没有找到相关设置</p>}
               </div>}
             </div>
             <button className="modal-close" aria-label="关闭设置" onClick={onClose}><Icon name="close" size={16}/></button>
@@ -515,6 +516,7 @@ export function SettingsModal({
             <button className={tab === "general" ? "active" : ""} onClick={() => selectTab("general")}><Icon name="settings" size={17}/>通用</button>
             <button className={tab === "prompt" ? "active" : ""} onClick={() => selectTab("prompt")}><Icon name="edit" size={17}/>系统提示词</button>
             <button className={tab === "skills" ? "active" : ""} onClick={() => selectTab("skills")}><Icon name="book" size={17}/>skills</button>
+            <button className={tab === "subagents" ? "active" : ""} onClick={() => selectTab("subagents")}><Icon name="model" size={17}/>Subagent</button>
             <button className={tab === "workspace" ? "active" : ""} onClick={() => selectTab("workspace")}><Icon name="folder" size={17}/>工作空间</button>
             <button
               className={tab === "models" ? "active" : ""}
@@ -539,6 +541,7 @@ export function SettingsModal({
           </nav>
         </aside>
         <div className="settings-body" data-setting-target={settingTarget}>
+          {tab === 'subagents' && <SubagentSettings models={models} call={call} onNotice={notify} onError={onError}/>}
           {tab === 'skills' && <GlobalSkillsSettings refreshKey={globalSkillsRefreshKey} call={async input=>await call({type:'globalSkills',...input}) as GlobalSkillsView|GlobalSkillMutationReceipt} onChooseFolder={async()=>await call({type:'globalSkillsChooseFolder'}) as string|undefined}/>} 
           {feedback && (
             <div

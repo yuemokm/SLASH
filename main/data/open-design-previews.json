@@ -1,0 +1,1316 @@
+{
+  "schemaVersion": 1,
+  "commit": "0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7",
+  "retrievedAt": "2026-10-12T17:04:00.673Z",
+  "entries": {
+    "style:agentic": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-agentic.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/agentic/components.html",
+      "sourceHash": "c4a2a3db19f1550be2432bcd2d87a5481357717a498a106cfaa49b1c89ca4d80",
+      "imageHash": "a6121aa965e5b2b0084b249275f344bd16e73535d5e25465f8f50bd36034638e"
+    },
+    "style:airbnb": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-airbnb.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/airbnb/components.html",
+      "sourceHash": "2c1fe49ee73c33b434d6dcb77f0e7c52a0ef7852f6559282667a6713075c93cd",
+      "imageHash": "9a5bdcfc7628b8870478b0a334328e5fd244a0da9839e22439016a1bb8042b88"
+    },
+    "style:airtable": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-airtable.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/airtable/components.html",
+      "sourceHash": "ddbda214f55b905d7709f022cf1a3287381eab8436a487860243869cc8c7d3bf",
+      "imageHash": "338a39ec7594a2c0bb1845d037ee9a2e14d4ef4073b0322c15274f36ef0c4389"
+    },
+    "style:ant": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-ant.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/ant/components.html",
+      "sourceHash": "325e4b94e8525423cabbfe110a1e4299f62873fc0dfb9f6e54f846f042ef4911",
+      "imageHash": "978bb051f41bcfd21c407670701ed3716e452da7af489f19c7332cc36b20e3fd"
+    },
+    "style:apple": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-apple.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/apple/components.html",
+      "sourceHash": "21b3af063e62640facf4c213d2fe9f832475d4530a27306e716fe483a783553b",
+      "imageHash": "3a80daec7072bf77ba68939bf42fdfe03c0eb60383f149d0cf1f66e6da704ddc"
+    },
+    "style:application": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-application.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/application/components.html",
+      "sourceHash": "dbbad31eb423623ef0ee6830687ebea8e5945c4121c837671cf02494a6a96d94",
+      "imageHash": "9453e27aece115eb8e03a63a1b178d35a02d56bbe7054a5f1e89c89904ebb077"
+    },
+    "style:arc": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-arc.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/arc/components.html",
+      "sourceHash": "ebecbe2d9bc1b48d5f8655133c7394def85a988046258df8d0b82db4822c29ae",
+      "imageHash": "88abda5b1246dc5e434a56ee9196f666f1942e75e9a25051923826a70fd7008c"
+    },
+    "style:artistic": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-artistic.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/artistic/components.html",
+      "sourceHash": "7da72794af5d267942705f8d6993c7caf85c7509d5a9d924da5d16bf5d8efd36",
+      "imageHash": "ad6af7ef17eac82e01e5e6a6ca08e8856d8e3567a826448301fae5d57dac150f"
+    },
+    "style:atelier-zero": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-atelier-zero.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/atelier-zero/components.html",
+      "sourceHash": "f50ad20f9f5afb7c5f60657c4f047687ee3fdfd7b1627de543561025aea62e63",
+      "imageHash": "89b87dd3b59691a9931fd4acfb4405f0a22a85af33fae290f02048f81b8b7b78"
+    },
+    "style:bento": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-bento.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/bento/components.html",
+      "sourceHash": "4cfd6b571ed053c6a85d93c48d362ab89b90610bc7f5433b0f9d71ccd10406f5",
+      "imageHash": "1fa4f6dc5727fc35edbd0a32c3fa15730c0ca620d1283617294ada2bde1f9e38"
+    },
+    "style:binance": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-binance.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/binance/components.html",
+      "sourceHash": "b0e2e15f36e7c3f6401529c8e12b5142f8e4b93f625e58d9ad78a3d094753be1",
+      "imageHash": "5133390af74f59265e82c0d794e22e926f2a9168af2101a426c4952113249eac"
+    },
+    "style:bmw": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-bmw.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/bmw/components.html",
+      "sourceHash": "fded9ec47ceef92dc20c25b22f4bc6ec774e878a910a5a75a872af65bc509567",
+      "imageHash": "00ce810cf09fb4e0fcb69f9cc54795cec7cb2badffa49b50d24a63dd0e04fc76"
+    },
+    "style:bmw-m": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-bmw-m.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/bmw-m/components.html",
+      "sourceHash": "1433eb36bcbfe92290983dcf2119cea68fff4ba55c8b2d89a2ada881560689ca",
+      "imageHash": "ef2ed8414984c8de4053c7d1808f35fb2f073af93daa1a769dbeb6ccf7cbbb4b"
+    },
+    "style:bold": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-bold.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/bold/components.html",
+      "sourceHash": "1ab3c0df025190d458f8fc7633328b5c91fc08710e68a5b38ab5a15998d29a43",
+      "imageHash": "77f3ce6e8f87105d558b7c4eb0eac8da97f71f6bbae53255433693e2c439a23e"
+    },
+    "style:brutalism": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-brutalism.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/brutalism/components.html",
+      "sourceHash": "f12e0f430791e32b29737d919946e517c6a0e18c7039cd043045acdd3243cc78",
+      "imageHash": "6f8da7a15d120df675a65d4a3ce5993a3e0b1f4653e31b6ee299dc395ecc1059"
+    },
+    "style:bugatti": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-bugatti.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/bugatti/components.html",
+      "sourceHash": "6f75691dbf6ccfdc480f5bc1e0f8f211c337427215da050524b65d133a0ad549",
+      "imageHash": "24bf27776b24dcd4c7311c02fb2ab40c88d54d37560648a7015ae6eda071b87e"
+    },
+    "style:cafe": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cafe.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cafe/components.html",
+      "sourceHash": "383c1da3c42f3d01c25fd24affe33719444df9334dac8bf69953106f48b0441d",
+      "imageHash": "595a869a97863292b63ad3bc5858ba5c21780bcbb06bb3bc913f3adb19b405f2"
+    },
+    "style:cal": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cal.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cal/components.html",
+      "sourceHash": "3249856da944fb12ac8643257e29bb23ae541f9aa819dd302d89edf329d248da",
+      "imageHash": "db828492c5cfad69461f869e16767c73adae2dc28212f4e86f2e56215cf472e0"
+    },
+    "style:canva": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-canva.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/canva/components.html",
+      "sourceHash": "5476133e37da4a5bf3b99fb4e6412e936ce7a63440a6c5bae671580343f15180",
+      "imageHash": "6daeff071a77f07734e45be8114b55149d98e35a64042ae146a99fa9dcd21f66"
+    },
+    "style:cisco": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cisco.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cisco/components.html",
+      "sourceHash": "b38ec4e95945bf62dc51378a58b7bda559debea9ae10e423f8c6fb6fb8c00c43",
+      "imageHash": "c965895a42b7439aed784de709699a123c2432928f043e8a35c571bb7b1965d6"
+    },
+    "style:claude": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-claude.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/claude/components.html",
+      "sourceHash": "d23d5f401d91272d28d577da089578c67c1c0c385567a944d91037c6b2f19c2f",
+      "imageHash": "7683eaf3fb7c809dd6b130ce9f424a91d5e3c8b9359bcbd7e34f628bbb0abd64"
+    },
+    "style:clay": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-clay.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/clay/components.html",
+      "sourceHash": "5ddbb8649c07d2248d2be5942a7373ed64e489bcc21d4bf5f63488d573874dd1",
+      "imageHash": "dfa39a602bc5f590be9ae85e704045b6260d78c1ce9101f89e13feeed53bc17f"
+    },
+    "style:claymorphism": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-claymorphism.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/claymorphism/components.html",
+      "sourceHash": "c4ae9ccfd378eb1c2bcb07d2ae69f8378a8cc40c892bb6bfcabcfe55f9fe2517",
+      "imageHash": "6f02b723eaa285f56f596859394d4ccc29a69551109100beedba549bb2b0d12e"
+    },
+    "style:clean": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-clean.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/clean/components.html",
+      "sourceHash": "3faa60b99a31fc3a7890f215c80e28f2ff9c79038766ed000f31a346055f8e77",
+      "imageHash": "11aa21217e0bff678a8307979ad2c8e899420f3a45fdef1e4c89df11f7a496fe"
+    },
+    "style:clickhouse": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-clickhouse.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/clickhouse/components.html",
+      "sourceHash": "b4cc0d86a9eefb6f81fe9f3ed1d20aad6561e4e9e7222ea6f96d3d614d38c46a",
+      "imageHash": "c576adee28f020e8bf0617cb2d435387ba3f5bd35b16faba7da3a0e7db613c83"
+    },
+    "style:cloudflare-kumo": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cloudflare-kumo.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cloudflare-kumo/components.html",
+      "sourceHash": "1206b0bd6d32931f72650e1f5275e70325a485724a11c8054ba9e71fc05de14e",
+      "imageHash": "1c91980b27c650146baf5c9a32f263baeba6d74ca3a6f914ea6874b3f47e01fd"
+    },
+    "style:cohere": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cohere.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cohere/components.html",
+      "sourceHash": "f0328230a596f98807b28bfb3256e453b7c80693e491b713ee05c2add74e27c2",
+      "imageHash": "c70c86a2d1b08dad1cd14e94aa9e4285d21b3caadd786a7ebf0bd8dfc8f3e145"
+    },
+    "style:coinbase": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-coinbase.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/coinbase/components.html",
+      "sourceHash": "7c954da9bc1efbd441518b39525d8f0c14ee91f4c737f0581726861c7dfc5911",
+      "imageHash": "99510c2258d1a445f31a3a19ad30da7671bd12cd8a72396a602f594a1ddff01d"
+    },
+    "style:colorful": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-colorful.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/colorful/components.html",
+      "sourceHash": "26ec490dcba30180f55b957c317db5ac7ac6b3df2c23bb20d8db51a7d9830d63",
+      "imageHash": "8424224e212f29eee4f4074ae93c858bed2427f639c556a5701dd51340dca09b"
+    },
+    "style:composio": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-composio.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/composio/components.html",
+      "sourceHash": "673a4d53beaea722eb1cd96680d94a10ca6fa4c90ef8c3fa239305af821a65ae",
+      "imageHash": "58a5164fec212e6da16f4803753a5d87ad614dc39f639312e37c2f5551c7c38d"
+    },
+    "style:contemporary": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-contemporary.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/contemporary/components.html",
+      "sourceHash": "2f21cbe54a1b350bd454f842d663715e78cbab2e6692eca34306e267e14c045d",
+      "imageHash": "f2219ad672d5cd3629bc80524847c9d91c44e8eb591d2ddb3ea94d6d7ffa43b7"
+    },
+    "style:corporate": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-corporate.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/corporate/components.html",
+      "sourceHash": "a5bc31a4abe14c6d396e58b6b5378d79d28ab5e75bd37658f496e41af50b950f",
+      "imageHash": "dcf9956f6ec6bad15e6549a658f2dfc2b683c060e6a7346d4560d4cb00fbff6d"
+    },
+    "style:cosmic": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cosmic.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cosmic/components.html",
+      "sourceHash": "493de52cfef32a74a3258d2c3362cb2f573dd911c91df784c3621693dde2261b",
+      "imageHash": "7e10a471c049a655def8c11d072d236507349199fe189395686321cee73f49f1"
+    },
+    "style:creative": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-creative.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/creative/components.html",
+      "sourceHash": "0c97b88ee6a7473d12855f561490b132878181990550c02cbdda367044aa7329",
+      "imageHash": "4905a9df13d3c028e41edba54a87e03fcc3bb33af52bf95c6885c9bd9cb04c4f"
+    },
+    "style:cursor": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-cursor.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/cursor/components.html",
+      "sourceHash": "4c8dd1ca059827eda5837998e8ae82a61d36abd514ecac21ad848e4d6c22e70d",
+      "imageHash": "3df0b454a35542b8efbb2a46bf55c31f6b176e88a533600bf3f13564254414ce"
+    },
+    "style:dashboard": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-dashboard.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/dashboard/components.html",
+      "sourceHash": "9fd07a5d7c6a5ad9d71d5cdb4bf03f55415dd1bbd05693a06090a30c2abe504b",
+      "imageHash": "5085bae042da38b79bce1c269e1e54dd494f0ea313d52e8bb2446c454590ee0d"
+    },
+    "style:default": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-default.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/default/components.html",
+      "sourceHash": "5a17f2a4743253cf26b7558fc9cc1f33199b9bf8c2bf65e03504f02458caee27",
+      "imageHash": "ac0873e1440e0522b85452732d61d5aa6399cffac410098ca6fde90d3fcec24f"
+    },
+    "style:discord": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-discord.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/discord/components.html",
+      "sourceHash": "ca54f94d5fdbf96173eed231435889cdb4b2125bac18f8dcee98653ff3eee541",
+      "imageHash": "35cf4be0073249a110ee48f938343e6745e1207d3ea7cea0bfa2ab06ff7168da"
+    },
+    "style:dithered": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-dithered.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/dithered/components.html",
+      "sourceHash": "d65956d2c3c5bcc4c1c5a7730ed040dd9e891e9035ba80b34b0ea1cff2a75862",
+      "imageHash": "f12e75105ac989f91da2e3ffd43ac5e388468584a7311950e7cd879abaec7eb5"
+    },
+    "style:doodle": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-doodle.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/doodle/components.html",
+      "sourceHash": "a6c0fe309c1e2e8110514bc0183110a42fa6cef813d62071d217cd48088ecb94",
+      "imageHash": "5b3de294d43826b1875be449a9fc2c03716ddfcc168d680990907a3bc3865401"
+    },
+    "style:dramatic": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-dramatic.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/dramatic/components.html",
+      "sourceHash": "19c8d949a95a9c3cad7a0997c60f9b6180f2e6bcf9ce65865567798d065afa77",
+      "imageHash": "648bb7f57c49ef2d1e63ea64598ddc25a53351d8b53257fb5c1b43da00931581"
+    },
+    "style:duolingo": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-duolingo.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/duolingo/components.html",
+      "sourceHash": "f77c224a88bc8e516a09d695d2aeb71990d8e672ccb2dc0b8a132a2dd69b4686",
+      "imageHash": "fd4154d89c77077ddba7f60582ef049691e6b8f194f0bbb71db76cdfb85bf104"
+    },
+    "style:editorial": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-editorial.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/editorial/components.html",
+      "sourceHash": "75175af1f9d13b4622af68280604f1ff5eaea7ef3f3881e0b52294f9f342bb5f",
+      "imageHash": "f66d0202b551687edda2807185b864fd24954efc9e71c11b08d147eb01457319"
+    },
+    "style:elegant": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-elegant.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/elegant/components.html",
+      "sourceHash": "a66b2a464fa88d3904c3e70fe19f4e5ba0a15e965bd945b53842b3756668fbe2",
+      "imageHash": "011b3317c752fa14eeff885deb78650482090b6cf06c06c094fbb4830b9f7995"
+    },
+    "style:elevenlabs": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-elevenlabs.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/elevenlabs/components.html",
+      "sourceHash": "496e3a9d80b8fa207ecf93676070981fa7fe02c08c41b7e3c9910a022566e94f",
+      "imageHash": "67e0e1ac34bf45e28d780dc7f15ab9cfabc39b5f544c3b1be24c0a7651e63dc9"
+    },
+    "style:energetic": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-energetic.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/energetic/components.html",
+      "sourceHash": "3c0ec29e0b31f877ee3103886efa3f96e86a9dcd530aaa9983abf786c6187d6a",
+      "imageHash": "ead2e8cd76c71ceede39448c8a6c19864b3650c242d89d88b47d3838505440eb"
+    },
+    "style:enterprise": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-enterprise.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/enterprise/components.html",
+      "sourceHash": "fe5cf8fd777ef4cc43def81091559a75a43d45cef8b8affae62a4c66a5991778",
+      "imageHash": "92f8cbc8aa6e052a01c86e75fcf0cb8c6fdd5ff367c5dcc36792e92f29dafafd"
+    },
+    "style:expo": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-expo.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/expo/components.html",
+      "sourceHash": "4cba51d1d1d9d4bcfc6c67401cfb03745490597ac27e62bcc322f0ffc14ebb33",
+      "imageHash": "8aca73a723424f46818b1968a11fdfd34361aa9cb62e0d363d2d581f70fe3294"
+    },
+    "style:expressive": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-expressive.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/expressive/components.html",
+      "sourceHash": "ff1c7b664d26a82f648fc12013e44866fe76f7de69626df51b8a1ab47fd48aca",
+      "imageHash": "ece4c0d51f4a3c65337fe1a1446dedf09ed87d706e5b1ffc818cfc9bd8da7251"
+    },
+    "style:fantasy": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-fantasy.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/fantasy/components.html",
+      "sourceHash": "48fe0438a256cd5e61545c3fce2d51b4932b001730ca0533c0564bbdcfed80a8",
+      "imageHash": "d16a9335abd0565c3ba50657054b318fc4e7957559d61c211b5678da5fd455f9"
+    },
+    "style:ferrari": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-ferrari.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/ferrari/components.html",
+      "sourceHash": "6f5cc0ff080c6ebe6a3f7ef7e7e3937fb11e190b942e6b9774e25920432839b8",
+      "imageHash": "9848b00eb2438076de85c22943b2d6e4cd4a29a59c25537dfa9d67d61162058b"
+    },
+    "style:figma": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-figma.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/figma/components.html",
+      "sourceHash": "1efae25226ad97d7a2d68439e7c2b6e602925fcf96333f16f8894f3e5bfaaf28",
+      "imageHash": "53d2812668cf9dccf766cc95efa8b722d3a35de0c76154918d66a9fea9896d03"
+    },
+    "style:flat": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-flat.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/flat/components.html",
+      "sourceHash": "e752dbcf1ab9065435e5c26fabd9814ef37320f2bb63f2344fbd05fb6accdc5e",
+      "imageHash": "6704441ab29aba80e8e55e0adaedfb102372c209f85323092c72b5cbf99856dc"
+    },
+    "style:framer": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-framer.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/framer/components.html",
+      "sourceHash": "96930680f4234a6e418a7ea26d4b304860ef246ab443ecf1db367b3f51ff6a56",
+      "imageHash": "cc0bf7236e4473d90f5e0e8240c14c0005228c87ca3b7fde842be0ba1c0cfd2a"
+    },
+    "style:friendly": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-friendly.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/friendly/components.html",
+      "sourceHash": "44a19dc6b7e18d2dffc96edb053dc13e8255fc7f111c22bdc6fdfbc4f2468753",
+      "imageHash": "ef4e988b7531ccd258b323ca0abe072b8d84241e25905bd77141eb65d52dfc95"
+    },
+    "style:futuristic": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-futuristic.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/futuristic/components.html",
+      "sourceHash": "f68f8cf7cba932ba713470870829fa0f13e13c3809f9fd0e01f1f4facf497cf7",
+      "imageHash": "f8db3036e0216bdbc32dcba43c50dd30ce7ac383ce7247379d2571b5ef0e62a0"
+    },
+    "style:github": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-github.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/github/components.html",
+      "sourceHash": "f105d2f1a356c12f3d84decd11f0b0bf32e75611b4514d17ec7114a7de10672d",
+      "imageHash": "215eb071e08261da17a1f1c8bee26b04d3559f5955b1c1b07f8fae6b6d246c09"
+    },
+    "style:glassmorphism": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-glassmorphism.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/glassmorphism/components.html",
+      "sourceHash": "f33fed4dfe8e425f0ad9840dd799163426a52c3d0e1a28eb9e3264fc578b7240",
+      "imageHash": "d62c86113645c4d708e046eba4869f94dd5e9c8292d4d41b023a684d096848a3"
+    },
+    "style:gradient": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-gradient.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/gradient/components.html",
+      "sourceHash": "3f2b11a21b7bfa496a594c88acc6dbbcf8616f66551a663cb3f005d639840a35",
+      "imageHash": "c37ef2e479e0630d270fe4e9ac43e20180139c02479175cceedbca906ee91902"
+    },
+    "style:hashicorp": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-hashicorp.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/hashicorp/components.html",
+      "sourceHash": "683145b4a34cc3e1c92403a83a1992b2d525f4cb3d9102d99e8c84dc88ee7d42",
+      "imageHash": "76a68885b30d748ef5cbd745ca639a51b58a9ce2df7b3929821b330348522daf"
+    },
+    "style:hud": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-hud.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/hud/components.html",
+      "sourceHash": "e192a0d1d5615d7a2f98c86705c23f96977f6212a8e9b03ecb5d5d7283ef1090",
+      "imageHash": "4cf6afcdf82f5ab5249d8122f309e7f31134568fa8c264bd73795527572001c3"
+    },
+    "style:huggingface": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-huggingface.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/huggingface/components.html",
+      "sourceHash": "8c37d05ea2762c2080ba2bb871c0c96f4e8f86ae89ccf8653788808c3d2839ce",
+      "imageHash": "8bf16f3efb0098fc21400c284f59f57dae32060c9c48f84284621f1115644600"
+    },
+    "style:ibm": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-ibm.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/ibm/components.html",
+      "sourceHash": "b3bc9f7007c94a55c5b9a3f61c3c144f476e06f73f5d3f2f3fb6e6dfc202850c",
+      "imageHash": "860567717bf55fa9d9d7d8d81a4b4e781356a7714b00486fdf23f90ead189459"
+    },
+    "style:intercom": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-intercom.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/intercom/components.html",
+      "sourceHash": "6ab4e4a28dff6aa42ec67d714a4eaed98690265f09e94460e1e33cddf1015fd1",
+      "imageHash": "1b9fd39a386465687ed46c5cb1a48d3718fea9f084da478eacce249df04d6597"
+    },
+    "style:kami": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-kami.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/kami/components.html",
+      "sourceHash": "78fc17f0c8fd3a5a62e201fadd9e6725f255f6d4ce540893654de27a43cebbd1",
+      "imageHash": "77fde0d1cd8840ae6897dc5b8e7e8a52e6543aed67affbe7f29610b2c5b6cd5e"
+    },
+    "style:kraken": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-kraken.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/kraken/components.html",
+      "sourceHash": "b01acad9c8c2acf561ea1e4dfe93cebb01970cdf10e66b3765a3cc5d65a21b6c",
+      "imageHash": "c05b05f2a125033b6733c54376677c2f0fabfde7335526c40e073783a8c6a2ad"
+    },
+    "style:lamborghini": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-lamborghini.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/lamborghini/components.html",
+      "sourceHash": "c8f27ae35b7c2f11b80e4d31cc4c85b828ca07516169a19038e588f4591919ca",
+      "imageHash": "ac2b5439985339c7c33bbe8496eddb1f23aabfedf4b852fa87875878706b8a00"
+    },
+    "style:levels": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-levels.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/levels/components.html",
+      "sourceHash": "5267f5f443ecc07ed0048ea6683d2a124a0967c69bb7f7e608be6d53b1939617",
+      "imageHash": "e409f2f9c9a8b042899cd2cf33d10941827154e79f4f92403a9c1a420fed9575"
+    },
+    "style:linear-app": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-linear-app.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/linear-app/components.html",
+      "sourceHash": "5ef67d648284389cffa0ab9fe17dd90a426e341423dde2bca08f44a801c53451",
+      "imageHash": "bb1f9b9e9184cdd690ae29ea14a1fbd0c96e398185a4b32ecc91ea5e5b61ab3a"
+    },
+    "style:lingo": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-lingo.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/lingo/components.html",
+      "sourceHash": "b742c65116aa9c3593b74d7c80cbeb7fef006f9aee540d8dbed88fff570e4e21",
+      "imageHash": "9359f933ca236ee949f127524f491684c375c46496475bd141b44d7f8a123751"
+    },
+    "style:loom": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-loom.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/loom/components.html",
+      "sourceHash": "0153ac01089193ba11f08585b908ee80fb472d8e70602ca43352ecadbb75b657",
+      "imageHash": "717fe26e8be0c961e3ea4ab80690bb59fb079a5067f8bc074e99ceeb827920c3"
+    },
+    "style:lovable": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-lovable.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/lovable/components.html",
+      "sourceHash": "6e73144c03231572eced5c39426b62305a5242ad010404c2cce37ca4b51f0410",
+      "imageHash": "fa931ec68ea34d666ee5bd6cb4598ab8472e1e2273448ac2edf586c4e63c4608"
+    },
+    "style:luxury": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-luxury.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/luxury/components.html",
+      "sourceHash": "17b1112cfd09b3597baef3451acbd22086567e264a9268d88bfa281bf8ae9d90",
+      "imageHash": "17269ec5f549f003338d451f985b4377ed42eaa65dcd50d26b57d0f8994bff04"
+    },
+    "style:mastercard": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-mastercard.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/mastercard/components.html",
+      "sourceHash": "e25951d4c5798d8e0e8cf0a261d82398fdaa6a09b658b76505a9a417ff628ee9",
+      "imageHash": "21c48dee3493840d14c304d9ce5c1a5002a9f11ccc9de68e2f545c4d9477d4e9"
+    },
+    "style:material": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-material.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/material/components.html",
+      "sourceHash": "4b0534adc1c27b06edffdde38ab50ba98dd38fce2d419baa682eb21635ec21f2",
+      "imageHash": "ca7f96a1d4dd96dcaec7590a1bd8a3dcf3f49a20e031434dff4e91e2ede2021f"
+    },
+    "style:meta": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-meta.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/meta/components.html",
+      "sourceHash": "e54a9bbf6ca69c9db47eb111eff4fa1c5a6ac42e6d92337f93387f2d803eb24c",
+      "imageHash": "9216befa1c716a1726281bf15f3c8b2d3f70c6f3a0d433516af6735afa0362a1"
+    },
+    "style:minimal": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-minimal.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/minimal/components.html",
+      "sourceHash": "6b476aa70e8b76ae0685e19cb8123c7cf9ed5bb3706cb7ac18cc594f484d0db6",
+      "imageHash": "e1302292cd6c5ac4b5e8e7562207eaaa58c28e024ba431de1305188133c704dd"
+    },
+    "style:minimax": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-minimax.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/minimax/components.html",
+      "sourceHash": "11da3afbf6c23a40729dbbdea5b7e6ab1880aaaad6f9ee0fea15640b9ffe8d5b",
+      "imageHash": "7f516383db491b9cd428557bba6ea38f659b26331aeb9793c1a694d0ac475a85"
+    },
+    "style:mintlify": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-mintlify.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/mintlify/components.html",
+      "sourceHash": "78704da3b6035ca0bd61b49d15672e8e3dae96479e524826fdec50eb234ad815",
+      "imageHash": "91d480615616239c4d49d1dfb58acf273935a165162bf213938707514e827a5f"
+    },
+    "style:miro": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-miro.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/miro/components.html",
+      "sourceHash": "6e6953fc845909e7d944d8af361f71a3de7195c554f0997930fd30484e3c4974",
+      "imageHash": "816acdb84ac12475ba27cacc419b1a3efa3fe3d73bf94504102478ec88d9b91d"
+    },
+    "style:mission-control": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-mission-control.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/mission-control/components.html",
+      "sourceHash": "3a2753a542aab2ed79234b151c0517c5c9f63addcef463ea1eef9e96678bfca2",
+      "imageHash": "efdbe8bf2da9e583e37e61f6df0ccde031369d1ab9cbee9f76f142c8b48cece2"
+    },
+    "style:mistral-ai": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-mistral-ai.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/mistral-ai/components.html",
+      "sourceHash": "d40f1607098a6a4dcc6e2a4475cb7c71267e7f5388372a2328ced8e65d9353b0",
+      "imageHash": "a829093460c1f08a65bb617924d4b1290554e2d7975e32d7ebe6945a754d9962"
+    },
+    "style:modern": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-modern.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/modern/components.html",
+      "sourceHash": "6a1d78394a7455f0398aa8d86e0709959a88e943d35d00e35c7b5eb017f8327c",
+      "imageHash": "345defab265b1a1a3a4ca23380140dd1ef04d45afb5eb51a68a2d26398e96cff"
+    },
+    "style:mongodb": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-mongodb.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/mongodb/components.html",
+      "sourceHash": "4c2dd9bedb2a379c1acdd677389a2a70b8eabdfe16e64ca958a2b0ed0c4c7f65",
+      "imageHash": "0d5203e98cb02e4aadb5e0e4ee62d3a8f2488973e0f8552192d93aeab0f20245"
+    },
+    "style:mono": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-mono.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/mono/components.html",
+      "sourceHash": "d408f2f9477de546fb3210bb3e71eee278f689e5566b570e487bf712aac3667e",
+      "imageHash": "349658444c4c5a54eeea470794368180158a1bf75068e8bc8b7d77fe9589049c"
+    },
+    "style:neobrutalism": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-neobrutalism.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/neobrutalism/components.html",
+      "sourceHash": "87de24fa0179a90091fddbbd84cce041e6cf5c91911ea1bf358ae09a4d2e0bf0",
+      "imageHash": "a3e6645bc58165a40374ae36d2df945f030a407855d074fa8df54c039cff7695"
+    },
+    "style:neon": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-neon.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/neon/components.html",
+      "sourceHash": "096d3112591727f698ca1b01a65babe9808309a1a4367133319c09e8a506d896",
+      "imageHash": "9f7d9bfad88188a23313aa9fc282bab986ed3752047738bd64baa8c7ba38a593"
+    },
+    "style:neumorphism": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-neumorphism.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/neumorphism/components.html",
+      "sourceHash": "626f6e44b0b15d0f8061cdd2f541e97f82d86a537745755ffe8998247545acdd",
+      "imageHash": "ca0d6862544b7ae991ff265bafb40d1bd5c4faabdd1b42b22644c542669513f0"
+    },
+    "style:nike": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-nike.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/nike/components.html",
+      "sourceHash": "8b4d3315cba62f1038bf8dce338a5e7740e50af6234d1676d30e8c82202b2dcf",
+      "imageHash": "9ff3b9acc53f24f2b9af8c09c0a50ff1a4152a19dbb6c70e186e91e8a9de74f9"
+    },
+    "style:notion": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-notion.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/notion/components.html",
+      "sourceHash": "977a375dd1c6c178010a2f3810e10994aa8159d3fcfabdbdcfa23adeb73d5be6",
+      "imageHash": "a8061edb4cca4c00a77ef5095a8db3db27ac712d8808aaa77684539cf05c5dcf"
+    },
+    "style:nvidia": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-nvidia.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/nvidia/components.html",
+      "sourceHash": "82e1f6fe3ca3e76ce28bcc9cb565a8ba8b10119f3d6cbc22c08cf8812003a004",
+      "imageHash": "3ae7450f136aefe3cd7a3e7a7f55b16d2b79404a0a38e1a97142cbad06766f86"
+    },
+    "style:ollama": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-ollama.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/ollama/components.html",
+      "sourceHash": "bf08e436c1afadb00d99f44519a0ed3f79b5a3c0e47fb1306ec6e24d38fd20ab",
+      "imageHash": "fab62dc8739d961ae58b9534604448b1889925322279388b62a70fa240b678e8"
+    },
+    "style:openai": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-openai.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/openai/components.html",
+      "sourceHash": "efb7b8d39c19657774f64a27498f358132b12bac5d49808b20e73fdda77cfad8",
+      "imageHash": "2eb9ab251e8826562f8684c00bc93361889425b55bf8dae2b76513d1b66aea51"
+    },
+    "style:opencode-ai": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-opencode-ai.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/opencode-ai/components.html",
+      "sourceHash": "ac0a5342dace0f31c97549aaa36e81d491a46233dd60f34eda2f10d29bd8c56c",
+      "imageHash": "9216be0290bbadd6c872bdec65a2054c497abc82f55c7c541b44339afcca001f"
+    },
+    "style:pacman": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-pacman.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/pacman/components.html",
+      "sourceHash": "ea7211b64e5fc9b2cb1bedb7d451598e83ec47d58b2bda9bbc1f846a7406e2c6",
+      "imageHash": "dbecff69d8ed41e82cbd59682e49fec738152fb11e288c9c833a52692e2f282a"
+    },
+    "style:paper": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-paper.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/paper/components.html",
+      "sourceHash": "289845a87f574b1f438fc55eba16eae8c55f203433202fb79db483e1b42c85a9",
+      "imageHash": "46de8af1c1ff8c0fbdcc9d8d66706d8819972593a8a26e45ce6247bba1370d05"
+    },
+    "style:perplexity": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-perplexity.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/perplexity/components.html",
+      "sourceHash": "1f2519efcc63a7d5a8887885ab3f39b70bd434c20b9ba81915486d3f23e31627",
+      "imageHash": "10a0e29455587e0551a797a95fdc39d117610c6ce372e94c9e38150ef7719dc7"
+    },
+    "style:perspective": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-perspective.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/perspective/components.html",
+      "sourceHash": "a177739a2bc9d853f795d8f9c10e76be824c4f996233919fba404c701257db13",
+      "imageHash": "7df08d0810f91c4c13b2900c975af55ba21b005a6d4da5081f63c30ff515ff6f"
+    },
+    "style:pinterest": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-pinterest.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/pinterest/components.html",
+      "sourceHash": "b3625f412b10bfb16040031b05be87e353f1374a99d9f97ed86040a82fee3b7a",
+      "imageHash": "01100e3c3ff9ca72af468dfa7be9189f74860c5363f6064534d0dda25dd297c3"
+    },
+    "style:playstation": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-playstation.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/playstation/components.html",
+      "sourceHash": "d951314357c05d3aaa0c7abdc48864823c4c4bc9a13290b3734a2050ab69756f",
+      "imageHash": "06011cf2ddd7f249f9ae120d36263f27223edd04de4defe9492267958b585304"
+    },
+    "style:posthog": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-posthog.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/posthog/components.html",
+      "sourceHash": "7331f434255a633777083ce65429da2a423022048a28accd3ec13c9d65736c61",
+      "imageHash": "d98947c2400f5a395606e805ef0a0a1a5b55ddcdebbe84d1bbbc5e932811cd3b"
+    },
+    "style:premium": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-premium.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/premium/components.html",
+      "sourceHash": "44ec8910795f2859550a76f6d9fe7e2161b8ce01cc5530c94c02982ebcf68f72",
+      "imageHash": "ec6bbb477c63790abd901bcbf782bbb90aee4eebd2f03a11bf4287337c953eb1"
+    },
+    "style:professional": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-professional.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/professional/components.html",
+      "sourceHash": "96f77dcbd0ff40d5ec83d508ac511020d66962a1058c4cb10215b6c3a6678a89",
+      "imageHash": "f0aed51b93a134ea0ae580702522d6390396af0eb56b1092faa5bb9c620d690b"
+    },
+    "style:publication": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-publication.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/publication/components.html",
+      "sourceHash": "1563063ece91c6af1caeaf0f16c56dbd0c817b4f6f05f50c7ec254e8d249af1d",
+      "imageHash": "fd46bb361a5e0e799686d1afd0c011815468b1609a0f65e539ad261da7359802"
+    },
+    "style:raycast": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-raycast.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/raycast/components.html",
+      "sourceHash": "5dd5cdca5c5997b9021a8ea138db017aac5ed48f0a3e15f33a2f5e27d58f903e",
+      "imageHash": "7fdee2279f7fe96675e8276449168c53f9b2e020c1b573978be332895f807953"
+    },
+    "style:refined": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-refined.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/refined/components.html",
+      "sourceHash": "8e02e63c79fb5480e3b8a382dd97b676a17744b2de76d4c86261ae1feb8794ca",
+      "imageHash": "8812779edfb4ac73f3214655f1617aa6f693ae2bc352fadbc5e57e1737bd83e4"
+    },
+    "style:renault": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-renault.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/renault/components.html",
+      "sourceHash": "cf9000f150f9a9a991587eb42c0c7e1e95e31ab06d969a642405aedf74c32750",
+      "imageHash": "01dc60a48031257053d6f61d99fa0ab20137e80b47a68b238c4d8dcd5eeb7846"
+    },
+    "style:replicate": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-replicate.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/replicate/components.html",
+      "sourceHash": "beb5d875f2d20cba0e9a781e8dfea73c35271436f9e5ae549d1a541c6414c179",
+      "imageHash": "8ec37c0ffba59ea4712b3e843edc897110852cceb0e49c00ef47af64b1d02637"
+    },
+    "style:resend": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-resend.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/resend/components.html",
+      "sourceHash": "c7bc964f57c0ebd9850d0d9c2c377df889baac4f15d09f0de1f7b570991310a0",
+      "imageHash": "2b1ee8ce1a22df5d681f24c27a528d01745c9b64e2f9534b7e81ecf739cf0162"
+    },
+    "style:retro": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-retro.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/retro/components.html",
+      "sourceHash": "3a99b63538ea22cf9a1ffb3baafec1436b1d2bdb34d375e4fda762d1256929d8",
+      "imageHash": "f0d94366385947f1a356bb41d18e4ed698f652723c88a132b5264593ce8d6777"
+    },
+    "style:revolut": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-revolut.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/revolut/components.html",
+      "sourceHash": "a31db6c181f2da3ff355f4e76141e01d6e1d50b668e9ec87da2b861495055c7c",
+      "imageHash": "993af020d37bb7bb350261d6a3912c455b282fbb1a324dbc1e669ffdb4c7e43d"
+    },
+    "style:runwayml": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-runwayml.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/runwayml/components.html",
+      "sourceHash": "86abbe0a8fa6033c077226831d6300cbdf8c89a101a4403f41affab9e34ccedf",
+      "imageHash": "490ae66112d5ec0b5bd2ca40a47f4a74bfc336937f04f08818fece82652bff3d"
+    },
+    "style:sanity": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-sanity.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/sanity/components.html",
+      "sourceHash": "77becd4cb5c7b5e7b4c9055e1dc950674e4948df244c28602dbd73918655f0fb",
+      "imageHash": "adc9b21bcbbba4d99b532e0c1f7fa83e2b65c2776b7fb4a202e7a6958b0ccdd5"
+    },
+    "style:sentry": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-sentry.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/sentry/components.html",
+      "sourceHash": "4b16c3550cb43ab8de2a2e912d6912b92a166169dd9162ff2e44d0879e229e07",
+      "imageHash": "2b1ac901f481c30b64b2971d13331c1b3671016c63eb2fd5218ecb27911ba639"
+    },
+    "style:shadcn": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-shadcn.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/shadcn/components.html",
+      "sourceHash": "403ced430be0c0a33ac4c423f3d5e6baad15d36b2b4c288b8e6b267904b76068",
+      "imageHash": "740368e38c6b2a15ff647b87ce2b4f7fa78099f08d2e2fc51ac94a1548b79f24"
+    },
+    "style:shopify": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-shopify.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/shopify/components.html",
+      "sourceHash": "33675fac941f25df3902ccc3a87e8721de4710e8a4a85ae4ba8497e9ea6e763e",
+      "imageHash": "7080536f2f6c939fbd1a71e839d6a85f0e5d4847f3f3096960e010c4591fd701"
+    },
+    "style:simple": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-simple.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/simple/components.html",
+      "sourceHash": "b5f682501db544fdf7e975f3a5f9164b67f286800902e437db4dc7b284fd48cd",
+      "imageHash": "c6b94014549599446bf85349ee8b28552f2286bbf8f3b149c585d2f337d25814"
+    },
+    "style:skeumorphism": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-skeumorphism.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/skeumorphism/components.html",
+      "sourceHash": "996de446fede5e84ead475017ad65743148feedeb55e8c0a13a4760b2d861339",
+      "imageHash": "dbb43a1347610e389b127e999858726414661a8ff1b77aa15002fc850153d38b"
+    },
+    "style:slack": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-slack.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/slack/components.html",
+      "sourceHash": "03fe2d4fd41decab7a3624ed33ed00f5fcb8922369cced4ec12506f5abffb904",
+      "imageHash": "4ac1f7509280d9241464efc7a39e2508ec13e06c2f5b482d59ca617db4ae08b3"
+    },
+    "style:sleek": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-sleek.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/sleek/components.html",
+      "sourceHash": "62a6ddd6896e2cfb8759353eeb86ee74f521b5b29cf4f56e6335b56586f8998a",
+      "imageHash": "4e1be96aad61c49752d739e4cce57cef93a3f642f190904385e0622e679ea2a6"
+    },
+    "style:spacex": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-spacex.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/spacex/components.html",
+      "sourceHash": "a1fa8431c84302df5c6044bad436c2cbcd1672ae85ebec779069c74c1bc1297c",
+      "imageHash": "9433fe14f4d4c89a3a989e89c5f8a15fc1341d5ea3ef8dea370c6f8c18a31703"
+    },
+    "style:spacious": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-spacious.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/spacious/components.html",
+      "sourceHash": "104b63128f1b6e5b8e0246d153195dcd0b3e2164ea6134eacda829c345db603b",
+      "imageHash": "181ec05f90fc2d8535b327cc216c8de6923343ee6b1bd0ca9175af7f2c6c021e"
+    },
+    "style:spotify": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-spotify.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/spotify/components.html",
+      "sourceHash": "e850607dbe230355f22082f84e00482630c92951bbd8a1e4228f8f93b79460da",
+      "imageHash": "2de47fdb78b2cd1a402557cd928c7fb9e5bf45947368dd0e1f76d330252200c5"
+    },
+    "style:starbucks": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-starbucks.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/starbucks/components.html",
+      "sourceHash": "afc3054578fbcf0e7a0fae9af0a2ff4088ae7d3a362b6965be607baf5e11a67f",
+      "imageHash": "98ac2c10437250866a8fae58408522d5a2bae5c8b1b870a62b30c42b61c65649"
+    },
+    "style:storytelling": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-storytelling.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/storytelling/components.html",
+      "sourceHash": "9ce7ba9bb5e06c450f1c1a137540c23eb71f2e709b4a1f85317ef0355b264a09",
+      "imageHash": "b7a0e87b5126c2c88f3110471ce803263d8556c66930432dd449686e76ae6f68"
+    },
+    "style:stripe": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-stripe.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/stripe/components.html",
+      "sourceHash": "ef09d4fd7cdbee1fdc6e8b74b49113de7428c7c7579e542f17090982150175b3",
+      "imageHash": "3e8277456c38e4206c55dd57479ffffa09144d6a823f4c91f91522462c30b36d"
+    },
+    "style:supabase": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-supabase.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/supabase/components.html",
+      "sourceHash": "71f0b0539e2797f6e93835c59fb254b409185155088f006a261886084a3db689",
+      "imageHash": "231827078fbe91456971a37a4674d36cdd223dbe98b031b78176a5d30e7e3436"
+    },
+    "style:superhuman": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-superhuman.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/superhuman/components.html",
+      "sourceHash": "996058cd11153b8f9f0223ab72886903f466c4624a20062889ce394f030505e6",
+      "imageHash": "54d71dc42a8a00e16287dd951137c1ab16c5b0b0cc8c9cb83a4ba33eaf50cb2c"
+    },
+    "style:tesla": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-tesla.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/tesla/components.html",
+      "sourceHash": "d1c1fd6f5413cce45fdc39ce75dcdf0ed8d33a236b8d6f8e2294fabf2c5f1722",
+      "imageHash": "7c213ace435d45661f81c02a60a36320ae92d1e8a79211157c25c5b13eadc6e3"
+    },
+    "style:tetris": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-tetris.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/tetris/components.html",
+      "sourceHash": "89fdd6726875d394598c6321bf256ab3534ecfaa324e3eda198fb30d764d1f26",
+      "imageHash": "ddf9d35ac773120729d3b932939702224d4edc130270e5eb44775dd7d2c2b75f"
+    },
+    "style:theverge": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-theverge.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/theverge/components.html",
+      "sourceHash": "0d9275c0705b5c90e3791848789920d24ffac10b5c8394c6e9c2a16f9343be33",
+      "imageHash": "87bc8aff01919b07fc6c906cfdfd56be0eec68a828522a11c1e3b67e6a1d864a"
+    },
+    "style:together-ai": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-together-ai.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/together-ai/components.html",
+      "sourceHash": "f881802ac004cbf77824e599b54b277ad2a8c2e94ee189698b2e4230dcb2624d",
+      "imageHash": "d942b20cf91455bf0b85bdaeb639804a0807dcf9567a6bb5f00a9f4321a48e02"
+    },
+    "style:tom-modern": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-tom-modern.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/tom-modern/components.html",
+      "sourceHash": "60fa4c16361c14ffdbf506945e4b66d6cd1af6216c90a00f27affe8ca218f351",
+      "imageHash": "8454def3fa37a9d64a264fcf442362b43b3a688b6869ca71ac0733330487ea5f"
+    },
+    "style:totality-festival": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-totality-festival.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/totality-festival/components.html",
+      "sourceHash": "50e7962bff8cd4e0e7f9e19df2d8b2e990b1b1472c914613a4baeae8224f23e5",
+      "imageHash": "1fc9cb7d5e73d381aa1672583d5cc2dbd1471c4f65f0fa7d64eaee3d4a90f9fd"
+    },
+    "style:trading-terminal": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-trading-terminal.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/trading-terminal/components.html",
+      "sourceHash": "6b23fa9defb1bb7bd782c772243094750afd8cfc176e5e07ee0fe4c0c63715be",
+      "imageHash": "107b19161fea3325c161d8f11725e75e658116df1cd00aad0c7838b27c193bb2"
+    },
+    "style:uber": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-uber.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/uber/components.html",
+      "sourceHash": "1fac19015a10bdcf12ced7549b857f03d40bb562850d1d4647a30c5d0fe8a00a",
+      "imageHash": "8f0149d6aa248be1621c83c829be8e90139a1aa7b732693e87a113467a64b519"
+    },
+    "style:urdu": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-urdu.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/urdu/components.html",
+      "sourceHash": "3feb3a2f8a418ce512f2169654021f209d41db37ab23f5278de6864297abac2d",
+      "imageHash": "a58f791d60f8c9697e98b4aea0b27212e1d7a2b32a4c13bd0b56de4e1cde318e"
+    },
+    "style:vercel": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-vercel.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/vercel/components.html",
+      "sourceHash": "061a2663fedefaf9acc3898079210410a6c3f6b141fb57bb52e6f49b6ff86f58",
+      "imageHash": "53c96747e37888422e89c99e3df05cf2b093d4dd4227ee09f81bea31b91d4886"
+    },
+    "style:vibrant": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-vibrant.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/vibrant/components.html",
+      "sourceHash": "f3ee01b49ec2ecac86f26edba47b7731996737924d810be40af47d164786308c",
+      "imageHash": "5c70cbe7aa07f428f4177b5a589e6a6ae08b66933a9ed034e6ce1728e11e28dd"
+    },
+    "style:vintage": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-vintage.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/vintage/components.html",
+      "sourceHash": "1ea8eed94ba183eab5314c2d86c09c5ac5e53d25a8c3992ec1f4255a850aeed3",
+      "imageHash": "b83dc887ad6aab53a8ebe5c66c5ed1b44bccf80dc0c51a4b96ea136fa8d77f94"
+    },
+    "style:vodafone": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-vodafone.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/vodafone/components.html",
+      "sourceHash": "e36165fad42e82cf7324b56f53117b152d667842df40b7f598cc10c043c6cda9",
+      "imageHash": "5674a64fd34d30cae31bae039bf06b26b647ce0c8e8c99e1bb51c61a4acdfd99"
+    },
+    "style:voltagent": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-voltagent.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/voltagent/components.html",
+      "sourceHash": "c63873945400fa2c1b58c3c0a0d2253836a627b5ca4ea5990707d98c01e42256",
+      "imageHash": "952d7404b72ab5e444693b5f76d13e2e47954602eb55b207892a99c6c01609fe"
+    },
+    "style:warm-editorial": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-warm-editorial.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/warm-editorial/components.html",
+      "sourceHash": "a67e14a99278c0fd2292c7454b70b0074af3f171435f2a2193edb7fb26a3a320",
+      "imageHash": "48e9afbe4c2a0046042ca2951cb6ffa98b5c91db6932b515432d4faa0035f426"
+    },
+    "style:warp": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-warp.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/warp/components.html",
+      "sourceHash": "b529c371daf832330954b2e3bc229989770958fe91bd9b80801617408a7a3fd1",
+      "imageHash": "297f2e2fe4ee4985048d3f6af2f611960c0bfb58d265999f46bf31310f70f188"
+    },
+    "style:webex": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-webex.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/webex/components.html",
+      "sourceHash": "82117404072078763e1171fd18431cf93e1dd28531a81ed6a3e43e248a073852",
+      "imageHash": "6a38fb8eb013a5fd6db56d61e8b30c80232ab9150c0fd3a8867df1d0b1d79514"
+    },
+    "style:webflow": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-webflow.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/webflow/components.html",
+      "sourceHash": "aea805b8315566df0bbf8387f3907fe3f97398e2f92f3bdafef239f5d6a65f85",
+      "imageHash": "1d0467c8e1833c8b9629158bd69e33d70c126b71e468860ff3e5e1dae054a105"
+    },
+    "style:wechat": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-wechat.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/wechat/components.html",
+      "sourceHash": "d7d7a502e01b9169366d31ad3e9be75c7b29126010f75d66e92e3d10e75184e2",
+      "imageHash": "b90eb1b60b928a565e3bd679e0375bec3fe2cda04a979bed394ba057fb7a83fe"
+    },
+    "style:wired": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-wired.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/wired/components.html",
+      "sourceHash": "c49bf3a7c102cd793431e2e2eaee21b64abb9905dccacd2df1dbe935abd42360",
+      "imageHash": "4661e56bdd36b43c46780bdf11cffa2189b32f2aeaa04bbab6b4c20f76c93c6d"
+    },
+    "style:wise": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-wise.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/wise/components.html",
+      "sourceHash": "4db1fd68c0808b9721fc9ad16d32532ee060c90874dd4bb5c458f098da6b4448",
+      "imageHash": "0cdad034a83352a2514177a397500b2078e14e67e6bece2c2e72237d9e5413f2"
+    },
+    "style:x-ai": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-x-ai.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/x-ai/components.html",
+      "sourceHash": "3f16dc56be24e8bf5f851134ecf273deb8b32913b374f781c826e831ffa6f1e1",
+      "imageHash": "a574ccce14e90087292cec26551bcabcb2e39ba8187321e48731222bafc47ff7"
+    },
+    "style:xiaohongshu": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-xiaohongshu.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/xiaohongshu/components.html",
+      "sourceHash": "00fd2c0cfe911e062032286dc7472c4ad2f358d2cbd9b2c1b06305a5fc13104c",
+      "imageHash": "ad0d3aaa94ae6f0e4633d439c4e9966a1b0a3671576ee7a02bac5751ac546614"
+    },
+    "style:zapier": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/style-zapier.jpg",
+      "kind": "source-components",
+      "sourceUrl": "https://github.com/nexu-io/open-design/blob/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/design-systems/zapier/components.html",
+      "sourceHash": "42bf30634f0952f9c26b5c41aed84b3cfc285b78fc362a2b60e7e4b5db289b2a",
+      "imageHash": "9a01e02139036d8e6fa80a9aee0dff41907fa7bcc153b27e48d141680db97d01"
+    },
+    "template:clinical-case-report": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-clinical-case-report.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-clinical-case-report/a24cdd60cd3dbbc5/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "dc322240676cfa376a08a867ee090c57c28695ade0532bab661f21f933f884a3"
+    },
+    "template:blog-post": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-blog-post.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-blog-post/ad2f1bd871b8ea86/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "d7e6f38d6688ff0816a043ead1ddebe5b6cf9b2488379e03c6ab8c26b604e9f4"
+    },
+    "template:dating-web": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-dating-web.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-dating-web/2fdaaf3a51e5a394/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "164ccf2ad5763d732f1e886b34fd1397321423aa8338a07855838f5cb716b26a"
+    },
+    "template:dashboard": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-dashboard.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-dashboard/69e332de613dce3d/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "d2ef81d04347e795177efdf4e5952ae0ad23ef1eb33528c4f73723c99f34b924"
+    },
+    "template:digital-eguide": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-digital-eguide.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-digital-eguide/f37d6f772a3fcccb/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "e379ca4d50a5750bdfadeb791372742e554053915b84434ed202ed8e84454ecc"
+    },
+    "template:docs-page": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-docs-page.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-docs-page/db42e8fad52abeed/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "9ae5f18ec8227056974b9f1a4d8371151af8b330ae5b7ac874d132d05f421f5e"
+    },
+    "template:finance-report": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-finance-report.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-finance-report/886c888f031f2a0c/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "ccb800626dae87f40d3dab33545b9a8140c2c71cc5e3271b6304783345809439"
+    },
+    "template:flowai-live-dashboard-template": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-flowai-live-dashboard-template.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-flowai-live-dashboard-template/7129f76abc23984d/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "377a9d66b890e7601d7978b19c60eba3c1cf06077b76e1972087f82a8d0bae5b"
+    },
+    "template:eng-runbook": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-eng-runbook.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-eng-runbook/56569eb3391b3f7e/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "8d904b360117f14f9b9159583a9c4d8c95ff430160b425c4fc5b17e2cea495a8"
+    },
+    "template:email-marketing": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-email-marketing.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-email-marketing/e8e2bf718b916e9f/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "4e71610330b5889f01a3221ab87c99f7879ae6f75707712346aa35e22ede6923"
+    },
+    "template:github-dashboard": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-github-dashboard.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-github-dashboard/126c86862d94be61/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "1a372b76b4d0477b5472145d4a178397241fbf8ba12196d5d9628505db5e8bef"
+    },
+    "template:hr-onboarding": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-hr-onboarding.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-hr-onboarding/93e31f87fe2fed4c/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "ec88c661f097a60653c5af4293889eda50831430dd96bee546af15939bea3db7"
+    },
+    "template:invoice": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-invoice.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-invoice/32a4c3ff4333909c/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "79e04f9140d09d89a16b441aeb6e6e25cf704e6908fb48a60fe565444b9c2810"
+    },
+    "template:gamified-app": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-gamified-app.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-gamified-app/6289e3344d0f6ebb/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "d64022864dc6d27420d763e61828563f044117f0960e9b44d31b005e6bf41725"
+    },
+    "template:kanban-board": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-kanban-board.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-kanban-board/38819c782ae77c19/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "ceea4f06634cf7e124928e46f87a6d8176a528f8034f9054bdd587a204b64fa8"
+    },
+    "template:live-dashboard": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-live-dashboard.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-live-dashboard/bbe1a4afad0df258/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "2f18263c5553b7acaca83e529a6db5e7dbf5758e9c5400fced05c7123d382079"
+    },
+    "template:kami-landing": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-kami-landing.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-kami-landing/eeedabde2d79fa93/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "7311250a70b1f107224bc710e17293522cd53d87c7d036b76dca8730441b19f8"
+    },
+    "template:mobile-app": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-mobile-app.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-mobile-app/c933a4813cdd1ea7/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "560bab57552983932027255912337ded2573d5a511c5203d4a36972aa6a3cf0e"
+    },
+    "template:mobile-onboarding": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-mobile-onboarding.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-mobile-onboarding/03ff2c03e294b49e/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "dffc4201fad3e6c0f0ad81fb2a60947d6a30b270d58eebd7f1504d56c3ca953e"
+    },
+    "template:meeting-notes": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-meeting-notes.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-meeting-notes/9d28fdacec342047/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "a0af6e4f24c58b2aeab881b6dd71fcdd0f8571dce546f2c03e660ed8ffe6da28"
+    },
+    "template:pm-spec": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-pm-spec.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-pm-spec/2fb72345e7eb5a6b/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "93396401d207d4586424e84fd8ca54944d93c5fa8279c95b274cd721bf557189"
+    },
+    "template:social-media-dashboard": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-social-media-dashboard.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-social-media-dashboard/7aa9e7c755347561/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "7de871f9930d30abbe86732e4890dc950857b01174119fa72173f8736ec236e0"
+    },
+    "template:saas-landing": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-saas-landing.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-saas-landing/a45bacd41a7e48d2/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "35d0977668e6dcb207c3b1a31217e649ade27e0cc85a2e4e3f104b606a924cb7"
+    },
+    "template:pricing-page": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-pricing-page.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-pricing-page/51d62cdd9b836c60/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "6567a39f86313f857956247ae518a41c4816aa331a12a67b8dfa1d7966c76a54"
+    },
+    "template:social-media-matrix-tracker-template": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-social-media-matrix-tracker-template.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-social-media-matrix-tracker-template/20f09560183c9646/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "81f5e342d9bbeb4e87b346a24b97c302bd908f038993056c29fee53d2b064445"
+    },
+    "template:waitlist-page": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-waitlist-page.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-waitlist-page/37d0a8776c09c8a0/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "214381eabf8d44abeb5e8ac3397275fe3ee126a5dbc639f7116918f97957478a"
+    },
+    "template:trading-analysis-dashboard-template": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-trading-analysis-dashboard-template.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-trading-analysis-dashboard-template/479d00063641ff41/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "3d1ea23b5f8c6ab79f2d28e4341f63455d356a74be59340e68e3cc4a955b5fa9"
+    },
+    "template:web-prototype": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-web-prototype.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-web-prototype/aeb5731d76378b6b/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "7cfa42a385bf4932c6b80c27380fda3a984b7222a4ac286e90738a20e8f58402"
+    },
+    "template:team-okrs": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-team-okrs.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-team-okrs/f173fa66990cec4d/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "45efe00c8f0d9b7d4c4d776d74e502c5c540b2b0aa0d1bfcd7cc04d6b5818882"
+    },
+    "template:wireframe-greybox": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-wireframe-greybox.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-wireframe-greybox/4bc7e23ae3db7719/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "13b11790e59a571250a910d8d2cf311779f6cf0ec7a9e3e45c3db61de5599420"
+    },
+    "template:wireframe-mobile-flow": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-wireframe-mobile-flow.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-wireframe-mobile-flow/c98f5ca225b05889/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "a5a17b5750835a82c30c548a647b3c5b6bb2e6db0061fc730fdb40c58c0382c6"
+    },
+    "template:wireframe-annotated": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-wireframe-annotated.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-wireframe-annotated/909da33160b3de3b/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "ed14d52f8c72a52b8fc278a1a04bc20f2493b69e8b5e25876c4034ff088a2fd5"
+    },
+    "template:wireframe-sketch": {
+      "src": "design-previews/open-design/0bd8251c9b5c0bed4b3aef87f53f9c1eadc493c7/template-wireframe-sketch.jpg",
+      "kind": "official-poster",
+      "sourceUrl": "https://repo-assets.open-design.ai/plugin-previews/example-wireframe-sketch/e3198ca0f61633c0/poster.jpg",
+      "sourceHash": "020d431eb3df84df2b99c959a0fd7bfb53314482e173374d074d3d2658c2ba84",
+      "imageHash": "faf64e5ae69fc5bbe5b49f298e07bedfb2175bb7708e1f980f211141dc1dee88"
+    }
+  },
+  "failures": [
+    {
+      "id": "template:aster-atelier",
+      "error": "No matching official poster in pinned manifest"
+    },
+    {
+      "id": "template:contact-widget",
+      "error": "No matching official poster in pinned manifest"
+    },
+    {
+      "id": "template:live-artifact",
+      "error": "No matching official poster in pinned manifest"
+    }
+  ]
+}

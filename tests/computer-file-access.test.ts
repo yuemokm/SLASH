@@ -85,3 +85,36 @@ test('same physical path shares locks with ordinary mounts and stable conversati
  try{await assert.rejects(f.service.apply(change.id),/LOCK|CONFLICT/);assert.equal(await fs.readFile(f.file,'utf8'),'SYNTHETIC_MARKER');}finally{f.service.releaseShareLock(lock.id,'other-run');}
  assert.deepEqual(computerReference(computerScopeId(f.conversation),f.file),ref);
 });
+
+test('full access shallow browse exposes immediate empty directories as metadata; recursive default stays files only',async t=>{
+ const f=await fixture(t);await fs.mkdir(path.join(f.source,'empty'));await fs.mkdir(path.join(f.source,'nested'));await fs.writeFile(path.join(f.source,'nested','deep.txt'),'DEEP');await f.start('full_access');
+ const recursive=await f.options().files.searchEvidence('',{mountId:f.scope,directory:f.source});assert.equal(recursive.items.length,2);
+ const browse=await f.options().files.searchEvidence('',{mountId:f.scope,directory:f.source,shallow:true});assert.equal(browse.items.length,3);assert.equal(browse.items.filter(item=>item.entryType==='directory').length,2);assert.equal(browse.coverage.listedFiles,1);assert.equal(browse.coverage.listedDirectories,2);assert.equal(browse.coverage.bodyReadFiles,0);assert.ok(browse.items.every(item=>!item.snippet&&!item.textContentHash));assert.ok(!browse.items.some(item=>item.path.endsWith('deep.txt')));
+ const nested=browse.items.find(item=>path.basename(item.path)==='nested')!;assert.equal((await f.options().files.searchEvidence('',{mountId:nested.mountId,directory:nested.path,shallow:true})).items.length,1);
+ const filtered=await f.options().files.searchEvidence('empty',{mountId:f.scope,directory:f.source,shallow:true});assert.equal(filtered.items[0]?.entryType,'directory');assert.equal(filtered.coverage.scannedFiles,1);
+});
+
+test('mounted directory scope is respected and unbound directory is rejected instead of silently searching project',async t=>{
+ const f=await fixture(t),mount=await f.service.mount(f.source,false);await fs.mkdir(path.join(f.source,'sub'));await fs.writeFile(path.join(f.source,'sub','only.txt'),'ONLY');await f.start();
+ assert.equal((await f.options().files.searchEvidence('',{mountId:mount.id,directory:'sub',shallow:true})).items.length,1);
+ await assert.rejects(f.options().files.searchEvidence('',{directory:f.source}),/SEARCH_DIRECTORY_SCOPE_REQUIRED/);
+ await assert.rejects(f.options().files.searchEvidence('',{mountId:mount.id,directory:'../',shallow:true}),/PERMISSION_DENIED/);
+ await assert.rejects(f.options().files.searchEvidence('',{mountId:f.scope,directory:f.source,shallow:true}),/PERMISSION_DENIED/);
+});
+
+test('legacy host subAgent reads inherit the same active conversation scope; foreign scope, mode downgrade and deny reject',async t=>{
+ const f=await fixture(t),id=await f.start('full_access');f.store.set('app-preferences',{subAgentMaxTasks:50});
+ const request={parentRunId:id,tool:'search_files',capability:'workspace_read' as const,input:{query:'',directory:f.source,shallow:true}};
+ const listed=await f.service.runSubAgent(request) as any;assert.equal(listed.results.items.length,1);const ref=listed.results.items[0];
+ const read=await f.service.runSubAgent({parentRunId:id,tool:'read_file',capability:'workspace_read',mountId:ref.mountId,input:{path:ref.path}}) as any;assert.equal(read.content,'SYNTHETIC_MARKER');
+ const other=f.service.conversation();f.service.setRunPermissionMode(other,undefined,'full_access');await assert.rejects(f.service.runSubAgent({...request,input:{...request.input,mountId:computerScopeId(other)}}),/PERMISSION_DENIED/);
+ f.service.setRunPermissionMode(f.conversation,id,'accept_edits');await assert.rejects(f.service.runSubAgent(request),/PERMISSION_DENIED/);
+ f.service.setRunPermissionMode(f.conversation,id,'full_access');f.service.setPermission('workspace_read','deny');await assert.rejects(f.service.runSubAgent(request),/SUB_AGENT_PERMISSION_DENIED/);
+});
+
+test('shallow browsing obeys explicit disabled directory and stable pagination scope',async t=>{
+ const f=await fixture(t);await fs.mkdir(path.join(f.source,'hidden'));await fs.mkdir(path.join(f.source,'visible'));const hidden=await f.service.mount(path.join(f.source,'hidden'),false);f.service.setMountAccess(hidden.id,false,false);await f.start('full_access');
+ const first=await f.options().files.searchEvidence('',{mountId:f.scope,directory:f.source,shallow:true,limit:1});assert.ok(!JSON.stringify(first).includes('hidden'));assert.equal(first.pagination.totalMatches,2);
+ const next=await f.options().files.searchEvidence('',{mountId:f.scope,directory:f.source,shallow:true,limit:1,offset:1,resultVersion:first.resultVersion});assert.equal(next.items.length,1);
+ await assert.rejects(f.options().files.searchEvidence('',{mountId:f.scope,directory:f.source,shallow:false,offset:1,resultVersion:first.resultVersion}),/SEARCH_RESULTS_CHANGED/);
+});

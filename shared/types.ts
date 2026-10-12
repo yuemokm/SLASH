@@ -1,5 +1,6 @@
 import {mcpPrototypeProjectLocatorSchema,type McpPrototypeProjectLocator,type McpPrototypeProjectBinding} from './prototype-delivery.js';
 import {z} from 'zod';
+import {designCatalogRequestSchema,designSourceOpenRequestSchema,designReferencesSchema} from './design-systems.js';
 import {modelProxyUrlSchema} from './model-proxy.js';
 import {mcpConnectionFields,mcpRequestSchemas,type McpConnectionOptions} from './mcp-connections.js';
 import {globalSkillsRequestSchema} from './global-skills.js';
@@ -11,6 +12,7 @@ import {taskAcceptanceOptionalSchema} from './task-acceptance.js';
 import {projectCatalogRequestSchemas} from './project-catalog.js';
 import {knowledgeDesktopRequestSchemas} from './knowledge-desktop.js';
 import {piPackageRequestSchemas} from './pi-packages.js';
+import {subagentRequestSchemas} from './subagent-settings.js';
 import {sharePermissionInspectSchema,sharePermissionUpdateSchema,shareStopSchema,shareDisconnectSchema,shareReconnectSchema} from './network-share-management.js';
 export type {SharePermissionView,ShareManagementResult} from './network-share-management.js';
 import {businessRuleCheckInputSchema} from './business-rules.js';
@@ -28,7 +30,7 @@ export type ImportedFile={sourcePath:string;mountId:string;path:string;category:
 export type ProcessingCopy={id:string;runId?:string;source:{mountId:string;path:string;contentHash:string};copy:{mountId:string;path:string};size:number;createdAt:string};
 /** Older receipts omit workspace/output hashes and remain explicitly unverified. */
 export type ProcessingResult={copyId:string;source:ProcessingCopy['source'];copy:ProcessingCopy['copy'];copyHash:string;operation:'extract_text'|'script';output:{mountId:string;path:string};changeId:string;status:Change['status'];workspaceId?:string;outputHash?:string;reuse?:{requestedCopyId:string;parserVersion:string;notice:string}};
-export type FileRef={mountId:string;path:string;size:number;referenceProtected?:boolean};
+export type FileRef={mountId:string;path:string;size:number;referenceProtected?:boolean;entryType?:'file'|'directory'};
 export type Message={role:'user'|'assistant'|'tool';text:string;time:string;runId?:string;completedAt?:string;generationDurationMs?:number;attachmentIds?:string[];attachments?:unknown;evidenceText?:string};
 export type SystemPromptView={content:string;defaultContent:string;isDefault:boolean;updatedAt?:string;notice:string};
 export type ProjectTreeRole='resource'|'output'|'process';
@@ -55,7 +57,7 @@ export type ThinkingLevel=(typeof thinkingLevels)[number];
 export type ModelLimitsCapability={contextWindow:number;maxTokens:number;status:'verified'|'unverified';source:string;reason:string;contextWindowSource:string;maxTokensSource:string;fingerprint:string;modelEntryId?:string;modelId:string;stale?:boolean;checkedAt?:string};
 export type ModelThinkingCapability={status:'supported'|'unsupported'|'unknown';levels:ThinkingLevel[];source:string;reason:string;defaultLevel?:ThinkingLevel;modelEntryId?:string;modelId:string;fingerprint:string;nativeLevels?:Partial<Record<ThinkingLevel,string|null>>;stale?:boolean;checkedAt?:string;limits?:ModelLimitsCapability};
 export type RunReasoning={requestedLevel?:ThinkingLevel;effectiveLevel:ThinkingLevel;source:string;status:ModelThinkingCapability['status'];fingerprint:string};
-export type Run={piChildTasks?:import('./pi-packages.js').PiChildTaskView[];piPlanReview?:import('./pi-packages.js').PiPlanReviewView;acceptance?:{contractId:string;contractRevision:number;reportId?:string;status:import('./task-acceptance.js').TaskAcceptanceStatus;summary?:string;businessCoverage:'unverified'|'needs_human'|'confirmed';outputCount:number;repairRounds:number};sourceReads?:WorkflowSourceReceipt[];id:string;conversationId:string;status:RunStatus|string;phase?:RunPhase;mode?:AgentMode;permissionMode?:PermissionMode;modelEntryId?:string;reasoning?:RunReasoning;systemPromptHash?:string;agentIndexReceipt?:AgentIndexReceipt;skillDiscovery?:import('./skills.js').SkillDiscoveryReceipt;skillLoads?:import('./skills.js').SkillLoadReceipt[];imageReads?:import('./image-reading.js').ImageReadReceipt[];inputs?:import('./run-inputs.js').RunInputRecord[];runtimeStatus?:import('./runtime-status.js').RuntimeObservedStatus;generationStartedAt?:string;generationFinishedAt?:string;generationDurationMs?:number;modelRoute?:{strategy:string;taskType:string;modelId:string;provider:string;reason:string;fallbackUsed:boolean;entryId?:string};attachmentIds?:string[];attachments?:unknown;evidenceText?:string;plan?:RunPlan;proposal?:PlanProposal;sourcePlanRunId?:string;input?:string;error?:string;startedAt:string;updatedAt?:string;finishedAt?:string;attempt?:number;resumable?:boolean;resumedFromRunId?:string;workflow?:RunWorkflow;checkpointRef?:string;piSessionFile?:string;contextResume?:import('./run-resume.js').RunContextResume;interruptionReason?:'model_output_limit'|'context_budget'|'context_compaction_failed';modelStopReason?:string;contextRecovery?:{status:'compacting'|'compacted'|'failed';reason:string;error?:string}};
+export type Run={designReferences?:import('./design-systems.js').DesignReference[];designReferenceReceipts?:import('./design-systems.js').DesignReferenceReceipt[];piChildTasks?:import('./pi-packages.js').PiChildTaskView[];piPlanReview?:import('./pi-packages.js').PiPlanReviewView;acceptance?:{contractId:string;contractRevision:number;reportId?:string;status:import('./task-acceptance.js').TaskAcceptanceStatus;summary?:string;businessCoverage:'unverified'|'needs_human'|'confirmed';outputCount:number;repairRounds:number};sourceReads?:WorkflowSourceReceipt[];id:string;conversationId:string;status:RunStatus|string;phase?:RunPhase;mode?:AgentMode;permissionMode?:PermissionMode;modelEntryId?:string;reasoning?:RunReasoning;systemPromptHash?:string;agentIndexReceipt?:AgentIndexReceipt;skillDiscovery?:import('./skills.js').SkillDiscoveryReceipt;skillLoads?:import('./skills.js').SkillLoadReceipt[];imageReads?:import('./image-reading.js').ImageReadReceipt[];inputs?:import('./run-inputs.js').RunInputRecord[];runtimeStatus?:import('./runtime-status.js').RuntimeObservedStatus;generationStartedAt?:string;generationFinishedAt?:string;generationDurationMs?:number;modelRoute?:{strategy:string;taskType:string;modelId:string;provider:string;reason:string;fallbackUsed:boolean;entryId?:string};attachmentIds?:string[];attachments?:unknown;evidenceText?:string;plan?:RunPlan;proposal?:PlanProposal;sourcePlanRunId?:string;input?:string;error?:string;startedAt:string;updatedAt?:string;finishedAt?:string;attempt?:number;resumable?:boolean;resumedFromRunId?:string;workflow?:RunWorkflow;checkpointRef?:string;piSessionFile?:string;contextResume?:import('./run-resume.js').RunContextResume;interruptionReason?:'model_output_limit'|'context_budget'|'context_compaction_failed';modelStopReason?:string;contextRecovery?:{status:'compacting'|'compacted'|'failed';reason:string;error?:string}};
 export type RunCheckpoint={runId:string;attempt:number;phase:RunPhase|string;updatedAt:string;assistantText:string;completedOperations:Array<{id:string;tool:string;state:string;result?:string;createdAt:string}>;contextManifestRef?:string;safeToResume:boolean};
 export type ConnectionHealthStatus='unknown'|'healthy'|'degraded'|'failed';
 export type ConnectionHealthSnapshot={connectionId:string;checkedAt:string;status:ConnectionHealthStatus;summary:string;version?:string;capabilities:string[];diagnostic?:string};
@@ -259,7 +261,10 @@ export const requestSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('mountAccess'),id:safeId,write:z.boolean(),enabled:z.boolean()}),
  z.object({type:z.literal('conversation'),id:safeId.optional(),title:z.string().trim().min(1).max(120).optional(),archived:z.boolean().optional()}),
  z.object({type:z.literal('conversationDelete'),id:safeId}),
-  z.object({type:z.literal('send'),id:safeId,text:z.string().min(1).max(50000),mode:z.enum(['plan','build']).default('build'),permissionMode:z.enum(['standard','accept_edits','full_access']).default('standard'),modelEntryId:safeId.optional(),thinkingLevel:z.enum(thinkingLevels).nullable().optional(),taskType:z.enum(['research','analysis','writing','coding','review','orchestration','general']).optional(),attachmentIds:z.array(safeId).max(8).optional(),workflow:pmWorkflowSchema.optional()}),
+  ...subagentRequestSchemas,
+  designCatalogRequestSchema,
+  designSourceOpenRequestSchema,
+  z.object({type:z.literal('send'),id:safeId,text:z.string().min(1).max(50000),mode:z.enum(['plan','build']).default('build'),permissionMode:z.enum(['standard','accept_edits','full_access']).default('standard'),modelEntryId:safeId.optional(),thinkingLevel:z.enum(thinkingLevels).nullable().optional(),taskType:z.enum(['research','analysis','writing','coding','review','orchestration','general']).optional(),attachmentIds:z.array(safeId).max(8).optional(),workflow:pmWorkflowSchema.optional(),designReferences:designReferencesSchema.optional()}),
   z.object({type:z.literal('planDraft'),id:safeId,selectedOptionIds:z.array(safeId).max(20),customText:z.string().max(50000)}),
   z.object({type:z.literal('planConfirm'),id:safeId,selectedOptionIds:z.array(safeId).max(20),customText:z.string().max(50000),permissionMode:z.enum(['standard','accept_edits','full_access']),modelEntryId:safeId.optional(),thinkingLevel:z.enum(thinkingLevels).nullable().optional()}),
   z.object({type:z.literal('resume'),id:safeId,freshContext:freshContextResumeSchema.optional()}).strict(),
@@ -267,7 +272,7 @@ export const requestSchema=z.discriminatedUnion('type',[
  reconcileRunOperationSchema.safeExtend({type:z.literal('runRecoveryReconcile')}),
  z.object({type:z.literal('cancel'),id:safeId}),
   z.object({type:z.literal('files'),query:z.string().max(500).default('')}),
-   z.object({type:z.literal('importFiles'),files:z.array(z.string().min(1).max(32767)).max(200).optional(),paths:z.array(z.string().min(1).max(32767)).max(200).optional(),category:z.enum(['reference','resource','prototype','output','process','knowledge','参考资料','资源','原型','产出材料','过程文件','产品知识库']).optional(),target:z.object({mountId:safeId,path:z.string().max(4096).refine(value=>!/[\0\r\n]/.test(value),'Invalid directory')}).strict().optional()}).superRefine((value,ctx)=>{if(!(value.files?.length||value.paths?.length))ctx.addIssue({code:'custom',message:'至少提供一个待导入文件路径'});}),
+   z.object({type:z.literal('importFiles'),files:z.array(z.string().min(1).max(32767)).max(200).optional(),paths:z.array(z.string().min(1).max(32767)).max(200).optional(),category:z.enum(['reference','resource','prototype','output','process','knowledge','参考资料','资源','原型','产出材料','过程文件','产品知识库']).optional(),target:z.object({projectId:safeId.optional(),mountId:safeId,path:z.string().max(4096).refine(value=>!/[\0\r\n]/.test(value),'Invalid directory')}).strict().optional()}).superRefine((value,ctx)=>{if(!(value.files?.length||value.paths?.length))ctx.addIssue({code:'custom',message:'至少提供一个待导入文件路径'});}),
  z.object({type:z.literal('read'),mountId:safeId,path:z.string().min(1).max(32767)}),
  z.object({type:z.literal('fileProtection'),mountId:safeId,path:z.string().max(32767)}).strict(),
  z.object({type:z.literal('copyForProcessing'),mountId:safeId,path:z.string().min(1).max(32767),targetMountId:safeId.optional(),directory:z.string().max(32767).optional()}).strict(),
@@ -365,6 +370,8 @@ export type SubAgentPermissionContext={
  permissionMode:PermissionMode;
  capabilities:Partial<PermissionSettings>;
  mountIds?:string[];
+ /** Host-bound conversation scope; file handlers must still enforce active Run access. */
+ computerScope?:string;
 };
 export type SubAgentCallRequest={tool:SubAgentToolName|string;input:Record<string,unknown>;capability:PermissionCapability;mountId?:string;parentRunId:string;subAgentId?:string};
 export type SubAgentCallDecision={allowed:boolean;code:'ALLOWED'|'SUB_AGENT_TOOL_DENIED'|'SUB_AGENT_PERMISSION_DENIED'|'SUB_AGENT_SCOPE_DENIED'|'SUB_AGENT_LIMIT_REACHED'|'PLAN_TOOL_DENIED';reason:string;inheritedFrom?:string};
