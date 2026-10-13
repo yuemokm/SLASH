@@ -1,5 +1,7 @@
 # slash AI 开发交付规范
 
+2026-10-13 F02/F03、PF03/PF09：新增宿主只读 `modelDiscover` 和前置校验、逐项回执的 `modelBatchAdd`，沿用 ModelEntry/加密凭据，无新依赖或数据库迁移。新增表单一框一个 ID、可增删行，仅获取目录成功后显示逐行下拉；同供应商新增使用 endpoint/protocol 约束凭据引用，旧项/default/Subagent 引用保留。代码、真实检查、隔离 UI 及未验证范围见[本轮记录](model-discovery-and-batch-add-2026-10-13.md)与同名 Mermaid；需要重启开发应用，未打包。
+
 2026-10-13 F02/F03/F10、PF03/PF08/PF09/PF10：输入工具栏分组、固定发送/停止和顶部队列已接原真实 RunInputQueue；默认 follow_up，立即单条不污染后续发送方式。修复已销毁窗口仍收队列清理通知及重复 dispose，真实活动队列关窗自然退出0、原文持久化通过。检查、实际 Electron/Pi 证据及夹具失败记录见[本轮交付](composer-toolbar-and-queue-2026-10-13.md)与同名 Mermaid；主进程修复需重启，未打包。
 
 2026-10-13 F02/F10、PF01/PF03/PF08/PF09：四个浏览页与会话/设置紧凑字号已实现；只读本机Codex CSS参照，UI14/辅助12/聊天14/页题20。真实Electron、首行CSS y对照、17项定向和检查边界见[本轮记录](compact-workspace-typography-2026-10-13.md)及同名Mermaid。保留未提交功能与用户数据，未打包。

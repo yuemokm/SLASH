@@ -19,6 +19,8 @@ import { ConnectionsPanel } from "./ConnectionsPanel";
 import { McpExecute } from "./Delivery";
 import { ProjectStructureEditor } from "./ProjectStructureEditor";
 import { ModelLimitsSettings } from "./ModelLimitsSettings";
+import {ModelPicker,parseModelIds} from './ModelPicker';
+import type {ModelBatchResult} from '../shared/types';
 import { GlobalSkillsSettings } from "./GlobalSkillsSettings";
 import { PiPackagesSettings } from "./PiPackagesSettings";
 import { SubagentSettings } from "./SubagentSettings";
@@ -31,6 +33,7 @@ type Call = (request: Request) => Promise<unknown>;
 export type ThemeName = "reference" | "graphite" | "sand";
 type ModelDraft = {
   id?: string;
+  credentialSourceId?: string;
   provider: string;
   name: string;
   baseUrl: string;
@@ -235,6 +238,7 @@ export function SettingsModal({
   const [modelDraft, setModelDraft] = useState<ModelDraft>();
   const [modelDetailsOpen, setModelDetailsOpen] = useState(true);
   const [modelResult, setModelResult] = useState<Record<string, string>>({});
+  const [batchResult,setBatchResult]=useState<ModelBatchResult>();
   const [busy, setBusy] = useState("");
   const resolvingApprovals = useRef(new Set<string>());
   const [feedback, setFeedback] = useState<{
@@ -350,11 +354,13 @@ export function SettingsModal({
     setTab(settingsDestination(next));
   };
   const closeModelDraft = () => {
+    if(busy==='model-save')return;
     setModelDraft(undefined);
     setModelDetailsOpen(true);
     setFeedback(undefined);
   };
   const openModelDraft = (draft: ModelDraft) => {
+    setBatchResult(undefined);
     setModelDetailsOpen(true);
     setFeedback(undefined);
     setModelDraft(draft);
@@ -366,6 +372,8 @@ export function SettingsModal({
     const baseUrl = modelDraft.baseUrl.trim();
     const proxyUrl = modelDraft.proxyUrl.trim();
     const modelId = modelDraft.modelId.trim();
+    const modelIds=modelDraft.id?[modelId]:parseModelIds(modelId);
+    if(!modelDraft.id&&modelDraft.modelId.split('\n').some(row=>/[\s,，;；]/.test(row.trim()))){setFeedback({kind:'error',text:'每个输入框只填写一个模型 ID，需要多个请点击“添加模型行”。'});return;}
     let validUrl = false;
     try {
       const parsed = new URL(baseUrl);
@@ -373,16 +381,16 @@ export function SettingsModal({
     } catch {
       validUrl = false;
     }
-    if (!provider || !name || !validUrl || !modelId) {
+    if (!provider || (modelDraft.id&&!name) || !validUrl || !modelIds.length || modelIds.length>100 || modelIds.some(id=>id.length>200)) {
       setFeedback({
         kind: "error",
         text: !provider
           ? "请填写供应商名称"
-          : !name
+          : modelDraft.id&&!name
             ? "请填写模型名称"
             : !validUrl
               ? "请输入有效的 HTTP 或 HTTPS API 地址"
-              : "请填写模型 ID",
+              : !modelIds.length?"请填写或选择模型 ID":modelIds.length>100?"一次最多添加 100 个模型": "模型 ID 最长为 200 个字符",
       });
       return;
     }
@@ -401,6 +409,16 @@ export function SettingsModal({
       return;
     }
     await perform("model-save", async () => {
+      if(!modelDraft.id){
+        const result=await call({type:'modelBatchAdd',connection:{provider,baseUrl,proxyUrl:proxyUrl||null,protocol:modelDraft.protocol,supportsVision:modelDraft.supportsVision,contextWindow:contextWindow??null,maxTokens:maxTokens??null},models:modelIds.map(id=>({modelId:id,name:modelIds.length===1&&name?name:id.slice(0,100)})),key:modelDraft.key||undefined,credentialSourceId:modelDraft.credentialSourceId}) as ModelBatchResult;
+        setBatchResult(result);
+        const failed=result.items.filter(item=>item.status==='failed');
+        const added=result.items.filter(item=>item.status==='added').length,existing=result.items.filter(item=>item.status==='existing').length;
+        if(failed.length){setModelDraft(value=>({...value!,modelId:failed.map(item=>item.modelId).join('\n')}));setFeedback({kind:'error',text:`已添加 ${added} 个，跳过已有 ${existing} 个，失败 ${failed.length} 个。保留失败项，可重试。`});}
+        else{setModelDraft(undefined);notify(`已添加 ${added} 个模型${existing?`，跳过已有 ${existing} 个（原配置和密钥保留）`:''}`);}
+        try{await load();await onRefresh();}catch{setFeedback({kind:'error',text:'模型保存结果已返回，但列表刷新失败。请重新打开设置核对已保存的模型。'});}
+        return;
+      }
       await call({
         type: "modelUpsert",
         model: {
@@ -651,6 +669,7 @@ export function SettingsModal({
                             >
                               编辑
                             </button>
+                            <button onClick={()=>openModelDraft({...emptyModel,provider:item.provider,baseUrl:item.baseUrl,protocol:item.protocol,proxyUrl:item.proxyUrl??'',credentialSourceId:item.id})}>添加同供应商模型</button>
                             <button
                               className="quiet danger-text"
                               onClick={() =>
@@ -1021,12 +1040,14 @@ export function SettingsModal({
                   type="button"
                   className="icon-button"
                   aria-label="关闭模型表单"
+                  disabled={busy==='model-save'}
                   onClick={closeModelDraft}
                 >
                   <Icon name="close" size={17}/>
                 </button>
               </div>
               <div className="subdialog-body">
+              <fieldset className="model-form-fields" disabled={busy==='model-save'}>
               {feedback && (
                 <div
                   className={`modal-feedback ${feedback.kind}`}
@@ -1035,6 +1056,7 @@ export function SettingsModal({
                   {feedback.text}
                 </div>
               )}
+              {batchResult?.items.some(item=>item.status==='failed')&&<ul className="model-batch-errors">{batchResult.items.filter(item=>item.status==='failed').map(item=><li key={item.modelId}>{item.modelId}：{item.error}</li>)}</ul>}
               {!modelDraft.id && (
                 <label>
                   常用配置
@@ -1095,16 +1117,16 @@ export function SettingsModal({
                     }))
                   }
                   placeholder={
-                    modelDraft.id ? "留空保留已保存的密钥" : "输入 API 密钥"
+                    modelDraft.id||modelDraft.credentialSourceId ? "留空使用已保存的密钥" : "输入 API 密钥"
                   }
                 />
                 <small>
                   {modelDraft.id
                     ? "留空会保留原密钥；输入新值会替换。若修改 API 地址而未填新密钥，为避免把密钥发送到其他服务，原密钥会被清除。"
-                    : "密钥只保存在本机，不会在设置中回显。"}
+                    : modelDraft.credentialSourceId?"留空使用该连接已保存的密钥；修改 API 地址或协议后须填写新密钥。":"密钥只保存在本机，不会在设置中回显。"}
                 </small>
               </label>
-                <label>
+                {modelDraft.id&&<label>
                   模型 ID
                   <input
                     required
@@ -1117,7 +1139,7 @@ export function SettingsModal({
                     }
                     placeholder="选择常用配置后会自动填写"
                   />
-                </label>
+                </label>}
                 <label>
                 接口协议
                 <select
@@ -1159,7 +1181,7 @@ export function SettingsModal({
                 <label>
                   显示名称
                   <input
-                    required
+                    required={Boolean(modelDraft.id)}
                     value={modelDraft.name}
                     onChange={(event) =>
                       setModelDraft((value) => ({
@@ -1167,12 +1189,14 @@ export function SettingsModal({
                         name: event.target.value,
                       }))
                     }
-                    placeholder="会话中看到的名称"
+                    placeholder={modelDraft.id?"会话中看到的名称":"可选；添加多个时各自使用模型 ID"}
                   />
                 </label>
               </div>
+              {!modelDraft.id&&<ModelPicker call={call} connection={{baseUrl:modelDraft.baseUrl,protocol:modelDraft.protocol,proxyUrl:modelDraft.proxyUrl,key:modelDraft.key,credentialSourceId:modelDraft.credentialSourceId}} value={modelDraft.modelId} onChange={modelId=>setModelDraft(value=>({...value!,modelId}))} disabled={busy==='model-save'}/>}
               <details className="advanced model-secondary-fields" open={modelDetailsOpen} onToggle={(event) => setModelDetailsOpen(event.currentTarget.open)}>
                 <summary>高级配置（可选）</summary>
+                {!modelDraft.id&&parseModelIds(modelDraft.modelId).length>1&&<small>以下配置应用于本次新增的全部模型，保存后可分别编辑。</small>}
                 <label>
                   代理地址（可选）
                   <input
@@ -1208,8 +1232,8 @@ export function SettingsModal({
                 支持图片输入（视觉模型）
               </label>
               </details>
-              </div><div className="subdialog-actions">
-                <button type="button" onClick={closeModelDraft}>
+              </fieldset></div><div className="subdialog-actions">
+                <button type="button" disabled={busy==='model-save'} onClick={closeModelDraft}>
                   取消
                 </button>
                 <button
@@ -1217,7 +1241,7 @@ export function SettingsModal({
                   disabled={busy === "model-save"}
                   type="submit"
                 >
-                  保存模型
+                  {busy==='model-save'?'正在保存…':modelDraft.id?'保存模型':`保存模型${parseModelIds(modelDraft.modelId).length>1?`（${parseModelIds(modelDraft.modelId).length} 个）`:''}`}
                 </button>
               </div>
             </form>

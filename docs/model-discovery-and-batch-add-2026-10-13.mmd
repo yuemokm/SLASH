@@ -1,0 +1,20 @@
+flowchart TD
+  Settings[模型设置] --> Add[新增或添加同供应商模型]
+  Add --> Connection[API地址 密钥或受限引用 协议 供应商]
+  Connection --> Fetch[可选 获取上游模型列表]
+  Fetch --> Host[主进程只读请求 代理 禁止重定向 有界预算]
+  Host -->|本连接成功| Select[各输入框右侧显示下拉 每行选择一个模型]
+  Host -->|不支持或失败| Manual[不显示下拉 逐行手填或重试]
+  Connection --> Manual
+  Select --> Merge[一行一个ID 保存时合并去重]
+  Add --> Rows[添加移除独立输入行 至少保留一行]
+  Rows --> Manual
+  Manual --> Merge
+  Connection -->|参数变化| Reset[清空旧列表下拉 忽略旧请求回包]
+  Merge --> Validate[全部schema和容量校验]
+  Validate --> Save[沿用每模型独立ID与加密凭据]
+  Save -->|同供应商连接协议ID已存在| Skip[保留已有配置 默认及Subagent引用]
+  Save -->|新增成功| Added[返回新增项]
+  Save -->|逐项失败| Retry[保留成功项和失败草稿 显示原因]
+  Retry --> Validate
+  Added --> Check[保存后单项能力检测及文字测试]

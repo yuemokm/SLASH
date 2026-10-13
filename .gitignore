@@ -31,6 +31,7 @@ deliverables/**/build/
 .hyperframes/
 
 # Local audits, transient runs, and generated evidence
+/过程文件/
 /.codex-package-audit/
 /.temp/
 /temp/

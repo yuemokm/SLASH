@@ -8,6 +8,7 @@ import {createServer} from 'node:http';
 import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
 import AdmZip from 'adm-zip';
+import {TEST_RECORDS_ROOT} from './test-records.ts';
 import {Store} from '../main/store.ts';
 import {capturePrototypeStaticManifest} from '../main/prototype-delivery.ts';
 import {PrototypePublishOperation} from '../main/prototype-publish-operation.ts';
@@ -25,7 +26,7 @@ const uniqueHashes=[...new Set(configuration.files.map(file=>file.sha1))];
 const wait=async(predicate:()=>boolean|Promise<boolean>,budget=7000)=>{const until=Date.now()+budget;while(Date.now()<until){if(await predicate())return;await new Promise(resolve=>setTimeout(resolve,20));}throw Error('BOUNDED_OBSERVATION_TIMEOUT');};
 const alive=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
 async function fixture(mode='normal'){
- const directory=await fs.mkdtemp(path.join(root,'run-'+mode+'-')),databaseDirectory=path.join(directory,'host-store'),store=new Store(databaseDirectory),runId=randomUUID(),requests:any[]=[],children:any[]=[],dispatches:any[]=[],sessions:any[]=[];
+ const directory=await fs.mkdtemp(path.join(TEST_RECORDS_ROOT,'run-'+mode+'-')),databaseDirectory=path.join(directory,'host-store'),store=new Store(databaseDirectory),runId=randomUUID(),requests:any[]=[],children:any[]=[],dispatches:any[]=[],sessions:any[]=[];
  const deployId='SYNTHETIC_DEPLOY_'+randomUUID().slice(0,8);let releaseUpload:(()=>void)|undefined,releaseStatus:(()=>void)|undefined;
  const uploadWait=new Promise<void>(resolve=>{releaseUpload=resolve;}),statusWait=new Promise<void>(resolve=>{releaseStatus=resolve;});
  const server=createServer(async(req,res)=>{
@@ -135,7 +136,7 @@ test('read failure retains acknowledged uploads; verified ready can advance earl
  }finally{await f.close();}
 });
 test('Store CAS refuses identity mismatch, stale receipt and terminal regression',async()=>{
- const directory=await fs.mkdtemp(path.join(root,'run-store-cas-')),store=new Store(directory),domain=new PrototypePublishOperation(store,configuration,()=>{throw Error('NO_TRANSPORT');},()=>{});try{
+ const directory=await fs.mkdtemp(path.join(TEST_RECORDS_ROOT,'run-store-cas-')),store=new Store(directory),domain=new PrototypePublishOperation(store,configuration,()=>{throw Error('NO_TRANSPORT');},()=>{});try{
   const receipt=domain.claim(randomUUID()).receipt,operation=store.operationsForRun(receipt.runId)[0],arguments_={key:domain.key,operationId:receipt.operationId,runId:receipt.runId,tool:receipt.tool,scopeHash:domain.binding,requestHash:domain.requestHash,expectedResult:operation.result,nextResult:operation.result,state:'outcome_unknown' as const};
   assert.throws(()=>store.compareAndSwapOperationResult({...arguments_,runId:'wrong'}),/IDENTITY/);assert.throws(()=>store.compareAndSwapOperationResult({...arguments_,requestHash:'wrong'}),/IDENTITY/);assert.equal(store.compareAndSwapOperationResult({...arguments_,expectedResult:'{}'}),false);assert.throws(()=>store.compareAndSwapOperationResult({...arguments_,state:'succeeded'}),/TERMINAL/);
   store.finishOperation(receipt.operationId,receipt.runId,receipt.tool,'cancelled',operation.result);assert.equal(store.compareAndSwapOperationResult(arguments_),false);

@@ -71,6 +71,9 @@ export const modelProtocols=['openai-completions','openai-responses','anthropic-
 export type ModelProtocol=(typeof modelProtocols)[number];
 export type ModelEntry={id:string;provider:string;name:string;baseUrl:string;proxyUrl?:string;modelId:string;protocol:ModelProtocol;hasKey:boolean;supportsVision?:boolean;contextWindow?:number;maxTokens?:number;createdAt?:string;updatedAt?:string};
 export type ModelGroup={provider:string;models:ModelEntry[]};
+export type DiscoveredModel={id:string;name:string};
+export type ModelDiscoveryResult={models:DiscoveredModel[];notice:string;truncated:boolean};
+export type ModelBatchResult={items:Array<{modelId:string;status:'added'|'existing'|'failed';id?:string;error?:string}>};
 export type PermissionDecision='ask'|'allow'|'deny';
 export const permissionCapabilities=['workspace_read','web_read','connection_config','process_execute','external_action','artifact_write'] as const;
 export type PermissionCapability=(typeof permissionCapabilities)[number];
@@ -285,6 +288,8 @@ export const requestSchema=z.discriminatedUnion('type',[
  z.object({type:z.literal('model'),baseUrl:httpUrl,id:z.string().trim().min(1).max(200),key:z.string().max(20000).optional()}),
  z.object({type:z.literal('testModel')}),
  z.object({type:z.literal('models')}),
+ z.object({type:z.literal('modelDiscover'),baseUrl:httpUrl,protocol:z.enum(modelProtocols),proxyUrl:modelProxyUrlSchema.nullable().optional(),key:z.string().max(20000).optional(),credentialSourceId:safeId.optional()}).strict(),
+ z.object({type:z.literal('modelBatchAdd'),connection:z.object({provider:z.string().trim().min(1).max(100),baseUrl:httpUrl,proxyUrl:modelProxyUrlSchema.nullable().optional(),protocol:z.enum(modelProtocols),supportsVision:z.boolean().optional(),contextWindow:tokenLimit.nullable().optional(),maxTokens:tokenLimit.nullable().optional()}).superRefine(validateModelLimits),models:z.array(z.object({modelId:z.string().trim().min(1).max(200).refine(value=>!/[\s,，;；]/.test(value),'模型 ID 不能包含分隔符'),name:z.string().trim().min(1).max(100)}).strict()).min(1).max(100),key:z.string().max(20000).optional(),credentialSourceId:safeId.optional()}).strict(),
  z.object({type:z.literal('modelUpsert'),model:z.object({id:safeId.optional(),provider:z.string().trim().min(1).max(100),name:z.string().trim().min(1).max(100),baseUrl:httpUrl,proxyUrl:modelProxyUrlSchema.nullable().optional(),modelId:z.string().trim().min(1).max(200),protocol:z.enum(modelProtocols).default('openai-completions'),supportsVision:z.boolean().optional(),contextWindow:tokenLimit.nullable().optional(),maxTokens:tokenLimit.nullable().optional()}).superRefine(validateModelLimits),key:z.string().max(20000).optional()}),
  z.object({type:z.literal('modelRemove'),id:safeId}),
  z.object({type:z.literal('modelDefault'),id:safeId}),

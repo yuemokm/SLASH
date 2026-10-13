@@ -38,6 +38,7 @@ import {discoverInstalledClis,ModelSettings} from './settings.js';
 import {buildWritableShareScript,describeShareFolder,inspectSharingSetup} from './sharing-setup.js';
 import {createOpenAICompatibleModelRuntime} from './model-runtime.js';
 import {testModelTextConnection} from './model-connection-test.js';
+import {discoverModels} from './model-discovery.js';
 import {AttachmentRepository} from './image-attachments.js';
 import {VisionBridge} from './vision.js';
 import {MemoryVisionCache} from '../shared/vision.js';
@@ -537,6 +538,13 @@ async function boot(){
      if(!service.state.defaultModelId)throw Error('未配置默认模型');return{ok:true,data:await testConfiguredModel(service.state.defaultModelId)};
     }
     case 'models':return{ok:true,data:{groups:modelSettings.list(),defaultModelId:service.state.defaultModelId}};
+    case 'modelDiscover':{
+     const key=modelSettings.connectionCredential(request);
+     // Do not echo draft credentials or an untrusted upstream error body into the renderer.
+     try{return{ok:true,data:await discoverModels(request,key??'')};}
+     catch(error){const message=error instanceof Error?error.message:'获取模型列表失败';throw Error(key?message.replaceAll(key,'[REDACTED]'):message);}
+    }
+    case 'modelBatchAdd':return{ok:true,data:modelSettings.batchAdd(request)};
     case 'modelUpsert':return{ok:true,data:await modelSettings.upsertWithCapabilities(request.model,request.key,id=>service.modelThinkingCapability({modelEntryId:id,refresh:true}))};
     case 'modelRemove':return{ok:true,data:{groups:modelSettings.remove(request.id),defaultModelId:service.state.defaultModelId}};
     case 'modelDefault':return{ok:true,data:{defaultModelId:modelSettings.setDefault(request.id)}};

@@ -3,7 +3,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {promisify} from 'node:util';
-import {modelEntrySchema,modelProtocols,type ConnectionDiscovery,type ModelEntry,type ModelGroup,type ModelProtocol,type PermissionSettings,type State} from '../shared/types.js';
+import {modelEntrySchema,modelProtocols,requestSchema,type Request,type ModelBatchResult,type ConnectionDiscovery,type ModelEntry,type ModelGroup,type ModelProtocol,type PermissionSettings,type State} from '../shared/types.js';
 import {resolveModelLimits,type ModelLimitMetadata} from './model-limits.js';
 import {thinkingFingerprint} from './model-thinking.js';
 
@@ -119,6 +119,31 @@ export class ModelSettings {
   // failed lookup must not turn a saved entry into an apparent failed write.
   try{await detect(model.id);}catch{}
   return model;
+ }
+ connectionCredential(input:{baseUrl:string;protocol:ModelProtocol;credentialSourceId?:string;key?:string}){
+  if(input.key!==undefined){if(!input.key)throw Error('请填写 API 密钥');return input.key;}
+  if(!input.credentialSourceId)return undefined;
+  const source=this.model(input.credentialSourceId);
+  if(normalizedUrl(source.baseUrl)!==normalizedUrl(input.baseUrl)||source.protocol!==input.protocol)throw Error('API 地址或协议已变化，请填写此连接的 API 密钥。');
+  return this.credential(source.id);
+ }
+ batchAdd(input:Extract<Request,{type:'modelBatchAdd'}>):ModelBatchResult{
+  const parsed=requestSchema.parse(input);if(parsed.type!=='modelBatchAdd')throw Error('无效模型批量请求');
+  const key=this.connectionCredential({...parsed.connection,key:parsed.key,credentialSourceId:parsed.credentialSourceId});
+  if(key!==undefined&&!this.cipher.isEncryptionAvailable())throw Error('系统凭据加密不可用');
+  // Validate every entry and its resolved limits before the first credential/state write.
+  for(const item of parsed.models){
+   const model=modelEntrySchema.parse({...parsed.connection,...item,id:'batch-validation',hasKey:false,proxyUrl:parsed.connection.proxyUrl??undefined,contextWindow:parsed.connection.contextWindow??undefined,maxTokens:parsed.connection.maxTokens??undefined});
+   resolveModelLimits({entryId:model.id,baseUrl:model.baseUrl,id:model.modelId,protocol:model.protocol,contextWindow:model.contextWindow,maxTokens:model.maxTokens},'batch-validation');
+  }
+  const items:ModelBatchResult['items']=[];
+  for(const item of parsed.models){
+   const existing=this.state.get().models?.find(model=>model.provider===parsed.connection.provider.toLowerCase()&&normalizedUrl(model.baseUrl)===normalizedUrl(parsed.connection.baseUrl)&&model.protocol===parsed.connection.protocol&&model.modelId===item.modelId);
+   if(existing){items.push({modelId:item.modelId,status:'existing',id:existing.id});continue;}
+   try{const saved=this.upsert({...parsed.connection,...item},key);items.push({modelId:item.modelId,status:'added',id:saved.id});}
+   catch(error){let message=error instanceof Error?error.message:'模型保存失败';if(key)message=message.replaceAll(key,'[REDACTED]');items.push({modelId:item.modelId,status:'failed',error:this.redact(message)});}
+  }
+  return{items};
  }
  remove(id:string){
   const state=this.state.get(),models=state.models??[];

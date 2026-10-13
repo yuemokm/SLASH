@@ -12,7 +12,7 @@ import {spawn} from 'node:child_process';
 import {createServer} from 'node:http';
 import {hash,baselineHash,assertCssOnly,styleRange,taskPrompt,focusedCases} from './sfa-focused-contract.mjs';
 const script=fileURLToPath(import.meta.url),repo=path.resolve(path.dirname(script),'..'),args=process.argv.slice(2);
-const source=path.join(repo,'output/sfa-delivery-20261010/异动端SFA主要界面-改进版.html');
+const source=path.join(repo,'过程文件/历史成果/output/sfa-delivery-20261010/异动端SFA主要界面-改进版.html');
 const suiteFile=path.join(repo,'.test-data/sfa-delivery-20261010/final-suite.json');
 const moduleUrl=name=>pathToFileURL(path.join(repo,'dist',name+'.js')).href;
 const json=file=>fs.readFile(file,'utf8').then(JSON.parse),write=(dir,name,value)=>fs.writeFile(path.join(dir,name),JSON.stringify(value,null,2)+'\n');
