@@ -99,7 +99,7 @@ flowchart TB
   Verify -.-> Desktop
 ```
 
-桌面图中只标注关键依赖版本，完整声明以根目录 package.json 和锁文件为准。knowledge-web/ 保留为历史工程，不属于当前启用功能或交付前提。
+桌面图中只标注关键依赖版本，完整声明以根目录 package.json 和锁文件为准。2026-10-13 已将 knowledge-web/ 及退役云发布实现完整迁入忽略的本地 `过程文件/历史模块/knowledge-web/`，当前源码、检查、构建与启动不再依赖该工程；资料集合与旧数据兼容仍由现有本机模块承担。见[退役源码清理](knowledge-source-cleanup-2026-10-13.md)。
 
 ## 4. 当前状态与边界
 

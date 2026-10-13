@@ -13,7 +13,7 @@ const root=process.cwd(),rootBat=process.argv.includes('--root-bat'),output=path
 await fs.mkdir(output,{recursive:true});
 await fs.mkdir(fixture,{recursive:true});
 const files=['package.json','package-lock.json','index.html','vite.config.ts','tsconfig.json','tsconfig.node.json','双击启动开发环境.bat'];
-const sourceDirectories=['src','shared','main','scripts','public','knowledge-web/lib'];
+const sourceDirectories=['src','shared','main','scripts','public'];
 const cacheDir=rootBat?path.join(root,'node_modules/.vite'):path.join(output,'vite-cache');
 if(!rootBat){
  for(const name of [...sourceDirectories,...files])await fs.cp(path.join(root,name),path.join(fixture,name),{recursive:true});

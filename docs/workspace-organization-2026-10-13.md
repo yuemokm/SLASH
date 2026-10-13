@@ -25,7 +25,7 @@
 
 - `.test-data/` 是现有规范化测试根，包含真实验收输入、模型隔离配置、历史草稿与测试记录；大量脚本、权限校验和文档固定引用，保留原路径。
 - `docs/` 与 `exa-results/` 是 AGENTS 明确要求的当前开发规格、调研与验收依据，除纯媒体制作提纲外保留原路径。
-- `knowledge-web/` 虽已退出当前产品，宿主仍静态导入其历史兼容契约，继续保留。
+- `knowledge-web/` 的旧静态依赖经后续审计确认只来自退役发布模块及其旧执行测试，2026-10-13 已完整归档至 `过程文件/历史模块/knowledge-web/` 并移出当前源码；资料集合与用户记录仍保留。见[退役源码清理](knowledge-source-cleanup-2026-10-13.md)。
 - `dev-startup.log` 是启动 BAT 和开发脚本的诊断文件，保留。用户本轮追加授权删除旧 `release/`；只读验证确认其位于项目内且无 reparse/junction 外指，共 3,569 个文件、18,761,872,984 字节。变量路径及精确字面路径的 PowerShell `Remove-Item -LiteralPath` 均被自动执行策略拒绝（`blocked by policy`，未提供更具体原因），实际删除未执行，目录仍保留；未改用其他 Shell/API 绕过。记录见本机 `过程文件/整理记录/release-cleanup-20261013.json`。
 - 源码、测试夹具、配置、依赖、`public/`、`dist/`、`.git/` 和启动 BAT 保留。此前其他功能的未提交修改保持原样。
 

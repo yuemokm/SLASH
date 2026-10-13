@@ -15,7 +15,7 @@
 | 根目录下列六份 JSON | 自动验收输出；移出索引并精确忽略，保留本地文件 |
 | `docs/`、`exa-results/` | 除上述纯演示提纲外，工程规格、架构、开发依据与验收结论继续跟踪 |
 | `scripts/`、`tests/` | 开发入口、复验工具、测试代码及夹具；继续跟踪 |
-| `knowledge-web/` | 已退出产品的历史源码；`main/knowledge-publication.ts` 仍静态导入 `lib/bundle.ts` 与 `lib/publication.ts`，保留兼容与历史契约 |
+| `knowledge-web/` | 10-12 当时因退役模块的静态依赖保留；10-13 确认无活跃调用后已完整归档并移出当前源码，见[后续清理](knowledge-source-cleanup-2026-10-13.md) |
 
 六份报告：`contract-race-changed-evidence.json`、`contract-race-control-evidence.json`、`current-zip-byte-equality.json`、`default-registry-service-negative.json`、`lost-restart-evidence.json`、`mount-revoke-evidence.json`。测试可以重新生成报告，不把它们作为输入。
 

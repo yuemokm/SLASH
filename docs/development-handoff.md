@@ -1,5 +1,7 @@
 # slash AI 开发交付规范
 
+2026-10-13 PF03/PF09/PF10/PF11：旧云发布类及网页导入只有历史测试调用，已完整归档网页、本地配置、退役发布源码和旧编译产物；当前源码/启动/构建不再依赖 `knowledge-web/`。保留退休入口拒绝、旧数据回归和本机集合兼容，无数据库迁移或远端操作。详见[本轮源码清理](knowledge-source-cleanup-2026-10-13.md)及同名 Mermaid。
+
 2026-10-13 F02/F03、PF03/PF09：新增宿主只读 `modelDiscover` 和前置校验、逐项回执的 `modelBatchAdd`，沿用 ModelEntry/加密凭据，无新依赖或数据库迁移。新增表单一框一个 ID、可增删行，仅获取目录成功后显示逐行下拉；同供应商新增使用 endpoint/protocol 约束凭据引用，旧项/default/Subagent 引用保留。代码、真实检查、隔离 UI 及未验证范围见[本轮记录](model-discovery-and-batch-add-2026-10-13.md)与同名 Mermaid；需要重启开发应用，未打包。
 
 2026-10-13 F02/F03/F10、PF03/PF08/PF09/PF10：输入工具栏分组、固定发送/停止和顶部队列已接原真实 RunInputQueue；默认 follow_up，立即单条不污染后续发送方式。修复已销毁窗口仍收队列清理通知及重复 dispose，真实活动队列关窗自然退出0、原文持久化通过。检查、实际 Electron/Pi 证据及夹具失败记录见[本轮交付](composer-toolbar-and-queue-2026-10-13.md)与同名 Mermaid；主进程修复需重启，未打包。

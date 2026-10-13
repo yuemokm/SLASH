@@ -72,7 +72,7 @@ scripts/       Development, verification, and maintenance scripts
 tests/         Automated tests
 docs/          Specifications, architecture, and verification records
 exa-results/   Research supporting product decisions
-knowledge-web/ Historical knowledge publishing source and compatibility contracts
+过程文件/      Ignored local evidence, materials, and retired module archives
 ```
 
 The renderer does not access files, SQL, or the shell directly. Agent tools go through the host gateway. Changes to multiple resources use version checks and resource locks; conflicting files must not be silently overwritten.

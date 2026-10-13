@@ -1,0 +1,11 @@
+flowchart TB
+  Audit[审计当前依赖] --> Dead[旧云发布类<br/>只有历史执行测试调用]
+  Dead --> Archive[完整网页与发布源码<br/>过程文件/历史模块/knowledge-web]
+  Archive --> Ignore[本地归档忽略<br/>Git 历史仍可恢复]
+  Dead --> Remove[移出当前main/shared发布实现<br/>及旧编译产物]
+  Remove --> Build[当前检查/构建/启动<br/>无knowledge-web依赖]
+  Tests[退休接口拒绝/旧数据保留回归] --> Build
+  User[资源与会话] --> Local[资料集合/历史索引查看<br/>普通原文检索]
+  Local --> Guard[原授权/来源版本/软删除]
+  Guard --> Data[(用户资料/索引/处理记录)]
+  Remote[原远端网站和数据库<br/>本次未操作]
