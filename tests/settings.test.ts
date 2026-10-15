@@ -5,6 +5,10 @@ import {connectionSchema,requestSchema} from '../shared/types.js';
 import {modelProxyUrlSchema} from '../shared/model-proxy.js';
 import {DEFAULT_BAISHAN_MODEL,ModelSettings,discoverInstalledClis} from '../main/settings.js';
 import {ModelThinkingResolver} from '../main/model-thinking.js';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {Store} from '../main/store.js';
 
 class MemoryStore {
  values=new Map<string,unknown>();
@@ -17,6 +21,20 @@ function fixture(state=legacyState()){
  const store=new MemoryStore();let saves=0;
  return{store,state,get saves(){return saves;},settings:new ModelSettings(store,cipher,{get:()=>state,save:()=>{saves++;}})};
 }
+test('真实SQLite事务在state写入失败时同时回滚密钥与模型，保留原配置并可重试',async t=>{
+ const dir=await fs.mkdtemp(path.join(os.tmpdir(),'slash-settings-transaction-')),store=new Store(dir),state=legacyState();
+ t.after(async()=>{store.close();assert.equal(path.dirname(dir),os.tmpdir());assert(path.basename(dir).startsWith('slash-settings-transaction-'));await fs.rm(dir,{recursive:true,force:true});});
+ const settings=new ModelSettings(store,cipher,{get:()=>state,save:()=>{store.set('state',state);store.set('save-companion','written');}});settings.initialize();
+ const model=settings.upsert({provider:'fixture',name:'Original',baseUrl:'https://fixture.invalid/v1',modelId:'a'},'original-key'),before=structuredClone(state);
+ store.db.exec("CREATE TRIGGER fail_state BEFORE UPDATE ON kv WHEN NEW.key='state' BEGIN SELECT RAISE(ABORT,'fixture state write failure'); END");
+ assert.throws(()=>settings.upsert({...model,name:'Changed'},'replacement-key'),/fixture state write failure/);
+ assert.deepEqual(state,before);assert.deepEqual(store.get('state',null),JSON.parse(JSON.stringify(before)));assert.equal(settings.credential(model.id),'original-key');
+ assert.throws(()=>settings.upsert({provider:'fixture',name:'New',baseUrl:model.baseUrl,modelId:'b'},'new-key'),/fixture state write failure/);
+ assert.equal(store.db.prepare("SELECT count(*) AS total FROM kv WHERE key LIKE 'model-secret:%' AND value!='\"\"'").get()!.total,1);
+ store.db.exec('DROP TRIGGER fail_state');settings.upsert({...model,name:'Changed'},'replacement-key');assert.equal(settings.credential(model.id),'replacement-key');assert.equal(store.get<State>('state',state).models?.find(entry=>entry.id===model.id)?.name,'Changed');
+ assert.throws(()=>store.transaction(()=>{store.set('nested-fixture','outer');assert.throws(()=>store.transaction(()=>{store.set('nested-fixture','inner');throw Error('inner failure');}),/inner failure/);assert.equal(store.get('nested-fixture',''),'outer');throw Error('outer failure');}),/outer failure/);
+ assert.equal(store.get('nested-fixture','missing'),'missing');
+});
 
 test('保存后按每个模型GET能力并缓存，普通列表不调用推理，检测失败不撤销保存',async()=>{
  const f=fixture();f.settings.initialize();const urls:string[]=[];

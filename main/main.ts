@@ -72,6 +72,9 @@ type ExternalService=Service&{
 };
 
 let win:BrowserWindow;
+let startup:ReturnType<typeof installStartupRecovery>|undefined;
+let hiddenStartup=false,startupAborted=false,bootFailurePrompting=false;
+let initializationTimeout:ReturnType<typeof setTimeout>|undefined;
 let windowClosing=false;
 let service:Service;
 let store:Store;
@@ -86,6 +89,17 @@ const previews=new Map<string,{mountId:string;file:string;base:string}>();
 let port=0;
 
 function redact(value:string){const safe=mcpHost?.redact(value)??value;return modelSettings?.redact(safe)??safe;}
+async function failInitialization(error:unknown){
+ if(bootFailurePrompting||windowClosing)return;
+ bootFailurePrompting=true;startupAborted=true;clearTimeout(initializationTimeout);
+ const message=redact(error instanceof Error?error.message:String(error)).slice(0,4000);
+ console.error('[startup] '+message);
+ const logPath=path.join(userDataDir,'startup.log');
+ await fs.mkdir(userDataDir,{recursive:true}).then(()=>fs.appendFile(logPath,`${new Date().toISOString()} 初始化失败：${message}\n`)).catch(()=>{});
+ if(!app.isReady()||hiddenStartup){app.exit(1);return;}
+ const choice=await dialog.showMessageBox({type:'error',title:'slash 启动遇到问题',message:'slash 未能完成初始化',detail:`诊断日志：${logPath}\n\n${message.slice(0,500)}`,buttons:['重新启动','退出'],defaultId:0,cancelId:1,noLink:true});
+ if(choice.response===0)app.relaunch();app.exit(1);
+}
 function receiptText(value:unknown){let text='';try{text=JSON.stringify(value);}catch{text=String(value);}return redact(text).slice(0,200_000);}
 function snapshotImpact(store:Store,root:string,artifactId:string){const snapshot=new ProductRecordsRepository(store,{key:productRecordsWorkspaceIdentity(root).key}).snapshot();return{requirements:snapshot.requirements.filter(req=>snapshot.artifacts.some(a=>a.id===artifactId&&requirementRelatedToPath(req,a.mountId,a.relativePath))).map(req=>req.id),links:snapshot.artifactLinks.filter(link=>link.fromArtifactId===artifactId||link.toArtifactId===artifactId).map(link=>link.id),reviews:snapshot.reviews.filter(review=>review.artifactId===artifactId).map(review=>review.id)};}
 async function buildImpactGraph(store:Store,root:string,artifactId:string,query:{direction?:'outgoing'|'incoming'|'both';includeCandidates?:boolean;maxDepth?:number}){
@@ -342,6 +356,9 @@ async function probeMappedShareWrite(drive:string){
 
 async function boot(){
  await app.whenReady();
+ hiddenStartup=await isHiddenTestProfile(configuredDataDir,path.resolve(here,'../..','.test-data'),process.env.PM_SLASH_TEST_HIDDEN);
+ app.once('before-quit',()=>{windowClosing=true;clearTimeout(initializationTimeout);startup?.close();});
+ initializationTimeout=setTimeout(()=>{void failInitialization('启动等待超时：本地服务尚未完成初始化。');},60_000);initializationTimeout.unref();
  const devServerUrl=process.env.PM_SLASH_DEV_SERVER_URL?.trim();
  store=new Store(userDataDir);
  attachmentRepository=new AttachmentRepository(userDataDir);
@@ -363,13 +380,15 @@ async function boot(){
    ?executeDelivery({...execution,dryRun:false})
    :executeMcp(execution),
    prepareImages:async input=>{
-    const refs=await Promise.all(input.attachmentIds.map(id=>attachmentRepository.get(id,input.workspaceRoot)));
+    const context=await attachmentRepository.prepareContext(input.attachmentIds,input.workspaceRoot,input.contextWindow);
+    if(input.signal.aborted)throw Error('CANCELLED');
+    if(!context.images.length)return{documentContextText:context.documentContextText,attachments:context.attachments};
     const models=(service.state.models??[]).map(item=>({id:item.id,name:item.name,modelId:item.modelId,provider:item.provider,baseUrl:item.baseUrl,protocol:item.protocol,hasKey:item.hasKey,supportsVision:item.supportsVision}));
     const selected=service.state.models?.find(item=>item.id===input.selectedModel.entryId);
     const bridge=new VisionBridge({repository:attachmentRepository,workspaceRoot:input.workspaceRoot,requestVision:visionRequest,cache:visionCache});
-    const prepare=await bridge.prepare({attachments:refs,selectedModel:{...input.selectedModel,baseUrl:selected?.baseUrl,name:selected?.name},models,prompt:input.prompt,signal:input.signal,preferences:store.get<AppPreferences>('app-preferences',{} as AppPreferences)});
+    const prepare=await bridge.prepare({attachments:context.images,selectedModel:{...input.selectedModel,baseUrl:selected?.baseUrl,name:selected?.name},models,prompt:input.prompt,signal:input.signal,preferences:store.get<AppPreferences>('app-preferences',{} as AppPreferences)});
     const evidence=prepare.evidence?formatVisionEvidence(prepare.evidence):prepare.raw;
-    return{images:prepare.images?Array.from(prepare.images):undefined,evidenceText:evidence,attachments:prepare.attachments};
+    return{images:prepare.images?Array.from(prepare.images):undefined,evidenceText:evidence,documentContextText:context.documentContextText,attachments:context.attachments.map(ref=>prepare.attachments.find(image=>image.id===ref.id)??ref)};
    },
    redact,
   },id=>{try{return modelSettings?.credential(id);}catch{return undefined;}});
@@ -377,6 +396,7 @@ async function boot(){
   // Existing workspaces are restored by Service; a first run gets a private
  // folder under the app data directory and the normal six mount folders.
  await service.initializeDefaultProject();
+ if(startupAborted||windowClosing)return;
  deliveryGate=new DeliveryGate({
   store,
   files:service.files,
@@ -449,6 +469,10 @@ async function boot(){
     case 'globalSkillsChooseFolder':{const folder=(await dialog.showOpenDialog(win,{title:'选择全局技能目录',properties:['openDirectory']})).filePaths[0];if(folder)globalSkillFolderAuthorizations.add(path.resolve(folder));return{ok:true,data:folder};}
     case 'appPreferences':{const defaults:AppPreferences={qualityGateEnabled:true,forceQualityCheckBeforeDelivery:true,maxParallelTasks:4,maxParallelConcurrency:2,subAgentMaxDepth:1,subAgentMaxTasks:8,shareLockTtlMs:120000,modelRouting:{strategy:'task_type',taskTypes:{research:'',analysis:'',writing:'',coding:'',review:'',general:''}},subAgentTools:['read_file','search_files','read_workspace_rules','list_artifact_versions','list_product_records','query_artifact_impact','read_web_page','list_connections'],visionAutoFallback:true};const current={...defaults,...(store.get<Partial<AppPreferences>>('app-preferences',{})),...(request.patch||{}),modelRouting:{...defaults.modelRouting,...(store.get<Partial<AppPreferences>>('app-preferences',{}).modelRouting||{}),...((request.patch as Partial<AppPreferences>|undefined)?.modelRouting||{})}};if(request.patch)store.set('app-preferences',current);return{ok:true,data:current};}
     case 'visionAttach':return{ok:true,data:await attachmentRepository.importPath(request.path,service.state.root)};
+    case 'attachmentAttach':{
+     if(request.workspaceRoot!==service.state.root)throw Error('ATTACHMENT_WORKSPACE_CHANGED: 工作空间已变化，请重新添加');const root=service.state.root;
+     const attachment=await attachmentRepository.importContextPath(request.path,root);if(root!==service.state.root)throw Error('ATTACHMENT_WORKSPACE_CHANGED: 添加期间工作空间已变化，请重新添加');return{ok:true,data:attachment};
+    }
     case 'visionAnalyze':return{ok:true,data:await analyzeImageWithBridge(request.path,request.prompt,request.modelEntryId)};
     case 'windowTheme':{const colors={reference:{color:'#f6f7f8',symbolColor:'#20242b'},graphite:{color:'#151a20',symbolColor:'#f0ece5'},sand:{color:'#eee3d2',symbolColor:'#3d3027'}} as const;win?.setTitleBarOverlay?.({...colors[request.theme],height:36});win?.setBackgroundColor(colors[request.theme].color);return{ok:true,data:null};}
      case 'workspace':
@@ -891,17 +915,18 @@ async function boot(){
    return{ok:true,data:null};
   }catch(error){return{ok:false,error:redact(error instanceof Error?error.message:String(error))};}
  });
- const hiddenTest=await isHiddenTestProfile(configuredDataDir,path.resolve(here,'../..','.test-data'),process.env.PM_SLASH_TEST_HIDDEN);
- win=new BrowserWindow({show:!hiddenTest,skipTaskbar:hiddenTest,width:1440,height:940,minWidth:1000,minHeight:680,title:'slash',icon:devServerUrl?path.join(app.getAppPath(),'public/brand/slash.png'):path.join(here,'../renderer/brand/slash.png'),backgroundColor:'#f6f7f8',titleBarStyle:'hidden',titleBarOverlay:{color:'#f6f7f8',symbolColor:'#20242b',height:36},webPreferences:{preload:path.join(here,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ if(startupAborted||windowClosing)return;
+ clearTimeout(initializationTimeout);
+ win=new BrowserWindow({show:!hiddenStartup,skipTaskbar:hiddenStartup,width:1440,height:940,minWidth:1000,minHeight:680,title:'slash',icon:devServerUrl?path.join(app.getAppPath(),'public/brand/slash.png'):path.join(here,'../renderer/brand/slash.png'),backgroundColor:'#f6f7f8',titleBarStyle:'hidden',titleBarOverlay:{color:'#f6f7f8',symbolColor:'#20242b',height:36},webPreferences:{preload:path.join(here,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  win.setMenuBarVisibility(false);
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
  win.webContents.on('will-navigate',(event,url)=>{if(url!==win.webContents.getURL())event.preventDefault();});
  win.on('closed',()=>{windowClosing=true;service.dispose();cancelAllPrototypeAcceptance();});
  app.on('before-quit',()=>{windowClosing=true;mcpHost?.close();service.dispose();cancelAllPrototypeAcceptance();});
  app.on('window-all-closed',()=>{service.dispose();previews.clear();server.close();store.close();app.quit();});
- const startup=installStartupRecovery(win,{dataDir:userDataDir,redact,load:()=>devServerUrl?win.loadURL(devServerUrl):win.loadFile(path.join(here,'../renderer/index.html'))});
+ startup=installStartupRecovery(win,{dataDir:userDataDir,redact,hidden:hiddenStartup,load:()=>devServerUrl?win.loadURL(devServerUrl):win.loadFile(path.join(here,'../renderer/index.html'))});
  await startup.load();
 }
 
-void boot().catch(error=>{console.error(redact(String(error)));app.exit(1)});
+void boot().catch(error=>{void failInitialization(error);});
 

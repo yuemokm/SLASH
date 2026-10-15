@@ -240,6 +240,7 @@ export function SettingsModal({
   const [modelResult, setModelResult] = useState<Record<string, string>>({});
   const [batchResult,setBatchResult]=useState<ModelBatchResult>();
   const [busy, setBusy] = useState("");
+  const busyRef = useRef("");
   const resolvingApprovals = useRef(new Set<string>());
   const [feedback, setFeedback] = useState<{
     kind: "error" | "success";
@@ -295,6 +296,7 @@ export function SettingsModal({
       if (event.defaultPrevented) return;
       if (event.key === "Escape") {
         event.preventDefault();
+        if (busyRef.current === "model-save") return;
         if (modelDraft) closeModelDraft();
         else onClose();
         return;
@@ -337,6 +339,7 @@ export function SettingsModal({
     onNotice(text);
   };
   const perform = async (id: string, action: () => Promise<void>) => {
+    busyRef.current = id;
     setBusy(id);
     setFeedback(undefined);
     try {
@@ -346,6 +349,7 @@ export function SettingsModal({
       setFeedback({ kind: "error", text });
       onError(text);
     } finally {
+      busyRef.current = "";
       setBusy("");
     }
   };
@@ -354,7 +358,7 @@ export function SettingsModal({
     setTab(settingsDestination(next));
   };
   const closeModelDraft = () => {
-    if(busy==='model-save')return;
+    if(busyRef.current==='model-save')return;
     setModelDraft(undefined);
     setModelDetailsOpen(true);
     setFeedback(undefined);
@@ -366,7 +370,7 @@ export function SettingsModal({
     setModelDraft(draft);
   };
   const saveModel = async () => {
-    if (!modelDraft) return;
+    if (!modelDraft || busyRef.current === 'model-save') return;
     const provider = modelDraft.provider.trim();
     const name = modelDraft.name.trim();
     const baseUrl = modelDraft.baseUrl.trim();
@@ -414,7 +418,7 @@ export function SettingsModal({
         setBatchResult(result);
         const failed=result.items.filter(item=>item.status==='failed');
         const added=result.items.filter(item=>item.status==='added').length,existing=result.items.filter(item=>item.status==='existing').length;
-        if(failed.length){setModelDraft(value=>({...value!,modelId:failed.map(item=>item.modelId).join('\n')}));setFeedback({kind:'error',text:`已添加 ${added} 个，跳过已有 ${existing} 个，失败 ${failed.length} 个。保留失败项，可重试。`});}
+        if(failed.length){setModelDraft({...modelDraft,modelId:failed.map(item=>item.modelId).join('\n')});setFeedback({kind:'error',text:`已添加 ${added} 个，跳过已有 ${existing} 个，失败 ${failed.length} 个。保留失败项，可重试。`});}
         else{setModelDraft(undefined);notify(`已添加 ${added} 个模型${existing?`，跳过已有 ${existing} 个（原配置和密钥保留）`:''}`);}
         try{await load();await onRefresh();}catch{setFeedback({kind:'error',text:'模型保存结果已返回，但列表刷新失败。请重新打开设置核对已保存的模型。'});}
         return;

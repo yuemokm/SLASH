@@ -1,5 +1,6 @@
 import {spawn} from 'node:child_process';
-import {appendFileSync,copyFileSync,existsSync,statSync,writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {appendFileSync,copyFileSync,existsSync,realpathSync,statSync,writeFileSync} from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -41,7 +42,19 @@ let buildProcess;
 let rendererProcess;
 let electronProcess;
 let stopping=false;
+let launchLease;
 const startupController=new AbortController();
+
+async function acquireLaunchLease(){
+ // Windows pipe ownership is released by the OS even after a native crash.
+ // It needs no persistent lockfile, stale PID check, or process termination.
+ if(process.platform!=='win32')return;
+ const identity=createHash('sha256').update(realpathSync(root).toLowerCase()).digest('hex').slice(0,32);
+ const lease=net.createServer(socket=>socket.destroy());
+ try{await new Promise((resolve,reject)=>{lease.once('error',reject);lease.listen(`\\\\.\\pipe\\slash-dev-${identity}`,resolve);});}
+ catch(error){lease.close();if(error.code==='EADDRINUSE')throw Error('Another slash development launcher is already starting or running in this project. Use the existing window.');throw error;}
+ launchLease=lease;
+}
 
 function parsePort(value){
  const parsed=Number(value||5173);
@@ -117,9 +130,10 @@ async function stopProcess(child){
 async function shutdown(code=0){
  if(stopping)return;
  stopping=true;
- diagnose(`shutdown requested: code ${code}`);
+ if(launchLease||process.platform!=='win32')diagnose(`shutdown requested: code ${code}`);
  startupController.abort();
  await Promise.all([stopProcess(electronProcess),stopProcess(rendererProcess),stopProcess(buildProcess)]);
+ if(launchLease){await new Promise(resolve=>launchLease.close(resolve));launchLease=undefined;}
  process.exitCode=code;
 }
 
@@ -127,6 +141,7 @@ process.once('SIGINT',()=>{void shutdown(0);});
 process.once('SIGTERM',()=>{void shutdown(0);});
 
 try{
+ await acquireLaunchLease();
  diagnose(`launcher started: Node ${process.version}; platform ${process.platform}/${process.arch}; stdin=${process.stdin.isTTY?'TTY':'pipe'} stdout=${process.stdout.isTTY?'TTY':'pipe'}; diagnostics=${diagnosticPath}`,true);
  await assertPortAvailable();
  await compileMain();
@@ -134,6 +149,11 @@ try{
  const rendererStarted=performance.now();
  rendererProcess=start(nodeCommand,[viteCli,'--host',host,'--port',String(port),'--strictPort'],'Vite renderer',{env:{...process.env,PM_SLASH_DEV_SERVER_PORT:String(port)}});
  await waitForRenderer(rendererProcess,devServerUrl,{signal:startupController.signal});
+ // Readiness is a first response, not a lifetime guarantee. A later Vite
+ // failure must close this launcher's desktop and retain a failing exit code.
+ const rendererFailed=()=>{if(!stopping){diagnose('Vite renderer stopped after readiness',true);void shutdown(1);}};
+ rendererProcess.once('exit',rendererFailed);rendererProcess.once('error',rendererFailed);
+ if(rendererProcess.exitCode!==null||rendererProcess.signalCode!==null){rendererFailed();startupController.signal.throwIfAborted();}
  startupController.signal.throwIfAborted();
  diagnose(`renderer HTML ready at ${devServerUrl} in ${Math.round(performance.now()-rendererStarted)}ms`,true);
  electronProcess=start(nodeCommand,[electronCli,'.'],'Electron desktop',{env:{...process.env,PM_SLASH_DEV_SERVER_URL:devServerUrl,PM_SLASH_DEV_SERVER_PORT:String(port)}});
@@ -141,6 +161,6 @@ try{
  electronProcess=undefined;
  await shutdown(result.code??0);
 }catch(error){
- if(!stopping)diagnose(error instanceof Error?error.message:String(error),true);
+ if(!stopping){if(launchLease||process.platform!=='win32')diagnose(error instanceof Error?error.message:String(error),true);else console.error(`[dev] ${error instanceof Error?error.message:String(error)}`);}
  await shutdown(1);
 }

@@ -18,6 +18,7 @@ async function fixture(t:TestContext){
 const fs=require('node:fs'),path=require('node:path');
 fs.appendFileSync('calls.jsonl',JSON.stringify({cli:'tsc',args:process.argv.slice(2)})+'\\n');
 if(process.env.FIXTURE_MODE==='tsc-failure')process.exit(2);
+if(process.env.FIXTURE_MODE==='hold-electron')Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,700);
 if(process.env.FIXTURE_MODE!=='missing-entry'){fs.mkdirSync('dist/main',{recursive:true});fs.writeFileSync('dist/main/main.js','fresh main');}
 `);
  await write('node_modules/vite/bin/vite.js',`
@@ -27,17 +28,20 @@ if(args.includes('build'))throw Error('Unexpected production renderer build');
 if(process.env.FIXTURE_MODE==='renderer-failure')process.exit(23);
 if(process.env.FIXTURE_MODE==='renderer-native-exit')process.exit(-1073740791);
 http.createServer((req,res)=>res.writeHead(200,{'content-type':'text/html'}).end('<div id="root"></div><script type="module" src="/src/main.tsx"></script>')).listen(Number(args[args.indexOf('--port')+1]),'127.0.0.1');
+if(process.env.FIXTURE_MODE==='late-renderer-failure')setTimeout(()=>process.exit(29),1200);
 `);
  await write('node_modules/electron/cli.js',`
 const fs=require('node:fs');
 fs.appendFileSync('calls.jsonl',JSON.stringify({cli:'electron',args:process.argv.slice(2),url:process.env.PM_SLASH_DEV_SERVER_URL,main:fs.readFileSync('dist/main/main.js','utf8'),productionRendererExists:fs.existsSync('dist/renderer')})+'\\n');
+if(['late-renderer-failure','hold-electron'].includes(process.env.FIXTURE_MODE))setTimeout(()=>{},2500);
 `);
  return{root,write};
 }
 async function reserve(){const server=createServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));return{server,port:(server.address() as {port:number}).port};}
-async function launch(root:string,port:number,mode='normal'){
+async function launch(root:string,port:number,mode='normal',onSpawn?:(child:ReturnType<typeof spawn>)=>void){
  const child=spawn(process.execPath,[path.join(root,'scripts/dev-electron.mjs')],{cwd:root,env:{...process.env,PM_SLASH_DEV_PORT:String(port),FIXTURE_MODE:mode},windowsHide:true});
  let output='';child.stdout.on('data',chunk=>output+=chunk);child.stderr.on('data',chunk=>output+=chunk);
+ onSpawn?.(child);
  const code=await new Promise<number|null>((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve);});
  const calls=await fs.readFile(path.join(root,'calls.jsonl'),'utf8').then(text=>text.trim().split('\n').map(line=>JSON.parse(line))).catch(()=>[]);
  return{code,output,calls};
@@ -88,4 +92,28 @@ test('occupied development port is rejected before compilation',async t=>{
  const f=await fixture(t),reserved=await reserve();
  try{const result=await launch(f.root,reserved.port);assert.equal(result.code,1,result.output);assert.deepEqual(result.calls,[]);assert.match(result.output,/development port .* unavailable/);}
  finally{await new Promise<void>(resolve=>reserved.server.close(()=>resolve()));}
+});
+test('Vite在首次就绪后退出会关闭自有桌面、保持失败码并释放端口',async t=>{
+ const f=await fixture(t),reserved=await reserve();await new Promise<void>(resolve=>reserved.server.close(()=>resolve()));
+ const result=await launch(f.root,reserved.port,'late-renderer-failure');assert.equal(result.code,1,result.output);assert.deepEqual(result.calls.map(call=>call.cli),['tsc','vite','electron']);assert.match(result.output,/stopped after readiness/);
+ const server=createServer();await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(reserved.port,'127.0.0.1',resolve);});await new Promise<void>(resolve=>server.close(()=>resolve()));
+});
+test('Windows重复双击在编译前拒绝，不竞争dist或修改已有诊断日志',{skip:process.platform!=='win32'},async t=>{
+ const f=await fixture(t),reserved=await reserve();await new Promise<void>(resolve=>reserved.server.close(()=>resolve()));
+ let started!:()=>void;const compilerStarted=new Promise<void>(resolve=>started=resolve);
+ const first=launch(f.root,reserved.port,'hold-electron',child=>child.stdout!.on('data',chunk=>{if(chunk.toString().includes('starting TypeScript compiler'))started();}));
+ await compilerStarted;const before=await fs.readFile(path.join(f.root,'dev-startup.log'),'utf8');
+ const second=await launch(f.root,reserved.port+1);assert.equal(second.code,1);assert.match(second.output,/already starting or running/);
+ const after=await fs.readFile(path.join(f.root,'dev-startup.log'),'utf8');assert(after.startsWith(before));assert(!after.includes('shutdown requested: code 1'));
+ const completed=await first;assert.equal(completed.code,0,completed.output);assert.deepEqual(completed.calls.map(call=>call.cli),['tsc','vite','electron']);
+ const again=await launch(f.root,reserved.port);assert.equal(again.code,0,again.output);
+});
+test('Windows自有启动器进程树异常终止后，OS租约自动释放可重新启动',{skip:process.platform!=='win32'},async t=>{
+ const f=await fixture(t),reserved=await reserve();await new Promise<void>(resolve=>reserved.server.close(()=>resolve()));
+ let owner!:ReturnType<typeof spawn>,started!:()=>void;const compilerStarted=new Promise<void>(resolve=>started=resolve);
+ const first=launch(f.root,reserved.port,'hold-electron',child=>{owner=child;child.stdout!.on('data',chunk=>{if(chunk.toString().includes('starting TypeScript compiler'))started();});});
+ await compilerStarted;
+ // Only this test's explicitly spawned process tree is terminated.
+ const killer=spawn('taskkill',['/pid',String(owner.pid),'/t','/f'],{windowsHide:true,stdio:'ignore'});await new Promise<void>((resolve,reject)=>{killer.once('error',reject);killer.once('exit',()=>resolve());});await first;
+ const again=await launch(f.root,reserved.port);assert.equal(again.code,0,again.output);
 });

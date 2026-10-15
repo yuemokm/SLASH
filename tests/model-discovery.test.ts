@@ -48,10 +48,10 @@ test('目录失败/无密钥/坏地址不冒充成功；错误正文不回显密
  const empty=await discoverModels(config,'k',async()=>new Response('{"data":[]}'));assert.deepEqual(empty.models,[]);assert.match(empty.notice,/空列表/);
 });
 const fixture=()=>{
- const values=new Map<string,unknown>();let failEncryptionAt=0,encryptions=0;
+ const values=new Map<string,unknown>();let failEncryptionAt=0,encryptions=0,failSaveAt=0,saves=0,durable:State;
  const state:State={root:'',mounts:[],conversations:[],changes:[],runs:[],connections:[],model:{baseUrl:'https://old.invalid/v1',id:'old',hasKey:false}};
- const settings=new ModelSettings({get:<T>(key:string,fallback:T)=>(values.get(key)??fallback) as T,set:(key,value)=>{values.set(key,value);}},{isEncryptionAvailable:()=>true,encryptString:value=>{if(++encryptions===failEncryptionAt)throw Error('fixture-key encryption failed');return Buffer.from(value);},decryptString:value=>value.toString()},{get:()=>state,save:()=>{}});
- settings.initialize();return{state,values,settings,failEncryptionAfter:(count:number)=>{failEncryptionAt=encryptions+count;}};
+ const settings=new ModelSettings({get:<T>(key:string,fallback:T)=>(values.get(key)??fallback) as T,set:(key,value)=>{values.set(key,value);}},{isEncryptionAvailable:()=>true,encryptString:value=>{if(++encryptions===failEncryptionAt)throw Error('fixture-key encryption failed');return Buffer.from(value);},decryptString:value=>value.toString()},{get:()=>state,save:()=>{if(++saves===failSaveAt)throw Error('fixture save failure');durable=structuredClone(state);}});
+ settings.initialize();return{state,values,settings,get durable(){return durable;},get saves(){return saves;},failSaveAfter:(count:number)=>{failSaveAt=saves+count;},failEncryptionAfter:(count:number)=>{failEncryptionAt=encryptions+count;}};
 };
 const batch=(overrides:Record<string,unknown>={})=>requestSchema.parse({type:'modelBatchAdd',connection:{provider:'fixture',baseUrl:'https://fixture.invalid/v1/',protocol:'openai-responses'},models:[{modelId:'a',name:'A'},{modelId:'b',name:'B'}],key:'fixture-key',...overrides}) as Extract<ReturnType<typeof requestSchema.parse>,{type:'modelBatchAdd'}>;
 test('批量添加/重试去重保留旧项id密钥默认与Subagent引用；不同供应商保留',()=>{
@@ -79,4 +79,19 @@ test('逐项保存失败回执可重试，成功项保留，草稿密钥不会�
 });
 test('多个手工ID按常见分隔符合并，不截断ID；batch schema限定100项',()=>{
  assert.deepEqual(parseModelIds('a\nb, c，a；d; e\t f'),['a','b','c','d','e','f']);assert.throws(()=>batch({models:Array.from({length:101},(_,i)=>({modelId:String(i),name:String(i)}))}));
+});
+test('落盘失败不留下内存重复项，重试确实保存，批次已成功项保持',()=>{
+ const f=fixture();f.failSaveAfter(2);
+ const result=f.settings.batchAdd(batch());assert.deepEqual(result.items.map(item=>item.status),['added','failed']);
+ assert(!f.state.models?.some(model=>model.modelId==='b'));assert(!f.durable.models?.some(model=>model.modelId==='b'));
+ const first=structuredClone(f.settings.model(result.items[0].id!)),saves=f.saves;
+ const retry=f.settings.batchAdd(batch());assert.deepEqual(retry.items.map(item=>item.status),['existing','added']);assert.equal(f.saves,saves+1);
+ assert(f.durable.models?.some(model=>model.modelId==='b'));assert.deepEqual(f.settings.model(first.id),first);assert.equal(f.settings.credential(first.id),'fixture-key');
+});
+test('既有模型编辑保存失败恢复条目、默认legacy配置和原密钥',()=>{
+ const f=fixture(),saved=f.settings.batchAdd(batch()).items[0].id!,before=structuredClone(f.state);
+ for(const patch of [{name:'changed'}, {baseUrl:'https://moved.invalid/v1'}]){
+  f.failSaveAfter(1);assert.throws(()=>f.settings.upsert({...f.settings.model(saved),...patch},patch.name?'replacement-key':undefined),/fixture save failure/);
+  assert.deepEqual(f.state,before);assert.equal(f.settings.credential(saved),'fixture-key');
+ }
 });

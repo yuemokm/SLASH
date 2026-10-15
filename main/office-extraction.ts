@@ -116,7 +116,7 @@ function validateXml(bytes: Buffer, entryName: string, budget: XmlBudget,observa
   parser.write(bytes.toString('utf8')).close();
 }
 
-function validatePackage(bytes: Buffer, extension: string,observations?:FormulaCacheObservations): void {
+export function validateOfficePackage(bytes: Buffer, extension: string,observations?:FormulaCacheObservations): void {
   if (bytes.length > OFFICE_EXTRACTION_LIMITS.inputBytes) refuse('INPUT_LIMIT', 'Office 处理副本超过 100 MB');
   if (bytes.length < 4 || bytes.readUInt32LE(0) !== 0x04034b50) {
     refuse('INVALID_PACKAGE', '文件不是有效的 DOCX/XLSX 包，或已加密；请提供未加密的处理副本');
@@ -164,9 +164,10 @@ function validatePackage(bytes: Buffer, extension: string,observations?:FormulaC
     }
     if (xml) validateXml(data, name, budget,observations);
   }
-  const required = extension === '.docx' ? 'word/document.xml' : 'xl/workbook.xml';
+  const required = extension === '.docx' ? 'word/document.xml' : extension === '.pptx' ? 'ppt/presentation.xml' : 'xl/workbook.xml';
   if (!names.has('[content_types].xml') || !names.has(required)) refuse('INVALID_PACKAGE', '文件扩展名与 Office 包内容不匹配');
 }
+const validatePackage=validateOfficePackage;
 
 function scalarValue(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return '[空值]';

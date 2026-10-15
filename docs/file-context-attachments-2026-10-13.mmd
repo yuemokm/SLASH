@@ -1,0 +1,19 @@
+flowchart TD
+  Select[会话：多选 / 拖入 / 粘贴文件] --> IPC[attachmentAttach 严格schema + workspace复核]
+  IPC --> Capture[精确用户路径有界读取 / 原字节快照]
+  Capture --> Image{图片格式?}
+  Image -->|是| ImageVerify[原图片验证与快照]
+  Image -->|否| Parse[Office / PDF / PPTX字节Worker 或文本解码]
+  Parse -->|无法提取 / 超限 / 损坏| Failed[逐项可读失败 / 重试 / 移除]
+  Parse -->|成功| Snapshot[原字节hash + 解析版本 + 正文hash / 截断]
+  ImageVerify --> Ready[附件文件名 / 类型 / 状态]
+  Snapshot --> Ready
+  Ready --> Active{本轮仍在运行?}
+  Active -->|是| Wait[附件保留 / 明确等待新任务]
+  Active -->|否| Send[既有send attachmentIds]
+  Send --> Verify[所属workspace快照 / 完整性 / 模型预算]
+  Verify --> Docs[文档正文JSON / 不可信资料 / 实际截断]
+  Verify --> Vision[图片沿原VisionBridge]
+  Docs --> Prompt[所属Run session.prompt + 原权限网关]
+  Vision --> Prompt
+  Prompt --> History[原用户消息与Run保留来源元信息 / 重启历史]

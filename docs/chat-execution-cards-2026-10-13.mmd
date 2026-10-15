@@ -1,0 +1,15 @@
+flowchart TD
+  Run[宿主 Run 状态与原始记录] --> Owner{是否当前活动 Run}
+  Owner -->|是| Live[当前输出区域显示一次执行步骤]
+  Owner -->|否且有回复| Last[本 Run 末条回复前显示一次步骤]
+  Owner -->|无正文且有状态或结果| Anchor[原输入位置的任务记录]
+  Live --> Summary[实际状态摘要]
+  Last --> Summary
+  Anchor --> Summary
+  Summary -->|有需要处理的事项| Action[原方案确认 / 恢复核对 / 继续入口]
+  Summary -->|用户展开| Detail[原执行明细 / 来源 / 检查点]
+  Tools[工具消息] --> Fold[沿用原折叠分组]
+  Text[助手回复] --> Footer[复制 / 时间 / 质量检查]
+  Header[会话顶部工作记录] --> Work[当前会话需求 / 检查问题 / 决策]
+  Work -->|显式切换| History[当前项目完整历史与处理记录]
+  History --> Work

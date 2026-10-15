@@ -26,7 +26,7 @@ export const DEFAULT_PERMISSION_SETTINGS:PermissionSettings={
  artifact_write:'allow',
 };
 
-export type SettingsStore={get<T>(key:string,fallback:T):T;set(key:string,value:unknown):void};
+export type SettingsStore={get<T>(key:string,fallback:T):T;set(key:string,value:unknown):void;transaction?<T>(action:()=>T):T};
 export type CredentialCipher={isEncryptionAvailable():boolean;encryptString(value:string):Buffer;decryptString(value:Buffer):string};
 type StateAccess={get():State;save():void};
 
@@ -100,17 +100,34 @@ export class ModelSettings {
   const fingerprint=thinkingFingerprint(limitsInput);
   const snapshot=this.store.get<{resolution?:{capability?:{fingerprint?:string};metadataLimits?:ModelLimitMetadata}}|undefined>(`model-thinking:v1:${fingerprint}`,undefined);
   resolveModelLimits(limitsInput,fingerprint,snapshot?.resolution?.capability?.fingerprint===fingerprint?snapshot.resolution.metadataLimits:undefined);
+  const previousSecret=this.store.get<string>(this.secretKey(id),'');
+  const previous={models:state.models,defaultModelId:state.defaultModelId,model:state.model};
+  const endpointChanged=Boolean(existing&&normalizedUrl(existing.baseUrl)!==normalizedUrl(input.baseUrl));
+  let nextSecret=previousSecret;
   if(key!==undefined){
    if(!key)throw Error('VALIDATION_FAILED: 密钥不能为空');
    if(!this.cipher.isEncryptionAvailable())throw Error('系统凭据加密不可用');
-   this.store.set(this.secretKey(id),this.cipher.encryptString(key).toString('base64'));
+   nextSecret=this.cipher.encryptString(key).toString('base64');
   }
-  const endpointChanged=Boolean(existing&&normalizedUrl(existing.baseUrl)!==normalizedUrl(input.baseUrl));
-  if(endpointChanged&&key===undefined)this.store.set(this.secretKey(id),'');
+  if(endpointChanged&&key===undefined)nextSecret='';
   const model:ModelEntry={...validated,provider:validated.provider.toLowerCase(),supportsVision:Boolean(input.supportsVision),hasKey:key!==undefined||Boolean(existing?.hasKey&&!endpointChanged),createdAt:existing?.createdAt??now,updatedAt:now};
-  state.models=[...models.filter(item=>item.id!==id),model];
-  state.defaultModelId=state.defaultModelId??id;
-  this.syncLegacy(state);this.state.save();
+  const persist=()=>{
+   if(nextSecret!==previousSecret)this.store.set(this.secretKey(id),nextSecret);
+   state.models=[...models.filter(item=>item.id!==id),model];
+   state.defaultModelId=state.defaultModelId??id;
+   this.syncLegacy(state);this.state.save();
+  };
+  try{
+   if(this.store.transaction)this.store.transaction(persist);else persist();
+  }catch(error){
+   // Failed persistence cannot leave an apparent existing model on retry,
+   // or replace an existing model's working credential.
+   Object.assign(state,previous);
+   // The production Store rolls both secret and state back in SQLite. Small
+   // injected stores without transactions retain the same in-memory contract.
+   if(!this.store.transaction&&nextSecret!==previousSecret)this.store.set(this.secretKey(id),previousSecret);
+   throw error;
+  }
   return{...model};
  }
  async upsertWithCapabilities(input:Parameters<ModelSettings['upsert']>[0],key:string|undefined,detect:(id:string)=>Promise<unknown>){

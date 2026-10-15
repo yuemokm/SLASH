@@ -19,6 +19,18 @@ export class Store {
  }
  get<T>(key:string,fallback:T):T{const r=this.db.prepare('SELECT value FROM kv WHERE key=?').get(key);return r?JSON.parse(String(r.value)):fallback;}
  set(key:string,value:unknown){this.db.prepare('INSERT INTO kv VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,JSON.stringify(value));}
+ /** Synchronous local writes share one SQLite commit; savepoints also compose
+  * with callers already inside a transaction. */
+ transaction<T>(action:()=>T):T{
+  const name='local_'+randomUUID().replaceAll('-','');
+  this.db.exec(`SAVEPOINT ${name}`);
+  try{const result=action();this.db.exec(`RELEASE SAVEPOINT ${name}`);return result;}
+  catch(error){
+   try{this.db.exec(`ROLLBACK TO SAVEPOINT ${name}; RELEASE SAVEPOINT ${name}`);}
+   catch(rollbackError){throw new AggregateError([error,rollbackError],'本地事务保存及回滚失败');}
+   throw error;
+  }
+ }
  /** Host-only: one binding claim and its first Operation/recovery receipt share
   * one transaction. A crashed claimant therefore never leaves a missing receipt. */
  claimOperationBinding(input:{key:string;operationId:string;runId:string;tool:string;initialResult:string;recovery:RecoveryRecord}){

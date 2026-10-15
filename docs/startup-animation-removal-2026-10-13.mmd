@@ -1,0 +1,12 @@
+flowchart TD
+  Dev[根BAT 开发租约与Vite存活检查] --> Init[本地服务初始化]
+  Init --> Main[创建主窗口 普通用户直接显示]
+  Init --> Hidden[隔离隐藏测试 主窗口不显示]
+  Main --> Load[页面与业务资料加载]
+  Hidden --> Load
+  Load --> Ready[工作台可用]
+  Load --> Failure[加载失败或renderer崩溃]
+  Failure --> Log[脱敏诊断日志]
+  Failure --> Visible[普通用户在可见主窗重试或退出]
+  Visible --> Load
+  Failure --> HiddenError[隐藏测试保留错误反馈 不弹窗口]

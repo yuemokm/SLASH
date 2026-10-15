@@ -23,7 +23,18 @@ let app,page,settings;const form=()=>settings.locator('.subdialog');
 const call=async request=>{const result=await page.evaluate(value=>window.pm.request(value),request);assert(result.ok,result.error);return result.data;};
 const models=async()=> (await call({type:'models'})).groups.flatMap(group=>group.models);
 const pass=name=>{evidence.checks.push(name);console.log('PASS '+name);};
-async function launch(){app=await electron.launch({cwd:root,args:['.'],env:{...process.env,PM_SLASH_DATA_DIR:profile}});page=await app.firstWindow();page.setDefaultTimeout(15000);page.on('pageerror',error=>evidence.pageErrors.push(error.message));await page.locator('.brand').waitFor();await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.unmaximize();win.setSize(1280,840);});settings=page.getByRole('dialog',{name:'设置',exact:true});}
+async function launch(){
+ app=await electron.launch({cwd:root,args:['.'],env:{...process.env,PM_SLASH_DATA_DIR:profile,PM_SLASH_TEST_HIDDEN:'1'}});
+ const deadline=Date.now()+30000;
+ while(!page||page.isClosed()||!(/\/index\.html(?:$|[?#])/.test(page.url()))){
+  page=app.windows().find(candidate=>/\/index\.html(?:$|[?#])/.test(candidate.url()));
+  if(Date.now()>deadline)throw Error('主工作台窗口未在30秒内加载');
+  if(!page)await new Promise(resolve=>setTimeout(resolve,100));
+ }
+ page.setDefaultTimeout(15000);page.on('pageerror',error=>evidence.pageErrors.push(error.message));await page.locator('.brand').waitFor();
+ await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows().find(win=>/\/index\.html(?:$|[?#])/.test(win.webContents.getURL()));win.webContents.setBackgroundThrottling(false);win.unmaximize();win.setSize(1280,840);});
+ settings=page.getByRole('dialog',{name:'设置',exact:true});
+}
 async function openSettings(){await page.getByRole('button',{name:'设置',exact:true}).first().click();await settings.waitFor();await settings.locator('.settings-nav button').filter({hasText:'模型'}).first().click();}
 async function add(){await settings.getByRole('button',{name:'添加模型',exact:true}).click();await form().waitFor();}
 async function save(){await form().getByRole('button',{name:/^保存模型/}).click();await form().waitFor({state:'hidden'});}
@@ -40,7 +51,7 @@ try{
  await settings.locator('.model-row').filter({hasText:'fixture-alpha'}).getByRole('button',{name:'编辑',exact:true}).click();assert.equal(await form().locator('.model-picker').count(),0);await form().getByLabel('显示名称',{exact:true}).fill('Alpha 已编辑');await save();assert.equal((await models()).find(model=>model.id===a.id).name,'Alpha 已编辑');pass('原模型单项编辑保留id');
  await add();await form().getByLabel('供应商名称',{exact:true}).fill('failure-fixture');await form().getByLabel('API 地址',{exact:true}).fill(endpoint+'/failure');await form().locator('input[type=password]').fill('fixture-only-key');await form().getByRole('button',{name:'获取模型列表',exact:true}).click();await form().getByRole('alert').filter({hasText:'HTTP 404'}).waitFor();assert.equal(await form().getByRole('button',{name:/选择第 \d+ 行模型/}).count(),0);await fillRows(['manual-fallback-a','manual-fallback-b']);await screenshot('02-failure-manual-rows');await save();assert.equal((await models()).filter(model=>model.provider==='failure-fixture').length,2);pass('上游404不显示下拉，仍可用两行手动ID保存');
  await add();await form().getByLabel('API 地址',{exact:true}).fill(endpoint+'/slow');await form().locator('input[type=password]').fill('fixture-only-key');await form().getByRole('button',{name:'获取模型列表',exact:true}).click();await form().getByLabel('API 地址',{exact:true}).fill(endpoint+'/v1');await page.waitForTimeout(1000);assert.equal(await form().getByRole('button',{name:/选择第 \d+ 行模型/}).count(),0);await form().getByRole('button',{name:'获取模型列表',exact:true}).click();await form().getByRole('status').filter({hasText:'已获取 3 个模型'}).waitFor();assert.equal(await form().getByRole('button',{name:'选择第 1 行模型',exact:true}).count(),1);await form().getByLabel('接口协议').selectOption('openai-responses');assert.equal(await form().getByRole('button',{name:/选择第 \d+ 行模型/}).count(),0);await form().getByRole('button',{name:'获取模型列表',exact:true}).click();await form().getByRole('status').filter({hasText:'已获取 3 个模型'}).waitFor();pass('请求途中改地址/成功后改协议均移除旧下拉，旧回包不污染新连接');
- await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(640,760));await screenshot('03-narrow-form');pass('640宽窄窗口表单无水平溢出，保存操作固定可见');await form().getByRole('button',{name:'取消',exact:true}).click();await app.close();app=undefined;
+ await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(win=>/\/index\.html(?:$|[?#])/.test(win.webContents.getURL())).setSize(640,760));await screenshot('03-narrow-form');pass('640宽窄窗口表单无水平溢出，保存操作固定可见');await form().getByRole('button',{name:'取消',exact:true}).click();await app.close();app=undefined;
  await launch();entries=await models();assert.equal(entries.filter(model=>model.provider==='fixture').length,5);assert.equal(entries.find(model=>model.id===a.id).name,'Alpha 已编辑');assert(entries.filter(model=>model.provider==='fixture').every(model=>model.hasKey));assert.equal((await call({type:'models'})).defaultModelId,original);pass('实际重启后多模型、密钥标记、旧项id与默认选择持久恢复');
  assert.deepEqual(evidence.pageErrors,[]);evidence.status='passed';
 }catch(error){evidence.status='failed';evidence.error=String(error);if(page)await page.screenshot({path:path.join(output,'failure.png')}).catch(()=>{});throw error;}

@@ -249,6 +249,7 @@ export const requestSchema=z.discriminatedUnion('type',[
   z.object({type:z.literal('projectTreeSave'),workspaceId:safeId,expectedRevision:z.number().int().min(0),nodes:projectTreeNodesSchema}).strict(),
   z.object({type:z.literal('projectTreeApply'),workspaceId:safeId,expectedRevision:z.number().int().min(0)}).strict(),
   z.object({type:z.literal('visionAttach'),path:z.string().min(1).max(32767)}),
+  z.object({type:z.literal('attachmentAttach'),path:z.string().min(1).max(32767),workspaceRoot:z.string().min(1).max(32767)}).strict(),
   z.object({type:z.literal('visionAnalyze'),path:z.string().min(1).max(32767),prompt:z.string().max(5000).optional(),modelEntryId:safeId.optional()}),
   z.object({type:z.literal('windowTheme'),theme:z.enum(['reference','graphite','sand'])}),
   z.object({type:z.literal('workspace'),path:z.string().max(32767).optional()}),

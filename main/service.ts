@@ -131,8 +131,8 @@ export type ServiceBackendHooks={
  redact?:(value:string)=>string;
 };
 export type SelectedModelForImages={entryId?:string;modelId:string;provider:string;protocol?:ModelProtocol;supportsVision?:boolean};
-export type ImagePreparationInput={attachmentIds:string[];workspaceRoot:string;selectedModel:SelectedModelForImages;prompt:string;signal:AbortSignal;runId:string;conversationId:string};
-export type ImagePreparationResult={images?:ImageContent[];evidenceText?:string;attachments?:unknown};
+export type ImagePreparationInput={attachmentIds:string[];workspaceRoot:string;selectedModel:SelectedModelForImages;contextWindow?:number;prompt:string;signal:AbortSignal;runId:string;conversationId:string};
+export type ImagePreparationResult={images?:ImageContent[];evidenceText?:string;documentContextText?:string;attachments?:unknown};
 type PersistedMessage=State['conversations'][number]['messages'][number]&{attachmentIds?:string[];attachments?:unknown;evidenceText?:string};
 type PersistedRun=State['runs'][number]&{attachmentIds?:string[];attachments?:unknown;evidenceText?:string;modelLimits?:ModelThinkingCapability['limits']};
 export type ServiceExternalActionRequest=ExternalActionRequest|(
@@ -1142,7 +1142,7 @@ export class Service {
    if(run.attachmentIds?.length){
     if(!this.backend.prepareImages)throw Error('IMAGE_PREPARATION_UNAVAILABLE: 当前宿主未提供图片准备能力');
     if(controller.signal.aborted||this.cancelled.has(run.id))throw Error(this.cancellationReasons.get(run.id)||'CANCELLED');
-    preparedImages=await this.backend.prepareImages({attachmentIds:[...run.attachmentIds],workspaceRoot:this.state.root,selectedModel:{entryId:run.modelEntryId,modelId:model.id,provider:model.provider??'default',protocol:model.protocol,supportsVision:model.supportsVision},prompt:text,signal:controller.signal,runId:run.id,conversationId:c.id});
+    preparedImages=await this.backend.prepareImages({attachmentIds:[...run.attachmentIds],workspaceRoot:this.state.root,selectedModel:{entryId:run.modelEntryId,modelId:model.id,provider:model.provider??'default',protocol:model.protocol,supportsVision:model.supportsVision},contextWindow:run.modelLimits?.contextWindow,prompt:text,signal:controller.signal,runId:run.id,conversationId:c.id});
     if(controller.signal.aborted||this.cancelled.has(run.id))throw Error(this.cancellationReasons.get(run.id)||'CANCELLED');
     run.evidenceText=preparedImages.evidenceText?.trim()||undefined;run.attachments=preparedImages.attachments; if(message){message.attachments=preparedImages.attachments;message.evidenceText=run.evidenceText;}run.updatedAt=new Date().toISOString();this.save();
    }
@@ -1183,7 +1183,7 @@ export class Service {
    if(session.sessionFile){run.piSessionFile=session.sessionFile;this.store.set('session:'+c.id,session.sessionFile);this.save();}
    this.active.set(run.id,session);if(session.steer&&session.followUp&&session.clearQueue&&session.prepareUserInput)inputQueue.attach(session as RunInputRuntime);this.starting.delete(run.id);
    if(this.cancelled.has(run.id))throw Error(this.cancellationReasons.get(run.id)||'CANCELLED');
-    this.updateRun(run,{status:'running',phase:'generating'});run.generationStartedAt=new Date().toISOString();this.save();const designInput=prepareDesignReferences(run.designReferences);run.designReferenceReceipts=designInput.receipts;const contextPrompt=[workflowPrompt,designInput.prompt].filter(Boolean).join('\n\n');const workflowInput=contextPrompt?`${text}\n\n${contextPrompt}`:text;const promptText=run.evidenceText?`${workflowInput}\n\n<untrusted_image_evidence>\n${run.evidenceText}\n</untrusted_image_evidence>`:workflowInput;const images=model.supportsVision?preparedImages?.images:undefined;try{await session.prompt(promptText,images?.length?{images}:undefined);}finally{run.generationFinishedAt=new Date().toISOString();run.generationDurationMs=Math.max(0,Date.parse(run.generationFinishedAt)-Date.parse(run.generationStartedAt!));}
+    this.updateRun(run,{status:'running',phase:'generating'});run.generationStartedAt=new Date().toISOString();this.save();const designInput=prepareDesignReferences(run.designReferences);run.designReferenceReceipts=designInput.receipts;const contextPrompt=[workflowPrompt,designInput.prompt].filter(Boolean).join('\n\n');const workflowInput=contextPrompt?`${text}\n\n${contextPrompt}`:text;const attachmentInput=preparedImages?.documentContextText?`${workflowInput}\n\n${preparedImages.documentContextText}`:workflowInput;const promptText=run.evidenceText?`${attachmentInput}\n\n<untrusted_image_evidence>\n${run.evidenceText}\n</untrusted_image_evidence>`:attachmentInput;const images=model.supportsVision?preparedImages?.images:undefined;try{await session.prompt(promptText,images?.length?{images}:undefined);}finally{run.generationFinishedAt=new Date().toISOString();run.generationDurationMs=Math.max(0,Date.parse(run.generationFinishedAt)-Date.parse(run.generationStartedAt!));}
    if(session.sessionFile){run.piSessionFile=session.sessionFile;this.store.set('session:'+c.id,session.sessionFile);this.save();}
    if(blockingToolFailure)throw new HostToolError(blockingToolFailure);
    if(this.cancelled.has(run.id))throw Error(this.cancellationReasons.get(run.id)||'CANCELLED');

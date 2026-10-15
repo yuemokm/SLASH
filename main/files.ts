@@ -15,7 +15,10 @@ export const PDF_TEXT_LIMITS={maxBytes:10_000_000,maxPages:200,maxCharacters:1_0
 export const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 
 async function extractPdfText(file:string,size:number){
- if(size>PDF_TEXT_LIMITS.maxBytes)throw Error(`PDF_FILE_LIMIT: PDF 文件超过 ${PDF_TEXT_LIMITS.maxBytes} 字节`);const data=await fs.readFile(file);if(data.length<5||data.subarray(0,5).toString('ascii')!=='%PDF-')throw Error('PDF_PARSE_FAILED: 文件头不是有效 PDF');
+ if(size>PDF_TEXT_LIMITS.maxBytes)throw Error(`PDF_FILE_LIMIT: PDF 文件超过 ${PDF_TEXT_LIMITS.maxBytes} 字节`);return extractPdfTextBytes(await fs.readFile(file));
+}
+export async function extractPdfTextBytes(data:Uint8Array){
+ if(data.length>PDF_TEXT_LIMITS.maxBytes)throw Error(`PDF_FILE_LIMIT: PDF 文件超过 ${PDF_TEXT_LIMITS.maxBytes} 字节`);if(data.length<5||Buffer.from(data.subarray(0,5)).toString('ascii')!=='%PDF-')throw Error('PDF_PARSE_FAILED: 文件头不是有效 PDF');
  const parser=new PDFParse({data:Uint8Array.from(data),stopAtErrors:true,isEvalSupported:false,useWorkerFetch:false,useWasm:false,useSystemFonts:false,enableXfa:false,disableRange:true,disableStream:true,disableAutoFetch:true});
  try{const info=await parser.getInfo();if(!Number.isInteger(info.total)||info.total<1)throw Error('PDF_PARSE_FAILED: PDF 没有有效页面');if(info.total>PDF_TEXT_LIMITS.maxPages)throw Error(`PDF_PAGE_LIMIT: PDF 页数超过 ${PDF_TEXT_LIMITS.maxPages}`);const result=await parser.getText({first:info.total,lineEnforce:true,pageJoiner:'\n\n'});const text=result.text.replaceAll('\0','').trim();if(text.length>PDF_TEXT_LIMITS.maxCharacters)throw Error(`PDF_TEXT_LIMIT: 提取文本超过 ${PDF_TEXT_LIMITS.maxCharacters} 个字符`);if(!text)throw Error('PDF_TEXT_UNAVAILABLE: 未检测到可提取文字；扫描件暂不支持 OCR');return text;}catch(error){if(error instanceof Error&&error.message.startsWith('PDF_'))throw error;throw Error('PDF_PARSE_FAILED: PDF 文件无效、损坏或不受支持');}finally{await parser.destroy().catch(()=>{});}
 }

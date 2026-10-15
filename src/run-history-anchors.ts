@@ -9,7 +9,7 @@ export function runHistoryAnchors(
   const associated = new Set(messages.filter(message => message.role === "assistant").map(message => message.runId));
   const anchors = new Map<number, Run[]>();
   const candidates = runs.filter(run => run.id !== activeRunId && !associated.has(run.id)
-    && (outputRunIds.includes(run.id) || run.id === currentRunId || run.proposal?.status === "pending" || run.resumable || run.error));
+    && (outputRunIds.includes(run.id) || run.id === currentRunId || run.proposal?.status === "pending" || run.resumable || run.error || ['queued','running','waiting_user','cancelling','validating','cancelled'].includes(run.status)));
   // Do not use updatedAt: restart/resume changes it without moving the original task.
   candidates.sort((a, b) => {
     const first = Date.parse(a.startedAt), second = Date.parse(b.startedAt);

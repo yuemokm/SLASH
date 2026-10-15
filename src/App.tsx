@@ -1,4 +1,7 @@
 import {PublicationDeliveryRecords} from './NetlifyPublishingControls';
+import {ContextAttachmentHistory} from './ContextAttachmentHistory';
+import {contextAttachmentErrorMessage} from './context-attachment-error';
+import {CONTEXT_ATTACHMENT_ACCEPT,CONTEXT_ATTACHMENT_LIMITS,attachmentFormat,isDocumentAttachment,type ContextAttachmentRef} from '../shared/context-attachments';
 import {remarkHostWordBreaks} from './word-reading';
 import {testCaseExportIdentity} from "./test-case-export-request";
 import "./test-cases.css";
@@ -17,7 +20,8 @@ import "./composer-select.css";
 import {ComposerSubagentToggle} from './ComposerSubagentToggle';
 import "./reference-picker.css";
 import { DecryptedStream } from "./DecryptedStream";
-import { ReplyDetails, type ReplyPanelState } from "./ReplyDetails";
+import { ReplyDetails } from "./ReplyDetails";
+import { runExecutionSummary } from "./run-execution-summary";
 import { runHistoryAnchors } from "./run-history-anchors";
 import { toolMessageGroups } from "./tool-message-groups";
 import { runOutputMessageIndices } from "./run-output-placement";
@@ -210,27 +214,27 @@ const phaseLabels: Record<string, string> = {
   failed: "执行失败",
 };
 
-function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanConfirm, onPiReview, pendingChanges = 0, active = false, onClearInputs,call,workspaceRoot }: { call:(request:Request)=>Promise<unknown>;workspaceRoot:string;active?: boolean; onClearInputs?: () => void; run: Run; pendingChanges?: number; checkpoint?: RunCheckpoint; onResume?: () => void; onEdit?: () => void; onPlanDraft?: (ids:string[], text:string)=>void; onPlanConfirm?: (ids:string[], text:string)=>void; onPiReview?:(action:"open"|"cancel")=>void }) {
+function RunPlanCard({ run, onResume, onEdit, onPlanDraft, onPlanConfirm, onPiReview, pendingChanges = 0, active = false, hasTools = false, onClearInputs,call,workspaceRoot }: { call:(request:Request)=>Promise<unknown>;workspaceRoot:string;active?: boolean;hasTools?:boolean; onClearInputs?: () => void; run: Run; pendingChanges?: number; onResume?: () => void; onEdit?: () => void; onPlanDraft?: (ids:string[], text:string)=>void; onPlanConfirm?: (ids:string[], text:string)=>void; onPiReview?:(action:"open"|"cancel")=>void }) {
   const plan = run.plan;
   const proposal = run.proposal;
+  const [checkpoint, setCheckpoint] = useState<RunCheckpoint>();
+  const [checkpointError, setCheckpointError] = useState('');
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const completedOperations = runOperationViews(checkpoint?.completedOperations || []);
   const readSourceCount = run.workflow?.receipts.filter(receipt => receipt.contentStatus !== "metadata_only").length || 0;
   const metadataSourceCount = run.workflow?.receipts.filter(receipt => receipt.contentStatus === "metadata_only").length || 0;
-  const needsAttention = Boolean(run.error) || proposal?.status === "pending" || ["waiting_user", "awaiting_plan", "interrupted", "failed"].includes(run.status);
-  const phaseTitle = run.status === "succeeded" ? (pendingChanges ? "执行完成 · 草稿待应用" : "执行完成") : phaseLabels[run.phase || run.status] || "处理中";
+  const summary = runExecutionSummary(run, {active, pendingChanges, hasTools});
   const [selected, setSelected] = useState<string[]>(proposal?.selectedOptionIds || []);
   const [customText, setCustomText] = useState(proposal?.customText || '');
   useEffect(()=>{if(proposal){setSelected(proposal.selectedOptionIds||[]);setCustomText(proposal.customText||'');}},[proposal?.status, proposal?.selectedOptionIds?.join(','), proposal?.customText]);
+  useEffect(()=>{let stopped=false;if(!diagnosticsOpen)return;setCheckpointError('');void call({type:'runCheckpoint',runId:run.id}).then(value=>{if(!stopped)setCheckpoint(value as RunCheckpoint);}).catch(error=>{if(!stopped)setCheckpointError(String(error.message||error));});return()=>{stopped=true;};},[call,run.id,run.updatedAt,run.status,diagnosticsOpen]);
+  if (!summary.visible) return null;
   return (
-    <article className={`run-plan-card ${needsAttention ? "needs-attention" : ""} ${run.status === "failed" || run.error ? "has-error" : ""}`}>
-      {phaseTitle !== "生成与执行" && <div className="run-plan-head">
-        <div>
-          <b>{phaseTitle}</b>
-        </div>
-
-      </div>}
-      <details className="run-execution-details">
-      <summary>执行记录{completedOperations.length ? ` · ${completedOperations.length} 次工具操作` : ""}{run.workflow?.receipts.length ? ` · 来源输入：正文 ${readSourceCount} 份 · 仅文件信息 ${metadataSourceCount} 份` : ""}</summary>
+    <article aria-label="任务执行步骤" data-run-id={run.id} className={`run-plan-card run-step-card ${summary.needsAction ? "needs-attention" : ""} ${run.status === "failed" || run.error ? "has-error" : ""}`}>
+      <div className="run-plan-head"><span className={`run-step-indicator ${active ? 'is-active' : ''}`}><Icon name={run.status==='succeeded'?'check':run.error||run.status==='failed'?'warning':'clock'} size={14}/></span><div><b role={active?'status':undefined}>{summary.title}</b>{summary.detail&&<small>{summary.detail}</small>}</div></div>
+      <details className="run-execution-details" onToggle={event=>setDiagnosticsOpen(event.currentTarget.open)}>
+      <summary>执行详情</summary>
+      {checkpointError&&<p className="muted" role="status">执行检查点暂不可用：{checkpointError}</p>}
       <ol className="run-actual-progress" aria-label="实际执行记录">
         {run.piChildTasks?.map(task=><li key={task.id} className={task.state==='succeeded'?'done':task.state}><span>只读子任务 · {task.purpose==='research'?'资料研究':'独立检查'} · {({running:'进行中',succeeded:'已完成',failed:'失败',cancelled:'已取消'})[task.state]} · {(task.durationMs/1000).toFixed(1)} 秒<small>模型 {task.modelId} · {task.toolCount} 次工具调用{task.error?' · '+task.error:''}</small></span></li>)}
         {(run.runtimeStatus||Boolean(run.inputs?.length))&&<li><RunRuntimeStatus run={run} active={active} onClear={()=>onClearInputs?.()}/></li>}
@@ -244,10 +248,11 @@ function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanCon
         {!run.workflow?.receipts.length && !completedOperations.length && !checkpoint?.assistantText && <li><span>{run.status === "succeeded" ? "任务运行已结束，可核对回复与成果" : "读取来源与工具调用后，执行记录会在这里更新"}</span></li>}
       </ol>
       {run.skillDiscovery && <details><summary>项目技能与发现问题</summary><ul>{run.skillDiscovery.skills.map(skill=><li key={`${skill.mountId}-${skill.path}`}><b>{skill.name}</b>：{skill.description} · {skill.path}{skill.disableModelInvocation ? '（仅用户显式加载）' : ''}</li>)}{run.skillDiscovery.diagnostics.map((issue,index)=><li key={index}><span>{issue.path || '技能目录'}：{issue.message}（{issue.code}）</span></li>)}</ul></details>}
+      <WorkflowReceipt run={run} />
+      {plan && <details className="run-intended-plan"><summary>任务计划</summary><ol>{plan.steps.map((step, index) => <li key={`${run.id}-plan-${index}`}><span>{step}</span></li>)}</ol><small>实际完成情况见执行记录、检查结果和版本回执。</small></details>}
       <small>第 {run.attempt || 1} 次尝试 · 最近更新 {run.updatedAt ? new Date(run.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "刚刚"}{run.resumable ? " · 可继续" : ""}</small>
       </details>
       {run.piPlanReview && <div className="plan-proposal"><p>方案批注：{({awaiting_user:"等待评阅",approved:"已确认",needs_changes:"需修改",cancelled:"已关闭"})[run.piPlanReview.status]}</p>{run.piPlanReview.status === "awaiting_user" && <><button onClick={()=>onPiReview?.("open")}>打开方案批注</button><button onClick={()=>onPiReview?.("cancel")}>关闭本次批注</button></>}</div>}
-      {plan && <details className="run-intended-plan"><summary>查看任务计划</summary><ol>{plan.steps.map((step, index) => <li key={`${run.id}-plan-${index}`}><span>{step}</span></li>)}</ol><small>实际完成情况见执行记录、检查结果和版本回执。</small></details>}
       {run.mode === "plan" && proposal && (
         <div className="plan-proposal">
           <p className="plan-summary">{proposal.summary}</p>
@@ -256,7 +261,6 @@ function RunPlanCard({ run, checkpoint, onResume, onEdit, onPlanDraft, onPlanCon
           {proposal.status === "confirmed" && <small>方案已确认，Build Run：{proposal.buildRunId || "准备中"}</small>}
         </div>
       )}
-      <WorkflowReceipt run={run} />
       {run.error && <p className="run-plan-error">{run.error}</p>}
       {run.contextRecovery?.status === "compacting" && <p className="muted" role="status">正在整理上下文，已有回复与工具记录保留。</p>}
       {(run.interruptionReason === "context_budget" || run.contextRecovery?.status === "failed") && <p className="muted">上下文仍不足或整理未完成。可减少输入后继续，或新建会话并引用必要资料。</p>}
@@ -1072,7 +1076,8 @@ export function App() {
   const [slashSkills, setSlashSkills] = useState<SkillDiscoveryReceipt>();
   const [slashSkillsError, setSlashSkillsError] = useState("");
   const slashMenuRef = useRef<HTMLDivElement>(null);
-  const [imageAttachment, setImageAttachment] = useState<{path:string;name:string}>();
+  const [contextAttachments,setContextAttachments]=useState<Array<{key:string;path:string;name:string;size:number;status:'loading'|'ready'|'failed';ref?:ContextAttachmentRef;error?:string}>>([]);
+  const contextAttachmentPaths=useRef(new Set<string>());
   const [referencePickerOpen, setReferencePickerOpen] = useState(false);
   const [referenceAttachments, setReferenceAttachments] = useState<FileRef[]>([]);
   const [workflowKind, setWorkflowKind] = useState<PmWorkflowKind>();
@@ -1136,8 +1141,9 @@ export function App() {
   const [projectSidebarCollapsed, setProjectSidebarCollapsed] = useState(() => localStorage.getItem("slash:project-sidebar-collapsed") === "true");
   useEffect(() => { localStorage.setItem("slash:project-sidebar-collapsed", String(projectSidebarCollapsed)); }, [projectSidebarCollapsed]);
   const [decisionCenter, setDecisionCenter] = useState<DecisionCenterView>();
-  const [replyPanels, setReplyPanels] = useState<Record<string, ReplyPanelState>>({});
-  useEffect(() => setReplyPanels({}), [state?.root, conversationId]);
+  const [workRecordsOpen, setWorkRecordsOpen] = useState(false);
+  const [workRecordsVisited, setWorkRecordsVisited] = useState(false);
+  useEffect(() => {setWorkRecordsOpen(false);setWorkRecordsVisited(false);}, [state?.root, conversationId]);
   const [templateWorkflow, setTemplateWorkflow] =
     useState<TemplateWorkflowView>();
   const [flowView, setFlowView] = useState<FlowPreview>();
@@ -1227,8 +1233,8 @@ export function App() {
           "",
     );
   }, [call]);
-  const loadProjects = useCallback(async () => {
-    const raw = await futureRequest({ type: "projects" });
+  const loadProjects = useCallback(async (required = false) => {
+    const raw = required ? await call({type:"projects"}) : await futureRequest({ type: "projects" });
     const value = record(raw);
     const list = Array.isArray(raw)
       ? raw
@@ -1261,10 +1267,10 @@ export function App() {
     // reopen the previous folder during the next refresh or application
     // restart.
     setProjectId(currentProjectId);
-  }, [futureRequest]);
+  }, [futureRequest,call]);
   useEffect(() => {
-    void act(refresh);
-    void loadProjects();
+    let mounted=true;
+    void Promise.all([refresh(),loadProjects(true)]).catch(reason=>{if(mounted){setError(reason instanceof Error?reason.message:String(reason));console.error('[slash-startup] Initial application data failed: '+String(reason));}});
     const cursors = new Map<string, number>();
     const pending = new Map<string, Promise<void>>();
     const apply = (event: Event, refreshState = true) => {
@@ -1325,7 +1331,8 @@ export function App() {
       pending.set(streamId, task);
       void task.finally(() => { if (pending.get(streamId) === task) pending.delete(streamId); });
     };
-    return window.pm.subscribe(enqueue);
+    const unsubscribe=window.pm.subscribe(enqueue);
+    return()=>{mounted=false;unsubscribe();};
   }, [act, call, loadProjects, refresh]);
   const fileLoadVersion = useRef(0);
   const fileMountSignature = JSON.stringify(state?.mounts.map(mount => [mount.id, mount.name, mount.path, mount.enabled, mount.write]));
@@ -1554,11 +1561,10 @@ export function App() {
   }, [activeProject.id, projects]);
   const runs =
     state?.runs.filter((run) => run.conversationId === conversationId) || [];
-  const active = runs.find((run) =>
-    ["queued", "running", "waiting_user", "cancelling", "validating"].includes(run.status),
-  );
+  const active = runs.find(run=>["running", "waiting_user", "cancelling", "validating"].includes(run.status)) || runs.find(run=>run.status==='queued');
   const composerScope=JSON.stringify([state?.root,conversationId]);
   const composerScopeRef=useRef(composerScope);composerScopeRef.current=composerScope;
+  useEffect(()=>{contextAttachmentPaths.current.clear();setContextAttachments([]);},[composerScope]);
   const changePermissionMode=async(value:'standard'|'accept_edits'|'full_access')=>{
     if(permissionUpdating)return;
     const scope=composerScope;setPermissionUpdating(true);
@@ -1714,7 +1720,7 @@ export function App() {
     setWorkflowSources(undefined);
     setReferenceAttachments([]);
     setPrdTemplate(undefined);
-    setImageAttachment(undefined);
+    setContextAttachments([]);contextAttachmentPaths.current.clear();
   };
   const openProject = async (id:string, nextView:View="会话") => {
     if (projectSwitchInFlight.current) return;
@@ -1725,19 +1731,27 @@ export function App() {
         if(id==="__choose__"&&!result?.currentProjectId)return;
         setProjectId(result?.currentProjectId||id);
         setConversationId("");setDraft("");setWorkflowKind(undefined);setWorkflowSources(undefined);
-        setReferenceAttachments([]);setPrdTemplate(undefined);setReferencePickerOpen(false);setImageAttachment(undefined);
+        setReferenceAttachments([]);setPrdTemplate(undefined);setReferencePickerOpen(false);setContextAttachments([]);contextAttachmentPaths.current.clear();
         setProductRecords(undefined);setDecisionCenter(undefined);setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);
         fileLoadVersion.current++;setFiles([]);setProjectTree(undefined);setView(nextView);
         await refresh();await loadProjects();
       });
     } finally {projectSwitchInFlight.current=false;setFeatureProjectSwitching(false);}
   };
-  const attachImage = (file?: File) => {
-    if (!file || !/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)) { setError("请拖入 PNG、JPEG、WEBP 或 GIF 图片"); return; }
+  const importContextAttachment=async(localPath:string,key:string,scope:string)=>{
+    try{const ref=await call({type:'attachmentAttach',path:localPath,workspaceRoot:state!.root}) as ContextAttachmentRef;if(scope!==composerScopeRef.current)return;setContextAttachments(items=>items.map(item=>item.key===key?{...item,status:'ready',ref,error:undefined}:item));setNotice('附件已加入输入区，请核对文件状态后发送。');}
+    catch(reason){if(scope!==composerScopeRef.current)return;setContextAttachments(items=>items.map(item=>item.key===key?{...item,status:'failed',error:reason instanceof Error?reason.message:String(reason)}:item));}
+  };
+  const attachFiles = (files: File[]) => {
+    if(!files.length)return;
+    for(const file of files){
     const localPath = window.pm.pathForFile?.(file);
-    if (!localPath) { setError("当前环境无法读取图片路径"); return; }
-    setImageAttachment({ path: localPath, name: file.name || "图片" });
-    setNotice("图片已加入当前任务，发送时会由视觉模型生成结构化证据");
+    if (!localPath) { setError("当前环境无法读取文件路径，请在桌面应用中添加文件"); continue; }
+    if(contextAttachmentPaths.current.has(localPath))continue;
+    if(contextAttachmentPaths.current.size>=CONTEXT_ATTACHMENT_LIMITS.count){setError('最多添加8个附件，请移除部分文件后再添加');break;}
+    const key=crypto.randomUUID();contextAttachmentPaths.current.add(localPath);setContextAttachments(items=>[...items,{key,path:localPath,name:file.name||'文件',size:file.size,status:'loading'}]);void importContextAttachment(localPath,key,composerScope);
+    }
+    setNotice(active?'文件已加入输入区；当前任务结束后可携带这些附件发送新任务。':'文件正在读取，完成后将作为当前任务的参考资料。');
   };
   const openReferencePicker = async () => {
     setReferencePickerOpen(true);
@@ -1763,7 +1777,7 @@ export function App() {
   const send = async () => {
     if(active){
       if(busy||!draft.trim())return;
-      if(imageAttachment||referenceAttachments.length||workflowKind||prdTemplate||designReferences.length){setNotice('本轮补充仅支持文字；请移除新附件或任务上下文，或等待本轮结束后另发任务。');return;}
+      if(contextAttachments.length||referenceAttachments.length||workflowKind||prdTemplate||designReferences.length){setNotice('本轮补充仅支持文字；请移除新附件或任务上下文，或等待本轮结束后另发任务。');return;}
       if(!['queued','running','waiting_user'].includes(active.status)){setNotice('本轮正在收尾或取消，请等待结束后另发任务。');return;}
       setBusy(true);setError('');
       const previous=inputRequest.current;
@@ -1773,6 +1787,7 @@ export function App() {
       catch(reason){if(scope===composerScopeRef.current)setError(reason instanceof Error?reason.message:String(reason));}finally{setBusy(false);}return;
     }
     if (busy || (!draft.trim() && !prdTemplate)) return;
+    if(contextAttachments.some(item=>item.status!=='ready')){setError('请等待附件读取完成；读取失败的文件请重试或移除后再发送');return;}
     if (templateCommandConflict) { setError("当前命令与 PRD 模板冲突，请改用 PRD 或移除模板。"); return; }
     if (thinkingLoading && (thinkingDirty || thinkingLevel)) { setNotice("正在确认思考档位，请稍后发送。");return; }
     const parts = draft.trim().split(/\s+/);
@@ -1791,15 +1806,10 @@ export function App() {
         ? `\n\n引用资料（发送时按当前已授权版本读取）：\n${referenceAttachments.map((file) => `- mountId=${file.mountId} · ${file.path}`).join("\n")}`
         : "";
       let finalText = `${requestText}${referenceText}`;
-      let attachmentIds: string[] | undefined;
-      if (imageAttachment) {
-        setVisionBusy(true);
-        const attachment = await call({ type: "visionAttach", path: imageAttachment.path }) as { id: string };
-        attachmentIds = [attachment.id];
-      }
+      const attachmentIds=contextAttachments.length?contextAttachments.map(item=>item.ref!.id):undefined;
       await call({ type: "send", id, text: finalText, mode: command === "/plan" ? "plan" : agentMode, permissionMode:current?.permissionMode??permissionMode, modelEntryId: modelEntryId || undefined, thinkingLevel: availableThinkingLevel(thinkingCapability,thinkingLoading,thinkingLevel), taskType, attachmentIds, workflow: kind ? { kind, sources, template: prdTemplate ? { mountId: prdTemplate.mountId, path: prdTemplate.path, versionId: prdTemplate.versionId, contentHash: prdTemplate.contentHash } : undefined } : undefined,designReferences:designReferences.length?designReferences.map(({id,contentHash})=>({id,contentHash})):undefined });
       setDraft("");
-      setImageAttachment(undefined);
+      setContextAttachments([]);contextAttachmentPaths.current.clear();
       setReferenceAttachments([]);
       setPrdTemplate(undefined);
       setDesignReferences([]);
@@ -1892,7 +1902,7 @@ export function App() {
         const result = await call({type:"project",id:file.projectId}) as {currentProjectId:string};
         setProjectId(result.currentProjectId||file.projectId);
         setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);
-        setProductRecords(undefined);setDecisionCenter(undefined);setWorkflowKind(undefined);setWorkflowSources(undefined);setImageAttachment(undefined);
+        setProductRecords(undefined);setDecisionCenter(undefined);setWorkflowKind(undefined);setWorkflowSources(undefined);setContextAttachments([]);contextAttachmentPaths.current.clear();
         await refresh();await loadProjects();
         const id = await call({type:"conversation",title:`引用 ${file.path.split(/[\\/]/).pop()}`}) as string;
         setConversationId(id);setReferenceAttachments([file]);setDraft(`请参考文件（mountId=${file.mountId}）：${file.path}\n`);
@@ -2259,7 +2269,8 @@ export function App() {
 
   const workIssues = (inConversation: boolean, expanded = false) => <WorkIssues expanded={expanded} key={`${state?.root}:${inConversation ? conversationId : selectedArtifactId}`} records={productRecords} decisions={decisionCenter} conversationId={inConversation ? conversationId || undefined : undefined} artifactId={inConversation ? undefined : selectedArtifactId || undefined} artifactFile={inConversation ? undefined : selected} businessAccessKey={JSON.stringify([state?.permissions, state?.mounts.map(m => [m.id, m.path, m.enabled, m.write])])} runIds={inConversation ? runs.map(run => run.id) : []} onContinue={prefill} onOpen={file => void act(() => openFile(file))} onRefresh={() => void act(async () => { setProductRecords((await call({ type: "productRecords" })) as ProductRecordsView); await loadDecisionCenter(); })} onDecision={(id,status) => void transitionDecision(id,status)} onReview={transitionReviewIssue} onBusinessCheck={async input => (await call({ type: "businessRuleCheck", ...input })) as BusinessRuleCheckView} onCreate={createDecision} onAnswer={async (requirementId, questionId, answer) => Boolean(await act(async () => { const cid = await ensureConversation(); await call({ type: "requirementQuestionAnswer", requirementId, conversationId: cid, answers: [{ questionId, answer }], expectedRevision: productRecords?.revision }); setProductRecords((await call({ type: "productRecords" })) as ProductRecordsView); await loadDecisionCenter(); setNotice("答复已保存到需求记录与会话，问题标记为已答复。"); return true; }))} />;
   const replyKey = (message: State["conversations"][number]["messages"][number], index: number) => message.runId ? `run:${message.runId}:${current?.messages.slice(0,index).filter(item=>item.role === "assistant" && item.runId === message.runId).length || 0}` : `legacy:${message.time}:${index}`;
-  const replyDetails = (message: State["conversations"][number]["messages"][number], run: Run | undefined, key: string, streaming = false) => <ReplyDetails key={`${state?.root}:${conversationId}:${key}`} message={message} run={run} streaming={streaming} state={replyPanels[key] || {execution:false,records:false}} onToggle={panel=>setReplyPanels(previous=>{const value=previous[key]||{execution:false,records:false};return {...previous,[key]:{...value,[panel]:!value[panel]}};})} call={call} execution={checkpoint=><RunPlanCard call={call} workspaceRoot={state?.root||""} run={run!} active={run?.id===active?.id} onClearInputs={()=>{if(run?.id===active?.id)void act(()=>call({type:"runInputClearQueued",runId:run!.id}));}} pendingChanges={state?.changes.filter(change=>change.runId===run?.id&&change.status==="pending").length||0} checkpoint={checkpoint} onResume={run?.resumable?()=>void resumeRun(run.id):undefined} onEdit={()=>{if(run?.workflow)chooseWorkflow(run.workflow.kind,run.workflow.sources,run.input,run.workflow.template);}} onPlanDraft={(ids,text)=>{if(run)void savePlanDraft(run.id,ids,text);}} onPlanConfirm={(ids,text)=>{if(run)void confirmPlan(run.id,ids,text);}} onPiReview={action=>{if(run)void call({type:action==="open"?"piPlanReviewOpen":"piPlanReviewCancel",runId:run.id}).then(refresh).catch(reason=>setError(String(reason)));}}/>} records={workIssues(true,true)}/>;
+  const replyDetails = (message: State["conversations"][number]["messages"][number], run: Run | undefined, key: string, streaming = false) => <ReplyDetails key={`${state?.root}:${conversationId}:${key}`} message={message} run={run} streaming={streaming} call={call}/>;
+  const executionStep = (run: Run) => <RunPlanCard key={`${state?.root}:${conversationId}:${run.id}`} call={call} workspaceRoot={state?.root||""} run={run} active={run.id===active?.id} hasTools={Boolean(current?.messages.some(message=>message.role==='tool'&&message.runId===run.id))} onClearInputs={()=>{if(run.id===active?.id)void act(()=>call({type:"runInputClearQueued",runId:run.id}));}} pendingChanges={state?.changes.filter(change=>change.runId===run.id&&change.status==="pending").length||0} onResume={run.resumable?()=>void resumeRun(run.id):undefined} onEdit={()=>{if(run.workflow)chooseWorkflow(run.workflow.kind,run.workflow.sources,run.input,run.workflow.template);}} onPlanDraft={(ids,text)=>void savePlanDraft(run.id,ids,text)} onPlanConfirm={(ids,text)=>void confirmPlan(run.id,ids,text)} onPiReview={action=>void call({type:action==="open"?"piPlanReviewOpen":"piPlanReviewCancel",runId:run.id}).then(refresh).catch(reason=>setError(String(reason)))}/>;
   const runChanges = (runId: string) => <div className="run-output-group" data-output-run-id={runId}>{state?.changes.filter(change => change.runId === runId).map(change => (
                     <article className="change" key={change.id} data-change-id={change.id} data-run-id={change.runId}>
                       <div>
@@ -2296,7 +2307,7 @@ export function App() {
                       </div>
                     </article>
   ))}</div>;
-  const historyAnchorsAt = (index: number) => (historyAnchors.get(index) || []).map(run => <div className="reply-run-anchor" key={run.id}><small>任务记录 · {runStatusLabel(run.status)}{Number.isFinite(Date.parse(run.startedAt)) && <> · <time dateTime={run.startedAt}>{new Date(run.startedAt).toLocaleString()}</time></>}（尚无关联回复）</small>{replyDetails({role:"assistant",text:"",time:run.startedAt,runId:run.id},run,`run:${run.id}:0`)}{runChanges(run.id)}</div>);
+  const historyAnchorsAt = (index: number) => (historyAnchors.get(index) || []).map(run => <div className="reply-run-anchor" data-run-id={run.id} key={run.id}><small>任务记录{Number.isFinite(Date.parse(run.startedAt)) && <> · <time dateTime={run.startedAt}>{new Date(run.startedAt).toLocaleString()}</time></>}</small>{executionStep(run)}{runChanges(run.id)}</div>);
 
   return (
     <div className={`app ${projectSidebarCollapsed ? "project-sidebar-collapsed" : ""}`} data-theme={theme}>
@@ -2353,7 +2364,7 @@ export function App() {
         onProjectCopyPath={async id => { await act(async () => { const item=projects.find(project=>project.id===id),projectPath=item?.root || item?.path;if(!projectPath)throw Error("项目路径暂不可用，请重新打开项目。");await navigator.clipboard.writeText(projectPath);setNotice("项目路径已复制。"); }); }}
         onProjectRemove={async id => {
           await call({ type: "projectRemove", id });
-          if (id === projectId) { setConversationId("");setDraft("");setWorkflowKind(undefined);setWorkflowSources(undefined);setReferenceAttachments([]);setImageAttachment(undefined);setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);setProductRecords(undefined);setDecisionCenter(undefined);setView("会话"); }
+          if (id === projectId) { setConversationId("");setDraft("");setWorkflowKind(undefined);setWorkflowSources(undefined);setReferenceAttachments([]);setContextAttachments([]);contextAttachmentPaths.current.clear();setSelected(undefined);setDocumentView(undefined);setPreview(undefined);setFlowView(undefined);setProductRecords(undefined);setDecisionCenter(undefined);setView("会话"); }
           await refresh();await loadProjects();setNotice("项目已从列表移除，本地文件、会话和版本已保留。");
         }}
         onImportFiles={(items, category, target) => void act(() => importProjectFiles(items, category, target))}
@@ -2445,11 +2456,13 @@ export function App() {
               <div className="conversation-head">
                 <div className="conversation-title-block" onContextMenu={(event) => { event.preventDefault(); if (current) { setRename(current.title); setEditingTitle(true); } }}><b>{current?.title || "新会话"}</b><small>{state?.root ? `产品工作 · ${conversationStatus}` : "选择工作空间后开始"}</small></div>
                 <div className="conversation-route" aria-label="会话操作">
+                  <button className={`header-icon-button work-records-toggle ${workRecordsOpen ? 'active' : ''}`} aria-label="工作记录" aria-expanded={workRecordsOpen} aria-controls="conversation-work-records" title="需求、检查问题和决策；可查看项目历史" onClick={()=>{setWorkRecordsVisited(true);setWorkRecordsOpen(value=>!value);}}><Icon name="book" size={15}/><span>工作记录</span></button>
                   {modelRouteError && <button className="header-icon-button route-error-button" aria-label="检查模型配置" title={modelRouteError} onClick={() => setSettingsOpen(true)}><Icon name="warning" size={16}/></button>}
                   <button className="header-icon-button conversation-workspace-button" aria-label="打开工作目录" title="打开工作目录" onClick={() => void act(() => call({ type: "openFolder" }))}><Icon name="folder"/></button>
                   <button ref={detailsToggleRef} className={`header-icon-button details-toggle ${detailsOpen ? "active" : ""}`} aria-label={detailsOpen ? "收起详情" : "展开详情"} aria-expanded={detailsOpen} aria-controls="conversation-details" title={detailsOpen ? "收起详情" : "展开详情"} onClick={() => detailsOpen ? closeDetails() : setDetailsOpen(true)}><Icon name="panel"/></button>
                 </div>
               </div>
+              {(workRecordsVisited||workRecordsOpen)&&<section id="conversation-work-records" className="conversation-work-records" hidden={!workRecordsOpen} aria-label="工作记录与项目历史"><div className="work-records-heading"><div><b>工作记录</b><small>需求、检查问题和决策；可切换查看整个项目的历史。</small></div><button className="header-icon-button" aria-label="收起工作记录" onClick={()=>setWorkRecordsOpen(false)}><Icon name="close" size={15}/></button></div>{workIssues(true,true)}</section>}
               {(active||runs[0])&&<RunInputQueuePanel key={`${composerScope}:${(active||runs[0]).id}`} run={active||runs[0]} active={Boolean(active&&['queued','running','waiting_user'].includes(active.status))} onMutate={async input=>{await call({type:'runInputMutate',...input});await refresh();}} onRestore={text=>{if(composerScope!==composerScopeRef.current)return;setDraft(value=>value.trim()?`${value}\n\n${text}`:text);setNotice('原文已带回输入框，请核对后再发送；不会自动重发。');composerInputRef.current?.focus();}}/>}
               <div
                 ref={messagesRef}
@@ -2519,8 +2532,9 @@ export function App() {
                               })}
                             </time>}
                           </div>
-                          {message.attachmentIds?.length ? <div className="message-attachment-ref">图片附件 · {message.attachmentIds.length} 个 · 已保存为工作空间快照</div> : null}
+                          <ContextAttachmentHistory attachments={message.attachments} ids={message.attachmentIds}/>
                           {message.role==='user'&&message.runId&&<DesignReferenceCollection items={runs.find(run=>run.id===message.runId)?.designReferenceReceipts??[]}/>}
+                          {message.role === "assistant" && message.runId && outputMessageIndices.get(message.runId) === index && runs.filter(run=>run.id===message.runId).map(executionStep)}
                           <Markdown className="prose">{message.text}</Markdown>
                           {message.role === "assistant" && replyDetails(message,runs.find(run => run.id === message.runId),replyKey(message,index))}
                           {message.runId && outputMessageIndices.get(message.runId) === index && runChanges(message.runId)}
@@ -2534,13 +2548,12 @@ export function App() {
                 {active && (
                   <article ref={activeMessageRef} className="message assistant">
                     <div className="byline">
-                      slash <span className="pulse" aria-label="正在生成"/>
+                      slash <span className="pulse" aria-label="任务进行中"/>
                     </div>
+                    {executionStep(active)}
                     {stream[active.id] ? (
                       <DecryptedStream key={active.id} text={stream[active.id]} />
-                    ) : (
-                      <Markdown className="prose">正在读取上下文并处理任务…</Markdown>
-                    )}
+                    ) : null}
                     {replyDetails({ role: "assistant", text: stream[active.id] || "", time: active.startedAt, runId: active.id },active,`run:${active.id}:${current?.messages.filter(message=>message.role === "assistant" && message.runId === active.id).length || 0}`,true)}
                     {runChanges(active.id)}
                   </article>
@@ -2646,7 +2659,7 @@ export function App() {
 
               </div>
               <div className="composer-wrap">
-                <div className="composer" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); attachImage(event.dataTransfer.files?.[0]); }}>
+                <div className="composer" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); event.stopPropagation();attachFiles(Array.from(event.dataTransfer.files)); }}>
                   <ReferencePicker
                     open={referencePickerOpen}
                     files={allFiles}
@@ -2671,8 +2684,8 @@ export function App() {
                     placeholder={workflowKind ? pmWorkflows[workflowKind].hint : "描述任务，或加入文件、段落与原型元素…"}
                     value={draft}
                     onChange={(event) => { const value = event.target.value; setDraft(value);if(/^\/help(?:\s|$)|^\/skill:/.test(value.trimStart())) { if(value.trimStart().startsWith("/skill:"))clearSkillWorkflow();else{setWorkflowKind(undefined);setWorkflowSources(undefined);} }setSlashIndex(0);if(!slashOpen&&/^\/[^\s]*$/.test(value.trimStart())){setSlashSkills(undefined);setSlashSkillsError("");} setSlashOpen(/^\/[^\s]*$/.test(value.trimStart())); }}
-                    onPaste={(event) => { const image = Array.from(event.clipboardData.files).find((file) => file.type.startsWith("image/")); if (image) { event.preventDefault(); attachImage(image); } }}
-                    onDrop={(event) => { event.preventDefault(); attachImage(event.dataTransfer.files?.[0]); }}
+                    onPaste={(event) => { const files=Array.from(event.clipboardData.files);if(files.length){event.preventDefault();attachFiles(files);} }}
+                    onDrop={(event) => { event.preventDefault(); event.stopPropagation();attachFiles(Array.from(event.dataTransfer.files)); }}
                     onKeyDown={(event) => {
                       if (slashOpen && !event.nativeEvent.isComposing && event.key === "Escape") { event.preventDefault(); setSlashOpen(false); return; }
                       if (slashOpen && matchingSlashCommands.length && !event.nativeEvent.isComposing) {
@@ -2709,7 +2722,7 @@ export function App() {
                     {slashSkills?.diagnostics.length? <details><summary>技能检查提示（{slashSkills.diagnostics.length}）</summary>{slashSkills.diagnostics.map((issue,index)=><p key={index}>{issue.message}</p>)}</details>:null}
                     <button type="button" className="slash-manage-skills" onClick={()=>{setSlashOpen(false);setRequestedSettingsTab("skills");setSettingsOpen(true);}}>管理 skills</button>
                   </div>}
-                  {(workflowKind || prdTemplate || referenceAttachments.length > 0 || imageAttachment || designReferences.length > 0) && <div className="composer-context">
+                  {(workflowKind || prdTemplate || referenceAttachments.length > 0 || contextAttachments.length || designReferences.length > 0) && <div className="composer-context">
                     <DesignReferenceCollection items={designReferences} onRemove={id=>setDesignReferences(previous=>previous.filter(item=>item.id!==id))}/>
                     {workflowKind && <span className="composer-task-chip" aria-label="任务上下文" title={pmWorkflows[workflowKind].hint}><Icon name={workflowKind === "prototype" ? "code" : "file"} size={14}/><span>{pmWorkflows[workflowKind].label}{workflowKind === "change_summary" ? ` · ${workflowSources?.[0]?.versionId || "旧版"} → 当前版` : ""}</span><button type="button" aria-label="移除任务上下文" onClick={() => { setWorkflowKind(undefined);setWorkflowSources(undefined);setPrdTemplate(undefined);setNotice("已移除任务上下文，输入内容与引用资料保留。"); }}><Icon name="close" size={13}/></button></span>}
                     {prdTemplate && <span className="reference-attachment prd-template-chip" aria-label="已选择的 PRD 模板" title={prdTemplate.path}><FileIcon path={prdTemplate.path} size={14}/><span>PRD 模板 · {prdTemplate.path.split(/[\\/]/).pop()}</span><button type="button" aria-label="移除 PRD 模板" onClick={() => setPrdTemplate(undefined)}><Icon name="close" size={15}/></button></span>}
@@ -2728,13 +2741,14 @@ export function App() {
                         ))}
                       </div>
                     )}
-                    {imageAttachment && <span className="image-attachment" title={imageAttachment.path}><Icon name="image" size={14}/> {imageAttachment.name}<button type="button" aria-label="移除图片" onClick={() => setImageAttachment(undefined)}><Icon name="close" size={15}/></button></span>}
+                    {contextAttachments.map(item=><span className="reference-attachment context-file-attachment" key={item.key} title={item.error||[item.name,item.ref&&isDocumentAttachment(item.ref)?item.ref.limitations.join(' '):'',item.path].filter(Boolean).join('\n')}><FileIcon path={item.name} size={14}/><span><span className="context-file-name">{item.name}</span><small>{attachmentFormat(item.name)} · {item.status==='loading'?'读取中':item.status==='failed'?'读取失败':item.ref&&isDocumentAttachment(item.ref)?item.ref.truncated?'已读取 · 正文已截断':'已读取':'图片已就绪'}</small>{item.error&&<small role="alert">{contextAttachmentErrorMessage(item.error)}</small>}</span>{item.status==='failed'&&<button type="button" aria-label={'重试读取 '+item.name} onClick={()=>{setContextAttachments(items=>items.map(value=>value.key===item.key?{...value,status:'loading',error:undefined}:value));void importContextAttachment(item.path,item.key,composerScope);}}>重试</button>}<button type="button" aria-label={'移除附件 '+item.name} onClick={()=>{contextAttachmentPaths.current.delete(item.path);setContextAttachments(items=>items.filter(value=>value.key!==item.key));}}><Icon name="close" size={15}/></button></span>)}
+                    {contextAttachments.some(item=>item.status==='ready'&&item.ref&&isDocumentAttachment(item.ref))&&<small className="context-file-budget">每份最多4万字；发送时按当前模型容量分配，历史附件显示实际截断情况。</small>}
                   </div>}
                   {templateCommandConflict && <div className="template-command-conflict" role="status"><span>当前命令与 PRD 模板冲突。</span><button type="button" onClick={() => { setDraft(value => value.replace(/^\s*\/\S+\s*/, ""));setWorkflowKind("prd"); }}>使用 PRD 模板</button><button type="button" onClick={() => { setPrdTemplate(undefined);setWorkflowKind(undefined);setWorkflowSources(undefined); }}>移除模板</button></div>}
                   <div className="composer-bottom">
                     <div className="composer-toolbar-controls">
                     <div className="composer-source-controls">
-                    <ComposerPopover label="添加" icon="plus">{close => <><div className="composer-popover-heading">加入资料</div><button className="composer-action" type="button" onClick={() => { close();void openReferencePicker(); }}><Icon name="attach" size={17}/><span>引用资料</span></button><label className="composer-action composer-image-action"><Icon name="image" size={17}/><span>添加图片</span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" aria-label="添加图片" onChange={event => { attachImage(event.target.files?.[0]);event.target.value="";close(); }}/></label><div className="composer-popover-heading composer-popover-divider">快捷动作</div>{starterActions.map(action => <button className="composer-action" type="button" key={action.kind} onClick={() => { close();chooseWorkflow(action.kind); }}><Icon name={action.kind === "prototype" ? "code" : action.kind === "research" ? "search" : action.kind === "meeting" ? "chat" : "file"} size={17}/><span><b>{action.label}</b><small>插入可编辑的提示词</small></span></button>)}</>}</ComposerPopover>
+                    <ComposerPopover label="添加" icon="plus">{close => <><div className="composer-popover-heading">加入资料</div><button className="composer-action" type="button" onClick={() => { close();void openReferencePicker(); }}><Icon name="attach" size={17}/><span>引用资料</span></button><label className="composer-action composer-image-action"><Icon name="attach" size={17}/><span>添加文件或图片</span><input type="file" multiple accept={CONTEXT_ATTACHMENT_ACCEPT} aria-label="添加文件或图片" onChange={event => { attachFiles(Array.from(event.target.files||[]));event.target.value="";close(); }}/></label><div className="composer-popover-heading composer-popover-divider">快捷动作</div>{starterActions.map(action => <button className="composer-action" type="button" key={action.kind} onClick={() => { close();chooseWorkflow(action.kind); }}><Icon name={action.kind === "prototype" ? "code" : action.kind === "research" ? "search" : action.kind === "meeting" ? "chat" : "file"} size={17}/><span><b>{action.label}</b><small>插入可编辑的提示词</small></span></button>)}</>}</ComposerPopover>
                     <ComposerModelMenu value={modelEntryId} models={state?.models || []} capability={thinkingCapability} loading={thinkingLoading} thinkingLevel={thinkingLevel} onThinkingChange={level => { setThinkingDirty(true);setThinkingLevel(level); }} onRefreshCapability={() => void refreshThinkingCapability()} onChange={id => { if (id !== modelEntryId) { if (thinkingLevel) setNotice("已切换模型，思考强度恢复模型默认。");thinkingRequestId.current+=1;setThinkingCapability(undefined);setThinkingLoading(true);setThinkingLevel(undefined);setThinkingDirty(true);setModelEntryId(id); } }}/>
                     </div>
                     <div className="composer-task-controls">

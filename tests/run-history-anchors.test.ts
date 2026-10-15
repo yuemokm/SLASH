@@ -41,3 +41,11 @@ test("empty and undated histories retain actionable records instead of hiding th
   assert.equal(runHistoryAnchors(messages, [completed], {}).size, 0);
   assert.deepEqual([...runHistoryAnchors(messages, [completed], { currentRunId: completed.id })], [[1, [completed]]]);
 });
+
+test('queued and cancelled no-text runs keep their own chronological steps alongside an active run',()=>{
+ const messages=[message('user',day),message('user',today)];
+ const queued=run('queued',today,{status:'queued',error:undefined,resumable:false});
+ const cancelled=run('cancelled',day,{status:'cancelled',error:undefined,resumable:false});
+ const live=run('live',day,{status:'running',error:undefined,resumable:false});
+ assert.deepEqual([...runHistoryAnchors(messages,[queued,live,cancelled],{activeRunId:'live'})],[[1,[cancelled]],[2,[queued]]]);
+});
